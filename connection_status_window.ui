@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Connections</class>
+ <widget class="QWidget" name="Connections">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>501</width>
+    <height>375</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Connection Status</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget{
+background-color: rgb(125,125,125);
+
+}
+
+QPushButton {
+    background-color: rgb(75, 75, 75);  /* Background color */
+    color: rgb(110, 200, 200);  /* Text color */
+    border: 3px solid rgb(10,75,75);  /* Border color */
+    border-radius: 5px;  /* Rounded edges */
+	padding: 2px;
+}
+
+QPushButton:pressed {
+   background-color: rgb(255, 255, 255);  /* Background color when pressed */
+	border: 3px solid rgb(110,200,200);
+}
+QPushButton:clicked {
+   background-color: rgb(255, 255, 255);  /* Background color when pressed */
+	border:  rgb(110,200,200);
+}
+
+QPushButton:hover {
+    background-color: rgb(100, 100, 100);  /* Background color when hovered */
+    border-color: rgb(10, 100, 100);  /* Border color when hovered */
+}
+
+QPushButton:checked {
+    background-color: rgb(50, 50, 50); 
+	border: 3px solid rgb(110,200,200);
+	font-weight: bold;  /* Bold text */
+}
+
+QDoubleSpinBox:enabled{
+background-color: rgb(200,200,200);
+color: rgb(10,75,75);  /* Text color */
+border: 3px solid rgb(10,75,75);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+QDoubleSpinBox:disabled{
+background-color: rgb(125,125,125);
+color: rgb(10,75,75);  /* Text color */
+border: 3px solid rgb(10,75,75);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
+QGroupBox{
+color: rgb(10,75,75);  /* Text color */
+font-weight: bold;  /* Bold text */
+background-color: rgb(125,125,125);
+
+}
+
+QLabel{
+color: rgb(10,75,75);  /* Text color */
+background-color: rgb(125,125,125)
+}
+
+QPlainTextEdit{
+background-color: rgb(200,200,200);
+border-radius: 5px;  /* Rounded edges */
+}
+
+QLineEdit{
+background-color: rgb(200,200,200);
+color: rgb(10,75,75);  /* Text color */
+border: 3px solid rgb(10,75,75);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
+QComboBox{
+background-color: rgb(200,200,200);
+color: rgb(10,75,75);  /* Text color */
+border: 3px solid rgb(10,75,75);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="3" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="OCam_label">
+     <property name="text">
+      <string>Overview Camera</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="3">
+    <widget class="QLabel" name="artisan_status_label">
+     <property name="text">
+      <string>Status:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="artisan_label">
+     <property name="text">
+      <string>Artisan</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="4">
+    <widget class="QLabel" name="artisan_connect_label">
+     <property name="text">
+      <string>disconnected</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QLabel" name="artisan_port_label">
+     <property name="text">
+      <string>Port:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="5">
+    <widget class="QPushButton" name="artisan_connect_button">
+     <property name="text">
+      <string>connect</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="6">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>40</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="1" column="2">
+    <widget class="QLineEdit" name="artisan_port_lineEdit"/>
+   </item>
+   <item row="0" column="0">
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="3">
+    <widget class="QLabel" name="OCam_status_label">
+     <property name="text">
+      <string>Status:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="4">
+    <widget class="QLabel" name="OCam_connect_label">
+     <property name="text">
+      <string>disconnected</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="5">
+    <widget class="QPushButton" name="OCam_connect_button">
+     <property name="text">
+      <string>connect</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="Ocam_list_label">
+     <property name="text">
+      <string>List:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QComboBox" name="OCam_select_comboBox"/>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
