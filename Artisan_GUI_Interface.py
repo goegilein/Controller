@@ -1,4 +1,5 @@
-from PyQt6 import QtWidgets, uic, QtCore
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import pyqtSignal, QObject
 from BaseClasses import BaseClass
 
 class ArtisanInterface(BaseClass):
@@ -46,12 +47,17 @@ class ArtisanInterface(BaseClass):
         self.set_wp_button=gui.set_wp_button
         self.home_axis_button=gui.home_axis_button
 
-        self.artisan_controller.set_position_changed_callback(self.update_axis_pos)  # Set the position changed callback to track position
-        self.set_wp_button.clicked.connect(self.artisan_controller.set_work_position)
         self.move_abs_button.clicked.connect(self.move_abs)
         self.move_rel_button.clicked.connect(self.move_rel)
         self.home_axis_button.clicked.connect(self.artisan_controller.home_axis)
-        
+
+        #position tracking
+        self.position_emitter = SignalEmitter()
+        self.position_emitter.position_signal.connect(self.update_axis_pos)
+        self.artisan_controller.set_position_changed_callback(self.threadsafe_update_axis_pos)  # Set the position changed callback to track position
+        self.set_wp_button.clicked.connect(self.artisan_controller.set_work_position)
+
+
         #Laser Crosshair
         self.laser_crosshair_button = gui.laser_crosshair_button
         self.laser_crosshair_button.clicked.connect(self.toggle_laser_crosshair)
@@ -70,20 +76,22 @@ class ArtisanInterface(BaseClass):
 
         #Process Control
         self.startProcess_button=gui.startProcess_button
-        self.startProcess_button.clicked.connect(self.artisan_controller.start_process)
+        self.startProcess_button.clicked.connect(self.start_process)
 
         self.cancelProcess_button=gui.cancelProcess_button
-        self.cancelProcess_button.clicked.connect(self.artisan_controller.cancel_process)
+        self.cancelProcess_button.clicked.connect(self.cancel_process)
 
-        self.pauseProcess_button=gui.pauseProcess_button
-        self.pauseProcess_button.clicked.connect(self.artisan_controller.pause_process)
+        self.togglePauseProcess_button=gui.togglePauseProcess_button
+        self.togglePauseProcess_button.clicked.connect(self.toggle_process_pause)
 
         self.loadFile_button=gui.loadFile_button
         self.loadFile_button.clicked.connect(self.load_file)
 
         #Log
         self.log_textEdit=gui.log_textEdit
-        self.artisan_controller.set_log_callback(self.append_log)
+        self.log_emitter = SignalEmitter()
+        self.log_emitter.log_signal.connect(self.append_log)
+        self.artisan_controller.set_log_callback(self.threadsafe_append_log)
     
     def move_Axis(self, action, direction, axis):
         if self.axis_step_mode_button.isChecked():
@@ -111,6 +119,10 @@ class ArtisanInterface(BaseClass):
         else:
             self.artisan_controller.set_laser_crosshair("off")
             self.laser_crosshair_button.setText("Crosshair \nis OFF")
+    
+    def threadsafe_update_axis_pos(self, position=None):
+        # This method is called from any thread
+        self.position_emitter.position_signal.emit(position)
 
     def update_axis_pos(self, position = None):
         if position is None:
@@ -161,6 +173,10 @@ class ArtisanInterface(BaseClass):
             self.artisan_controller.set_air_assist("off")
             self.air_assist_button.setText("Air Assist \nis OFF")
     
+    def threadsafe_append_log(self, last_log):
+        # This method is called from any thread
+        self.log_emitter.log_signal.emit(last_log)
+        
     def append_log(self, last_log):
         self.log_textEdit.appendPlainText(last_log)
 
@@ -168,3 +184,25 @@ class ArtisanInterface(BaseClass):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self.gui, "Select File", "", "GCode Files (*.nc);;All Files (*)")
         if file_path:
             self.artisan_controller.read_nc_file(file_path)
+
+    def start_process(self):
+        self.artisan_controller.start_process()
+        self.togglePauseProcess_button.setChecked(False)
+        self.togglePauseProcess_button.setText("Pause Process")
+    
+    def cancel_process(self):
+        self.artisan_controller.cancel_process()
+        self.togglePauseProcess_button.setChecked(False)
+        self.togglePauseProcess_button.setText("Pause Process")
+    
+    def toggle_process_pause(self):
+        if self.togglePauseProcess_button.isChecked():
+            self.artisan_controller.pause_process()
+            self.togglePauseProcess_button.setText("Resume Process")
+        else:
+            self.artisan_controller.resume_process()
+            self.togglePauseProcess_button.setText("Pause Process")
+    
+class SignalEmitter(QObject):
+    position_signal = pyqtSignal(list)
+    log_signal = pyqtSignal(str)

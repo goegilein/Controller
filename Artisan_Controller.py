@@ -25,6 +25,7 @@ class ArtisanController():
         self.connected=False
         self._current_position = [0, 0, 0]
         self._last_log = ''
+        self.comand_lock = threading.Lock()
 
         # Initialize the execution thread and events
         self.execution_thread = None
@@ -91,25 +92,26 @@ class ArtisanController():
             try:
                 while self.connected:
                     time.sleep(0.1)
-                    self.send_command("M114")
-                    self.send_command("M114")
-                    response=self.get_response()
-                    counter=0
-                    while not 'X:' in response and counter <5:
-                        time.sleep(0.1)
-                        response= self.connection.readline().decode().strip()
-                        counter+=1
-                        if response == "ok" or response == '':
-                            break
+                    # self.send_command("M114", wait_ok=False)  # Send command to get current position
+                    # self.send_command("M114", wait_ok=False)
+                    # response=self.get_response()
+                    self.current_position=self.get_position()
+                    # counter=0
+                    # while not 'X:' in response and counter <5:
+                    #     time.sleep(0.1)
+                    #     response= self.connection.readline().decode().strip()
+                    #     counter+=1
+                    #     if response == "ok" or response == '':
+                    #         break
                         
-                    if 'X:' in response:
-                        self.last_response = response
-                        # # Example response: "X:10.00 Y:20.00 Z:30.00 E:0.00 Count X: 1000 Y: 2000 Z: 3000"
-                        position = []
-                        for part in self.last_response.split()[0:3]:
-                            position.append(float(part.split(":")[1]))
-                        #print(f"Got the Position: {position}")
-                        self.current_position=position
+                    # if 'X:' in response:
+                    #     self.last_response = response
+                    #     # # Example response: "X:10.00 Y:20.00 Z:30.00 E:0.00 Count X: 1000 Y: 2000 Z: 3000"
+                    #     position = []
+                    #     for part in self.last_response.split()[0:3]:
+                    #         position.append(float(part.split(":")[1]))
+                    #     #print(f"Got the Position: {position}")
+                    #     self.current_position=position
             except Exception as e:
                 self.last_log = f"Error in tracking axis: {e}"
         tracking_thread = threading.Thread(target=track_axis)
@@ -134,7 +136,7 @@ class ArtisanController():
             raise ValueError("Could not disconnect. Either no connection was established in the first place or something went wrong.")
         
 
-    def send_command(self, command):
+    def send_command(self, command, wait_ok=True):
         """
         Send a G-code command to Snapmaker.
         :param command: G-code command as a string.
@@ -144,17 +146,19 @@ class ArtisanController():
             return
         
         try:
-            if self.connection_type == "usb":
-                self.connection.write((command + '\n').encode())
-                response= self.get_response()
-                if response == "ok" or response == '':
-                    pass
+            
+            with self.comand_lock:
+                if self.connection_type == "usb":
+                    self.connection.write((command + '\n').encode())
+                else:  # TCP/IP
+                    self.connection.sendall((command + '\n').encode())
+
+                if wait_ok:
+                    lines = self._read_until_ok()
+                    self.last_response = lines if lines else None
                 else:
-                    self.last_response = response
-            else:  # TCP/IP
-                self.connection.sendall((command + '\n').encode())
-                self.last_response = self.connection.recv(1024).decode().strip()
-            #print(f"Response: {self.last_response}")
+                    self.last_response = self.get_response()
+                    
         except Exception as e:
             self.last_log = f"Failed to send command: {e}"
     
@@ -173,6 +177,25 @@ class ArtisanController():
         except Exception as e:
             self.last_log = f"Failed to get response: {e}"
             return None
+    
+    def _read_until_ok(self):
+            lines = []
+            counter = 0
+            got_ok = False
+            while counter < 1000:  # Limit to 1000 lines to prevent infinite loop
+                if self.connection_type == "usb":
+                    line = self.connection.readline().decode().strip()
+                else:  # TCP/IP
+                    line = self.connection.recv(1024).decode().strip()
+
+                if line:
+                    lines.append(line)
+                if line == "ok":
+                    got_ok = True
+                    break
+            if not got_ok:
+                self.last_log = "Error: 'ok' not received from Artisan!"
+            return lines
 
     def move_axis_continuous(self, axis, direction, speed):
         """
@@ -263,9 +286,12 @@ class ArtisanController():
         self.send_command("M114") # get new position     
         try:
             position = []
-            for part in self.last_response.split()[0:3]:
-                position.append(float(part.split(":")[1]))
-            #print(f"Got the Position: {position}")
+            for line in self.last_response:
+                if 'X:' in line and 'Y:' in line and 'Z:' in line:
+                    # Example response: "X:10.00 Y:20.00 Z:30.00 A:0.000 B:0.000 E:0.00 Count X: 1000 Y: 2000 Z: 3000 A:0 B:0 "
+                    # Split the line and extract the values
+                    for part in line.split()[0:3]:
+                        position.append(float(part.split(":")[1]))
             return position
         except Exception as e:
             self.last_log = f"Failed to get position: {e}"
@@ -339,7 +365,9 @@ class ArtisanController():
         Execute NC data (G-code) from a file.
         :param file_path: Path to the NC file.
         """
-        
+        if not self.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
         if not self.process_commands:
             self.last_log = "No commands to execute."
             return
@@ -355,18 +383,17 @@ class ArtisanController():
                     self.execution_running.wait()  # Wait if paused
 
                     self.send_command(command)
+                    self.last_log = '\n'.join(self.last_response)
                     time.sleep(0.1)  # Add a small delay between commands
                 else:
                     if not self.execution_canceled.is_set():
                         self.last_log = "Execution completed successfully."
                         self.process_state = "Not Started"  # Reset state after completion
             except Exception as e:
-                self.last_log = f"Error during execution: {e}"
+                #self.last_log = f"Error during execution: {e}"
                 self.process_state = "Not Started"  # Reset state on error
             finally:
-                # Ensure the thread is properly cleaned up
-                if self.execution_thread and self.execution_thread.is_alive():
-                    self.execution_thread.join()
+                self.last_log = "Execution thread finished."
                 self.execution_thread = None
 
         # Start execution in a separate thread
@@ -375,6 +402,7 @@ class ArtisanController():
             self.execution_canceled.clear()
             self.execution_running.set()
             self.execution_thread = threading.Thread(target=execute)
+            self.execution_thread.daemon = True  # Make thread a daemon
             self.execution_thread.start()
         else:
             self.last_log = "Execution already in progress or paused. Please cancel or resume first."
@@ -385,24 +413,34 @@ class ArtisanController():
         """
         Pause the execution of the NC file.
         """
+        if not self.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
+        
         self.execution_running.clear()
         self.last_log = "Execution paused."
         self.process_state = "Paused" # Update state to Paused
-        self.last_log = "Execution paused."
 
     def resume_process(self):
         """
         Resume the execution of the NC file.
         """
+        if not self.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
+        
         self.execution_running.set()
         self.last_log = "Execution resumed."
         self.process_state = "Running"  # Update state to Running
-        self.last_log = "Execution resumed."
 
     def cancel_process(self):
         """
         Cancel the execution of the NC file.
         """
+        if not self.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
+        
         if self.process_state in ["Running", "Paused"]:  # Only allow canceling if running or paused
             self.execution_canceled.set()
             
@@ -429,5 +467,6 @@ class ArtisanController():
                 return False
         else:
             return False
+
 
 
