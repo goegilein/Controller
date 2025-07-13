@@ -1,6 +1,8 @@
 from PyQt6 import QtWidgets, uic, QtCore
 from BaseClasses import BaseClass
 import os
+import wmi
+
 
 class MainInterface(BaseClass):
     def __init__(self, gui, controllers):
@@ -58,7 +60,8 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         self.OCam_connect_button = gui.OCam_connect_button
         self.OCam_connect_label = gui.OCam_connect_label
         self.OCam_select_comboBox = gui.OCam_select_comboBox
-        self.OCam_select_comboBox.addItems([f"Camera {i}" for i in range(5)]) #need to change this to get items
+        #self.OCam_select_comboBox.addItems([f"Camera {i}" for i in range(5)]) #need to change this to get items
+        self.populate_camera_list(self.OCam_select_comboBox)
         
         self.OCam_connect_button.clicked.connect(lambda: self.connect_disconnect(self.OCam_controller))
         self.OCam_select_comboBox.currentIndexChanged.connect(lambda: self.change_camera(self.OCam_controller))
@@ -79,8 +82,8 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
             self.artisan_connect_label.setStyleSheet("color: red;")
         
         #Overview Camera (OCam)
-        self.OCam_select_comboBox.setCurrentIndex(self.OCam_controller.camera_index)
-        if self.OCam_controller.cap:
+        self.OCam_select_comboBox.setCurrentIndex(self.OCam_controller.camera_index+1)  # +1 to account for the placeholder
+        if self.OCam_controller.connected:
             self.OCam_connect_button.setText('disconnect')
             self.OCam_connect_label.setText(f'Connected on Camera {self.OCam_controller.camera_index}')
             self.OCam_connect_label.setStyleSheet("color: green;")
@@ -100,10 +103,23 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
     def set_port(self,controller):
         sender=self.sender()
         controller.port=sender.text()
+    
+    def populate_camera_list(self, combobox):
+        self.OCam_select_comboBox.clear()
+        c = wmi.WMI()
+        available_cameras = ['None']
+        # 'usbvideo' is the service name for USB Video Class devices
+        for dev in c.Win32_PnPEntity(Service="usbvideo"):
+            available_cameras.append(dev.Name)
 
+        if not available_cameras:
+            available_cameras = ["No cameras found"]
+        combobox.addItems(available_cameras)
+    
     def change_camera(self, controller):
         sender = self.sender()
-        controller.camera_index = sender.currentIndex()
+        #controller.camera_index = sender.currentIndex()
+        controller.change_camera(sender.currentIndex()-1, sender.currentText()) # use index - 1 to skip the placeholder
 
 
 

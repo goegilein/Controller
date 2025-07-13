@@ -2,6 +2,7 @@ import serial #pyserial is a library for serial communication
 import socket
 import threading
 import time
+from PyQt6 import QtWidgets
 
 class ArtisanController():
     def __init__(self, connection_type="usb", port=None, baudrate=115200, ip=None, tcp_port=None):
@@ -21,11 +22,14 @@ class ArtisanController():
         self.connection_type = connection_type
         self.is_moving = False
         self.last_response = None
-        self.work_position = None   
+        self.abs_position = None   
         self.connected=False
-        self._current_position = [0, 0, 0]
-        self._last_log = ''
+        self.origin_offset = [0, 0, 0] # Offset from the work position to the maschine origin
+        
+        
         self.comand_lock = threading.Lock()
+        self.is_homed = False
+        self.process_commands = []
 
         # Initialize the execution thread and events
         self.execution_thread = None
@@ -33,15 +37,16 @@ class ArtisanController():
         self.execution_canceled = threading.Event()
         self.execution_running.clear()  # Initially not running
 
-        # Add a process state variable
-        self.process_state = "Not Started"  # Possible states: "Not Started", "Running", "Paused", "Canclecd"
-        self.process_commands = []
+        # Add internal variables thatare tracked and callbacks that can be connected to from a receiving class
+        self._current_position = [0, 0, 0]
+        self._last_log = ''
+        self._process_state = "Not Started"  # Possible states: "Not Started", "Running", "Paused", "Canceled"
 
-        #callbacks that can be connected to from a receiving class
         self.position_changed_callback = None
         self.log_callback = None
+        self.process_state_callback = None
 
-    #set a watcher on the current_position property and define a callback on it
+    #set a watchers for the current position and last log and process state together with their callbacks
     @property
     def current_position(self):
         return self._current_position
@@ -49,6 +54,7 @@ class ArtisanController():
     @current_position.setter
     def current_position(self, value):
         self._current_position = value
+        self.abs_position = [value[0] + self.origin_offset[0], value[1] + self.origin_offset[1], value[2] + self.origin_offset[2]]
         if self.position_changed_callback:
             self.position_changed_callback(value)
 
@@ -68,6 +74,19 @@ class ArtisanController():
     def set_log_callback(self, callback):
         self.log_callback = callback
 
+    @property
+    def process_state(self):
+        return self._process_state
+    
+    @process_state.setter
+    def process_state(self, value):
+        self._process_state = value
+        if self.process_state_callback:
+            self.process_state_callback(value)
+
+    def set_process_state_callback(self, callback):
+        self.process_state_callback = callback
+
     def connect(self):
         if self.connection_type == "usb" and self.port:
             try:
@@ -84,7 +103,18 @@ class ArtisanController():
             raise ValueError("Could not connect with given Parameters")
         
         self.connected=True
-        self.work_position = self.get_position()
+        if not self.is_homed:
+            dialog = QtWidgets.QMessageBox()
+            dialog.setWindowTitle("Homing Required")
+            dialog.setText("Artisan must be homed before use.\nPlease ensure the workspace is clear and press OK to continue.")
+            dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+            dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+            dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Ok)
+            dialog.exec()
+            self.home_axis()
+            self.is_homed = True
+
+        #self.work_position = self.get_position()
         self.current_position=self.get_position()
         
         #once connected, constantly track the axis position
@@ -92,26 +122,9 @@ class ArtisanController():
             try:
                 while self.connected:
                     time.sleep(0.1)
-                    # self.send_command("M114", wait_ok=False)  # Send command to get current position
-                    # self.send_command("M114", wait_ok=False)
-                    # response=self.get_response()
-                    self.current_position=self.get_position()
-                    # counter=0
-                    # while not 'X:' in response and counter <5:
-                    #     time.sleep(0.1)
-                    #     response= self.connection.readline().decode().strip()
-                    #     counter+=1
-                    #     if response == "ok" or response == '':
-                    #         break
-                        
-                    # if 'X:' in response:
-                    #     self.last_response = response
-                    #     # # Example response: "X:10.00 Y:20.00 Z:30.00 E:0.00 Count X: 1000 Y: 2000 Z: 3000"
-                    #     position = []
-                    #     for part in self.last_response.split()[0:3]:
-                    #         position.append(float(part.split(":")[1]))
-                    #     #print(f"Got the Position: {position}")
-                    #     self.current_position=position
+                    if self.process_state != "Running": # Only track position if not running a process
+                        self.current_position=self.get_position()
+
             except Exception as e:
                 self.last_log = f"Error in tracking axis: {e}"
         tracking_thread = threading.Thread(target=track_axis)
@@ -253,10 +266,10 @@ class ArtisanController():
         :param speed: Speed of movement.
         """
         if mode == "absolute":
-            # Set to absolute positioning
+            # Set to absolute positioning in Workposition Coorinates
             self.send_command("G90")
         elif mode == "relative":
-            # Set to relative positioning
+            # Set to relative positioning based on current position
             self.send_command("G91")
         else:
             self.last_log = "Error: Invalid move mode. Must be 'absolute' or 'relative'."
@@ -271,12 +284,47 @@ class ArtisanController():
         # Switch back to absolute positioning
         self.send_command("G90")
     
-    def home_axis(self, axis):
+    def move_axis_absolute(self, x, y, z, speed):
+        """
+        Move the axis in absolute machine coordinates.
+        :param x: X-coordinate to move to.
+        :param y: Y-coordinate to move to.
+        :param z: Z-coordinate to move to.
+        :param speed: Speed of movement.
+        """
+        # Set to absolute positioning
+        self.send_command("G90")
+
+        #limit speed for Z-Axis!
+        if speed >30:
+            speed=30
+
+        # Adjust coordinates based on origin offset
+        x+=self.origin_offset[0]
+        y+=self.origin_offset[1]
+        z+=self.origin_offset[2]
+        # Move the axis
+        self.send_command(f"G0 X{x} Y{y} Z{z} F{speed*60}")
+    
+    def move_to_work_position(self, speed):
+        """
+        Move the axis to the work position.
+        :param speed: Speed of movement.
+        """
+        # if self.work_position is None:
+        #     self.last_log = "Error: Work position not set."
+        #     return
+        
+        # Move to work position
+        self.move_axis_to("absolute", 0, 0, 0, speed=speed)
+    
+    def home_axis(self, axis=''):
         """
         Home an axis.
         :param axis: Axis to home ('X', 'Y', or 'Z').
         """
-        self.send_command(f"G28 {axis}")
+        self.send_command(f"G28 {axis}") #if axis is empty, all axes will be homed
+        self.origin_offset = [0, 0, 0] # Reset origin offset after homing
     
     def get_position(self):
         """
@@ -305,7 +353,16 @@ class ArtisanController():
         :param y: Y-coordinate of the work position.
         :param z: Z-coordinate of the work position.
         """
-        self.work_position = self.current_position
+        pos = self.get_position()
+        self.origin_offset[0] += pos[0]
+        self.origin_offset[1] += pos[1]
+        self.origin_offset[2] += pos[2]
+        self.send_command("G92 X0 Y0 Z0")  # Set current position as origin
+        self.last_log = f"Work position set to absolute: X{self.origin_offset[0]} Y{self.origin_offset[1]} Z{self.origin_offset[2]}"
+        #self.work_position = self.get_position()
+        # if self.work_position is None: 
+        #     self.last_log = "Error: Could not set work position."
+        #     return
 
     def stop_axis(self):
         """
@@ -375,15 +432,25 @@ class ArtisanController():
         def execute():
             try:
                 self.process_state = "Running"  # Update state to Running
+
+                #first set the work position as origin
+                work_pos= self.get_position()
+                if work_pos is None:
+                    self.last_log = "Error: Could set start position in Controller."
+                    return
+                new_coordinates = f"G92 X{work_pos[0]} Y{work_pos[1]} Z{work_pos[2]}"
+                self.send_command(new_coordinates)  # Set current position as origin
+
                 for command in self.process_commands:
+
+                    self.execution_running.wait()  # Wait if paused
+
                     if self.execution_canceled.is_set():
                         self.last_log = "Execution canceled."
                         break
 
-                    self.execution_running.wait()  # Wait if paused
-
                     self.send_command(command)
-                    self.last_log = '\n'.join(self.last_response)
+                    #self.last_log = '\n'.join(self.last_response)
                     time.sleep(0.1)  # Add a small delay between commands
                 else:
                     if not self.execution_canceled.is_set():
@@ -393,6 +460,8 @@ class ArtisanController():
                 #self.last_log = f"Error during execution: {e}"
                 self.process_state = "Not Started"  # Reset state on error
             finally:
+                #Restore the old origin position
+                self.send_command(f"G92 X0 Y0 Z0")
                 self.last_log = "Execution thread finished."
                 self.execution_thread = None
 
@@ -443,6 +512,7 @@ class ArtisanController():
         
         if self.process_state in ["Running", "Paused"]:  # Only allow canceling if running or paused
             self.execution_canceled.set()
+            self.execution_running.set() #Ensure the thread can exit if it is waiting
             
             # Wait for the execution thread to finish
             if self.execution_thread and self.execution_thread.is_alive():
@@ -451,6 +521,9 @@ class ArtisanController():
 
             # Reset the execution state
             self.process_state = "Canceled"
+
+            #Restore the old origin position
+            self.send_command(f"G92 X0 Y0 Z0")
 
     def is_connection_active(self):
         #first check if there is even a connection of any type that could be active

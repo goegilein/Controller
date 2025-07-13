@@ -15,7 +15,7 @@ gui.show()
 
 #setup controllers
 artisan_controller=Artisan_Controller.ArtisanController(connection_type="usb", port="COM6")
-OCam_controller = Camera_Controller.USBCameraController(camera_index=2)
+OCam_controller = Camera_Controller.USBCameraController()
 controllers={"artisan_controller":artisan_controller,"OCam_controller":OCam_controller}
 # arduino_controller = ArduinoController.ArduinoController(artisan_controller=artisan_controller)
 # arduino_controller.connect(port="COM5", baudrate=9600)

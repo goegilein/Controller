@@ -1,5 +1,7 @@
 import cv2
 from PyQt6 import QtWidgets, uic, QtGui, QtCore
+from PyQt6.QtCore import pyqtSignal, QObject
+import datetime
 
 class CameraInterface():
     def __init__(self, gui, camera_controller):
@@ -22,6 +24,12 @@ class CameraInterface():
         #connect interface to camera controller callback to receive frames
         self.camera_controller.set_frame_changed_callback(self.update_frame)
 
+        #logging for the camera
+        self.log_textEdit=gui.log_textEdit
+        self.log_emitter = SignalEmitter()
+        self.log_emitter.log_signal.connect(self.append_log)
+        self.camera_controller.set_log_callback(self.threadsafe_append_log)
+
 
     def update_frame(self,frame):
         try:
@@ -34,3 +42,14 @@ class CameraInterface():
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", str(e))
             self.timer.stop()
+    
+    def threadsafe_append_log(self, last_log):
+        # This method is called from any thread
+        self.log_emitter.log_signal.emit(last_log)
+        
+    def append_log(self, last_log):
+        timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S] ")
+        self.log_textEdit.appendPlainText(f"{timestamp}{last_log}")
+
+class SignalEmitter(QObject):
+    log_signal = pyqtSignal(str)
