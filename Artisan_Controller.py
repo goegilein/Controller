@@ -25,6 +25,8 @@ class ArtisanController():
         self.abs_position = None   
         self.connected=False
         self.origin_offset = [0, 0, 0] # Offset from the work position to the maschine origin
+        self._laser_offset = None # Offset for the laser. set in get_maschine_info()
+        self._tool_head = None # Tool head type, set in get_maschine_info(). Can be "laser1064" or "laser455"
         
         
         self.comand_lock = threading.Lock()
@@ -113,6 +115,11 @@ class ArtisanController():
             dialog.exec()
             self.home_axis()
             self.is_homed = True
+        
+        #Identify the maschine tool
+        toolhead_info = self.get_toolhead_info()
+        if toolhead_info is None:
+            return
 
         #self.work_position = self.get_position()
         self.current_position=self.get_position()
@@ -345,7 +352,6 @@ class ArtisanController():
             self.last_log = f"Failed to get position: {e}"
             return None
         
-        
     def set_work_position(self):
         """
         Set the work position (origin) of the machine.
@@ -369,7 +375,6 @@ class ArtisanController():
         Stop axis movement when the button is released.
         """
         self.is_moving = False
-
 
     def emergency_stop(self):
         """
@@ -428,18 +433,18 @@ class ArtisanController():
         if not self.process_commands:
             self.last_log = "No commands to execute."
             return
+        
+        # Now apply the laser offset
+        if not self._laser_offset:
+            self.last_log = "Error: No Laser Offset defined. Cannot start process."
+            return
+        else:
+            self.move_axis_to("relative", self._laser_offset[0], self._laser_offset[1], self._laser_offset[2], speed=30)
+            self.set_work_position()  # Set the current position as the new work position with the laser offset applied
 
         def execute():
             try:
                 self.process_state = "Running"  # Update state to Running
-
-                #first set the work position as origin
-                work_pos= self.get_position()
-                if work_pos is None:
-                    self.last_log = "Error: Could set start position in Controller."
-                    return
-                new_coordinates = f"G92 X{work_pos[0]} Y{work_pos[1]} Z{work_pos[2]}"
-                self.send_command(new_coordinates)  # Set current position as origin
 
                 for command in self.process_commands:
 
@@ -451,7 +456,7 @@ class ArtisanController():
 
                     self.send_command(command)
                     #self.last_log = '\n'.join(self.last_response)
-                    time.sleep(0.1)  # Add a small delay between commands
+                    time.sleep(0.01)  # Add a small delay between commands
                 else:
                     if not self.execution_canceled.is_set():
                         self.last_log = "Execution completed successfully."
@@ -460,8 +465,12 @@ class ArtisanController():
                 #self.last_log = f"Error during execution: {e}"
                 self.process_state = "Not Started"  # Reset state on error
             finally:
-                #Restore the old origin position
-                self.send_command(f"G92 X0 Y0 Z0")
+                #Restore the old work position
+                self.move_to_work_position(speed=30)
+                self.move_axis_to("relative", -self._laser_offset[0], -self._laser_offset[1], -self._laser_offset[2], speed=30)
+                self.set_work_position()  # Reset the work position to the original position
+
+
                 self.last_log = "Execution thread finished."
                 self.execution_thread = None
 
@@ -517,13 +526,11 @@ class ArtisanController():
             # Wait for the execution thread to finish
             if self.execution_thread and self.execution_thread.is_alive():
                 self.execution_thread.join()  # Wait for the thread to finish
+
             self.last_log = "Execution canceled."
 
             # Reset the execution state
             self.process_state = "Canceled"
-
-            #Restore the old origin position
-            self.send_command(f"G92 X0 Y0 Z0")
 
     def is_connection_active(self):
         #first check if there is even a connection of any type that could be active
@@ -541,5 +548,41 @@ class ArtisanController():
         else:
             return False
 
+    def get_toolhead_info(self):
+        """
+        Get information about the connected machine.
+        set the tool head 
+        :return: Machine information as a string.
+        """
+        if not self.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return None
+        
+        self.send_command("M1006")
+        toolhead_info = self.last_response
+        if toolhead_info:
+            tool_head = toolhead_info[0].split(":")[1].strip()
+
+            if tool_head == "LASER" and len(toolhead_info) == 39:
+                #this ius a 2W 1064 pulsed laser
+                self.last_log = "2W 1064 pulsed laser detected. Setting offsets for this laser."
+                self._tool_head = "laser1064"
+                self._laser_offset = [21.2, -11.3, 0]
+            elif tool_head == "LASER" and len(toolhead_info) == 34:
+                # this is a 40W 455 cw laser
+                self.last_log = "40W 455 cw laser detected. Setting offsets for this laser."
+                self._tool_head = "laser455"
+                self._laser_offset = None # this has to be measured first!
+            else:
+                self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
+                self._tool_head = None
+                self._laser_offset = None
+                self.disconnect()
+                return None
+        else:
+            self.last_log = "Error: Could not retrieve machine information. Closing connection for safety! You can try to reconnect."
+            self.disconnect()
+            return None
+        return toolhead_info
 
 
