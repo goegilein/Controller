@@ -27,6 +27,9 @@ class ArtisanController():
         self.origin_offset = [0, 0, 0] # Offset from the work position to the maschine origin
         self._laser_offset = None # Offset for the laser. set in get_maschine_info()
         self._tool_head = None # Tool head type, set in get_maschine_info(). Can be "laser1064" or "laser455"
+
+        self.speed=30
+        self.step_width=10
         
         
         self.comand_lock = threading.Lock()
@@ -217,12 +220,15 @@ class ArtisanController():
                 self.last_log = "Error: 'ok' not received from Artisan!"
             return lines
 
-    def move_axis_continuous(self, axis, direction, speed):
+    def move_axis_continuous(self, axis, direction, speed=None):
         """
         Move an axis continuously while the button is pressed.
         :param axis: Axis to move ('X', 'Y', or 'Z').
         :param speed: Speed of movement (positive or negative).
         """
+        if speed is None:
+            speed = self.speed
+
         self.is_moving = True
         #limit speed for Z-Axis!
         if axis=="Z" and speed >30:
@@ -244,13 +250,18 @@ class ArtisanController():
         thread = threading.Thread(target=move)
         thread.start()
     
-    def move_axis_step(self, axis, direction, distance, speed):
+    def move_axis_step(self, axis, direction, distance=None, speed=None):
         """
         Move an axis by a certain distance.
         :param axis: Axis to move ('X', 'Y', or 'Z').
         :param distance: Distance to move.
         :param speed: Speed of movement.
         """
+        if speed is None:
+            speed = self.speed
+
+        if distance is None:
+            distance = self.step_width
         # Set to relative positioning
         self.send_command("G91")
 
@@ -265,13 +276,17 @@ class ArtisanController():
         self.send_command("G90")
 
     
-    def move_axis_to(self, mode, x, y, z, speed):
+    def move_axis_to(self, mode, x, y, z, speed=None):
         """
         Move an axis to a specific position.
         :param axis: Axis to move ('X', 'Y', or 'Z').
         :param position: Position to move to.
         :param speed: Speed of movement.
         """
+
+        if speed is None:
+            speed = self.speed
+
         if mode == "absolute":
             # Set to absolute positioning in Workposition Coorinates
             self.send_command("G90")
@@ -299,6 +314,10 @@ class ArtisanController():
         :param z: Z-coordinate to move to.
         :param speed: Speed of movement.
         """
+
+        if speed is None:
+            speed = self.speed
+
         # Set to absolute positioning
         self.send_command("G90")
 
@@ -313,11 +332,14 @@ class ArtisanController():
         # Move the axis
         self.send_command(f"G0 X{x} Y{y} Z{z} F{speed*60}")
     
-    def move_to_work_position(self, speed):
+    def move_to_work_position(self, speed=None):
         """
         Move the axis to the work position.
         :param speed: Speed of movement.
         """
+
+        if speed is None:
+            speed = self.speed
         # if self.work_position is None:
         #     self.last_log = "Error: Work position not set."
         #     return
@@ -369,6 +391,25 @@ class ArtisanController():
         # if self.work_position is None: 
         #     self.last_log = "Error: Could not set work position."
         #     return
+    def set_speed(self, speed):
+        """
+        Change the speed of the machine.
+        :param speed: New speed to set.
+        """
+        if speed < 0 or speed > 100:
+            self.last_log = "Error: Speed must be between 0 and 100."
+            return
+        self.speed = speed
+
+    def set_step_width(self, step_width):
+        """
+        Change the step width of the machine.
+        :param step_width: New step width to set.
+        """
+        if step_width < 0 or step_width > 100:
+            self.last_log = "Error: Step width must be between 0 and 100."
+            return
+        self.step_width = step_width
 
     def stop_axis(self):
         """

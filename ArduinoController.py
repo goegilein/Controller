@@ -8,8 +8,9 @@ class ArduinoController:
     PIN_JOYSTICK_Y = "JOYSTICK_Y"  # Up/down control (printed as "JOYSTICK_Y:<value>")
     PIN_JOYSTICK_SW = "JOYSTICK_SW"  # Up/down control (printed as "JOYSTICK_SW:<value>")
 
-    def __init__(self, artisan_controller=None):	
+    def __init__(self, gui=None, artisan_controller=None):	
         # Attached external controller (e.g., Atrisan_Controller)
+        self.gui = gui
         self.atrisan_controller = artisan_controller
         self.ser = None  # Serial connection
         self.x_joystick_state = 0 # Previous state for X axis
@@ -38,18 +39,42 @@ class ArduinoController:
                     while self.ser.in_waiting:
                         try:
                             raw = self.ser.readline().decode('utf-8').strip()
-                            data = self.parse_analog_pins(raw)
-                            if data:
+                            data_sender = self.identify_sender(raw)
+
+                            if data_sender is None:
+                                print(f"Unknown data format: {raw}")
+                                continue
+                            
+                            if data_sender == "Joystick":  
+                                data = self.parse_analog_pins(raw)
+                                if data:
                                 #print("Parsed data:", data)
-                                self.handle_joystick(data[self.PIN_JOYSTICK_X],
-                                                     data[self.PIN_JOYSTICK_Y],
-                                                     data[self.PIN_JOYSTICK_SW])
+                                    self.handle_joystick(data[self.PIN_JOYSTICK_X],
+                                                        data[self.PIN_JOYSTICK_Y],
+                                                        data[self.PIN_JOYSTICK_SW])
+                            elif data_sender == "Keypad":
+                                # Handle keypad data if needed
+                                print(f"Keypad data received: {raw}")
+                                self.handle_keypad(raw)
+                            elif data_sender == "Remote":
+                                # Handle remote control 
+                                self.handle_remote(raw)
                         except Exception as e:
                             print("Error in run_loop:", e)
                 # Use a shorter sleep to yield control rather than collecting stale data
                 time.sleep(0.01)
         except KeyboardInterrupt:
             print("Exiting read loop.")
+
+    def identify_sender(self, raw):
+        # Identify the sender of the data based on the raw input format.
+        if raw.startswith("JOYSTICK_"):
+            return "Joystick"
+        elif raw.startswith("Keypad"):
+            return "Keypad"
+        elif raw.startswith("Remote"):
+            return "Remote"
+        return None
 
     def parse_analog_pins(self, raw):
         # Expected format: "X:<value> Y:<value> SW:<value>"
@@ -85,18 +110,17 @@ class ArduinoController:
         # Define thresholds
         theshold_high = 1000
         threshold_low = 23
-        speed=30
 
         # Detect X-axis state changes
         if x_value > theshold_high:
             if self.x_joystick_state != 1:
                 # high event on x-Axis triggered
-                self.atrisan_controller.move_axis_continuous("X", 1, speed)
+                self.atrisan_controller.move_axis_continuous("X", 1)
                 self.x_joystick_state = 1
         elif x_value < threshold_low:
             if self.x_joystick_state != -1:
                 #low event ont x-Axis triggered
-                self.atrisan_controller.move_axis_continuous("X", -1, speed)
+                self.atrisan_controller.move_axis_continuous("X", -1)
                 self.x_joystick_state = -1
         else:
             if not self.x_joystick_state == 0:
@@ -108,12 +132,12 @@ class ArduinoController:
         if y_value > theshold_high:
             if self.y_joystick_state != 1:
                 # high event on y-Axis triggered
-                self.atrisan_controller.move_axis_continuous("Y", -1, speed)
+                self.atrisan_controller.move_axis_continuous("Y", -1)
                 self.y_joystick_state = 1
         elif y_value < threshold_low:
             if self.y_joystick_state != -1:
                 #low event ont y-Axis triggered
-                self.atrisan_controller.move_axis_continuous("Y", 1, speed)
+                self.atrisan_controller.move_axis_continuous("Y", 1)
                 self.y_joystick_state = -1
         else:
             if not self.y_joystick_state == 0:
@@ -121,13 +145,51 @@ class ArduinoController:
                 self.atrisan_controller.stop_axis()
                 self.y_joystick_state = 0
 
-    # def process_signal(self, signal):
-    #     # Process the signal locally if needed.
-    #     if self.atrisan_controller:
-    #         self.atrisan_controller.handle_signal(signal)
-    #     else:
-    #         print("No Atrisan_Controller attached. Signal received:", signal)
-
-    # def attach_controller(self, controller):
-    #     self.atrisan_controller = controller
-    #     print("Atrisan_Controller attached")
+    def handle_keypad(self, raw):
+        # Handle keypad input 
+        key = raw.split()[1]
+        if key == "2":
+            self.atrisan_controller.move_axis_step("Y", 1)
+        elif key == "8":
+            self.atrisan_controller.move_axis_step("Y", -1)
+        elif key == "4":
+            self.atrisan_controller.move_axis_step("X", -1)
+        elif key == "6":
+            self.atrisan_controller.move_axis_step("X", 1)
+        elif key == "5":
+            self.atrisan_controller.stop_axis()
+        elif key == "A":
+            self.atrisan_controller.move_axis_step("Z", 1)
+        elif key == "B":
+            self.atrisan_controller.move_axis_step("Z", -1)
+        else:
+            print(f"Unhandled keypad key: {key}")
+    
+    def handle_remote(self, raw):
+        # Handle remote control input
+        hex_code = raw.split()[1]
+        if hex_code == "BA45FF00": # On/Off button
+            
+            speed = self.atrisan_controller.speed
+            step_width = self.atrisan_controller.step_width
+            send_string = f"Speed {speed}mm/s; Step {step_width}mm"
+            self.ser.write((send_string + '\n').encode())
+            print(f'refreshing LCD with {send_string}')
+        elif hex_code == "B946FF00": # + Vol
+            self.atrisan_controller.move_axis_step("Y", 1)
+        elif hex_code == "B847FF00": # Func/stop
+            pass
+        elif hex_code == "BB44FF00": # << button
+            self.atrisan_controller.move_axis_step("X", -1)
+        elif hex_code == "BF40FF00": # Play/pause button
+            self.atrisan_controller.stop_axis()
+        elif hex_code == "BC43FF00": # >> button
+            self.atrisan_controller.move_axis_step("X", 1)
+        elif hex_code == "F807FF00": # down button
+            self.atrisan_controller.move_axis_step("Z", -1)
+        elif hex_code == "EA15FF00": # - Vol
+            self.atrisan_controller.move_axis_step("Y", -1)
+        elif hex_code == "F609FF00": # up button
+            self.atrisan_controller.move_axis_step("Z", 1)
+        else:
+            print(f"Unhandled remote command: {hex_code}")

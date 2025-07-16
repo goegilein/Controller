@@ -30,8 +30,17 @@ class ArtisanInterface(BaseClass):
         self.axis_step_mode_button = gui.axis_step_mode_button
         self.axis_continuous_mode_button =gui.axis_continuous_mode_button
         self.lock_toggle_buttons(self.axis_step_mode_button, self.axis_continuous_mode_button)
-        self.axis_step_size_box = gui.axis_step_size_box
+        
+
+        #speed control
         self.axis_speed_box = gui.axis_speed_box
+        self.axis_speed_box.valueChanged.connect(lambda value: self.artisan_controller.set_speed(value))
+        self.artisan_controller.set_speed(self.axis_speed_box.value())
+
+        #step size control
+        self.axis_step_size_box = gui.axis_step_size_box
+        self.axis_step_size_box.valueChanged.connect(lambda value: self.artisan_controller.set_step_width(value))
+        self.artisan_controller.set_step_width(self.axis_step_size_box.value())
 
         #Absdolute Axis 
         self.abs_x_box=gui.abs_x_box
