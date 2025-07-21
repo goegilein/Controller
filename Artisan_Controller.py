@@ -745,59 +745,74 @@ class ArtisanJobHandler():
 
     def start_process(self):
         """
-        Execute NC data (G-code) from a file.
-        :param file_path: Path to the NC file.
+        Execute all process steps in the job handler.
+        1. Move to work position of this step
+        2. Move to the laser offset position.
+        3. Set the current position as the new work position with the laser offset applied.
+        4. Execute each command in the process steps.
+        5. Restore the old work position after execution.
+        6. Move back to the laser offset position.
         """
+
         if not self.controller.connected:
             self.last_log = "Error: Not connected to Artisan!"
             return
-        if not self.process_commands:
-            self.last_log = "No commands to execute."
+        if not self.process_steps:
+            self.last_log = "Error: No process steps defined. Please add process steps before starting."
             return
+        # Check if all process steps have a valid work position and a NC file set
+        for process_step in self.process_steps:
+            if process_step.work_position is None:
+                self.last_log = "Error: One or more process steps do not have a valid work position set."
+                return
+            if not process_step.gcode_file:
+                self.last_log = "Error: One or more process steps do not have a valid NC file set."
+                return
         
         #Here the Process state is set to running. Will use the threading events to control the execution interanlly
         self.process_state = "Running"  # Update state to Running
 
-        # Now apply the laser offset
-        if not self.controller.laser_offset:
-            self.last_log = "Error: No Laser Offset defined. Cannot start process."
-            return
-        else:
-            self.move_axis_to("relative", self.laser_offset[0], self.laser_offset[1], self.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
-            self.set_work_position(job_save=True)  # Set the current position as the new work position with the laser offset applied
+
+            
 
         def execute():
             try:
+                start_position = self.controller.get_absolute_position()
+                for idx, process_step in enumerate(self.process_steps):
+                    wp= process_step.work_position
+                    commands = process_step.command_list
+
+                    self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, job_save=True)
+                    self.controller.move_axis_to("relative", self.controller.laser_offset[0], self.controller.laser_offset[1], self.controller.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
+                    self.set_work_position(job_save=True)  # Set the current position as the new work position with the laser offset applied
                 
-                for command in self.process_commands:
+                    for command in self.commands:
 
-                    self.execution_running.wait()  # Wait if paused
+                        self.execution_running.wait()  # Wait if paused
 
-                    if self.execution_canceled.is_set():
-                        self.last_log = "Execution canceled. Returning to work position."
-                        break
+                        if self.execution_canceled.is_set():
+                            self.last_log = "Execution canceled. Returning to work position."
+                            break
 
-                    self.controller.send_command(command)
-                    #self.last_log = '\n'.join(self.last_response)
-                    time.sleep(0.01)  # Add a small delay between commands
-                else:
-                    self.last_log = "Execution completed successfully. Returning to work position."
+                        self.controller.send_command(command)
+                        #self.last_log = '\n'.join(self.last_response)
+                        time.sleep(0.01)  # Add a small delay between commands
+                    else:
+                        self.last_log = f"Execution of process_step {idx+1} completed successfully."
 
-                #Restore the old work position after execution
-                self.controller.move_to_work_position(speed=30,job_save=True)
-                self.controller.move_axis_to("relative", -self.laser_offset[0], -self.laser_offset[1], -self.laser_offset[2], speed=30,job_save=True)
-                self.controller.set_work_position(job_save=True)  # Reset the work position to the original position
+                #Restore the old position after execution
+                self.controller.move_axis_absolute(start_position[0], start_position[1], start_position[2], speed=30, job_save=True)
                 self.process_state = "Idle"  # Reset state after completion
             except Exception as e:
                 self.last_log = f"Error during execution: {e}"
                 self.process_state = "Idle"  # Reset state on error
             finally:
-                
                 self.execution_thread = None
 
         # Start execution in a separate thread
         if self.process_state == "Idle":
             self.last_log= "Start Processing..."
+            self.process_state = "Running"  # Set process state to Running
             self.execution_canceled.clear()
             self.execution_running.set()
             self.execution_thread = threading.Thread(target=execute)
