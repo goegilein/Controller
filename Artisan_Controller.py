@@ -742,6 +742,39 @@ class ArtisanJobHandler():
             self.last_log = f"Process step {index} removed successfully."
         else:
             self.last_log = "Error: Invalid process step index."
+    
+    def set_step_wp(self, step_index, new_work_position=None):
+        """
+        Edit the work position of a process step.
+        :param step_index: Index of the process step to edit.
+        :param new_work_position: New work position coordinates as a list [x, y, z].
+        """
+        if self.process_state != "Idle":
+            self.last_log = "Error: Cannot edit process step while a process is still active."
+            return
+        
+        if 0 <= step_index < len(self.process_steps):
+            if new_work_position is None:
+                new_work_position = self.controller.get_absolute_position()
+            else:
+                self.process_steps[step_index].work_position = new_work_position
+        else:
+            self.last_log = "Error: Invalid process step index."
+    
+    def set_step_nc_file(self, step_index, file_path):
+        """
+        Set the NC file for a process step.
+        :param step_index: Index of the process step to set the NC file for.
+        :param file_path: Path to the NC file.
+        """
+        if self.process_state != "Idle":
+            self.last_log = "Error: Cannot set NC file while a process is still active."
+            return
+        
+        if 0 <= step_index < len(self.process_steps):
+            self.process_steps[step_index].set_nc_file(file_path)
+        else:
+            self.last_log = "Error: Invalid process step index."
 
     def start_process(self):
         """
@@ -771,9 +804,6 @@ class ArtisanJobHandler():
         
         #Here the Process state is set to running. Will use the threading events to control the execution interanlly
         self.process_state = "Running"  # Update state to Running
-
-
-            
 
         def execute():
             try:
