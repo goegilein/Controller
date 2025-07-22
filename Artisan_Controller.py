@@ -786,7 +786,6 @@ class ArtisanJobHandler():
         5. Restore the old work position after execution.
         6. Move back to the laser offset position.
         """
-
         if not self.controller.connected:
             self.last_log = "Error: Not connected to Artisan!"
             return
