@@ -41,7 +41,7 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
     def __init__(self, controllers):       
         super().__init__()
         base_path = os.path.dirname(os.path.abspath(__file__))
-        ui_path = os.path.join(base_path, "connection_status_window.ui")
+        ui_path = os.path.join(base_path, "GUI_files/connection_status_window.ui")
         gui=uic.loadUi(ui_path, self)
 
         #controllers
