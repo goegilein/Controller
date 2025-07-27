@@ -1,7 +1,7 @@
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtCore import pyqtSignal, QObject
-from BaseClasses import BaseClass
+from BaseClasses import BaseClass, SignalEmitter, TextLogger
 import datetime
 
 class ArtisanInterface(BaseClass):
@@ -85,19 +85,6 @@ class ArtisanInterface(BaseClass):
         self.air_assist_button = gui.air_assist_button
         self.air_assist_button.clicked.connect(self.toggle_air_assist)
 
-        #Process Control
-        self.startProcess_button=gui.startProcess_button
-        self.startProcess_button.clicked.connect(self.start_process)
-
-        self.cancelProcess_button=gui.cancelProcess_button
-        self.cancelProcess_button.clicked.connect(self.cancel_process)
-
-        self.togglePauseProcess_button=gui.togglePauseProcess_button
-        self.togglePauseProcess_button.clicked.connect(self.toggle_process_pause)
-
-        self.loadFile_button=gui.loadFile_button
-        self.loadFile_button.clicked.connect(self.load_file)
-
         #Process State stracking
         self.artisan_controller.set_process_state_callback(self.threadsafe_update_process_state)
         self.process_state_emitter = SignalEmitter()
@@ -105,9 +92,8 @@ class ArtisanInterface(BaseClass):
 
         #Log tracking
         self.log_textEdit=gui.log_textEdit
-        self.log_emitter = SignalEmitter()
-        self.log_emitter.string_signal.connect(self.append_log)
-        self.artisan_controller.set_log_callback(self.threadsafe_append_log)
+        logger = TextLogger(log_object="Artisan", log_widget=self.log_textEdit)
+        self.artisan_controller.set_log_callback(logger.log)
     
     def move_Axis(self, action, direction, axis):
         if self.axis_step_mode_button.isChecked():
@@ -188,67 +174,26 @@ class ArtisanInterface(BaseClass):
             self.artisan_controller.set_air_assist("off")
             self.air_assist_button.setText("Air Assist \nis OFF")
     
-    def threadsafe_append_log(self, last_log):
-        # This method is called from any thread
-        self.log_emitter.string_signal.emit(last_log)
-        
-    def append_log(self, last_log):
-        timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S] ")
-        self.log_textEdit.appendPlainText(f"{timestamp}{last_log}")
-
     def load_file(self):
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self.gui, "Select File", "", "GCode Files (*.nc);;All Files (*)")
         if file_path:
             self.artisan_controller.read_nc_file(file_path)
-
-    def start_process(self):
-        workposition_check = ProcessStartHandler(self.artisan_controller).check_work_position()
-        if workposition_check is None:
-            self.append_log("Process cancelled by user.")
-            return
-        else:
-            self.append_log(workposition_check)
-        self.artisan_controller.start_process()
-        self.togglePauseProcess_button.setChecked(False)
-        self.togglePauseProcess_button.setText("Pause Process")
-    
-    def cancel_process(self):
-        self.artisan_controller.cancel_process()
-        self.togglePauseProcess_button.setChecked(False)
-        self.togglePauseProcess_button.setText("Pause Process")
-    
-    def toggle_process_pause(self):
-        if self.togglePauseProcess_button.isChecked():
-            self.artisan_controller.pause_process()
-            self.togglePauseProcess_button.setText("Resume Process")
-        else:
-            self.artisan_controller.resume_process()
-            self.togglePauseProcess_button.setText("Pause Process")
     
     def threadsafe_update_process_state(self, state):
         # This method is called from any thread
-        self.artisan_controller._process_state = state
+        #self.artisan_controller._process_state = state
         self.update_process_state(state)
     
     def update_process_state(self, state):
         if state == "Running":
             self.disable_move_controls()
             self.disable_wp_setters()
-            self.startProcess_button.setEnabled(False)
-            self.cancelProcess_button.setEnabled(True)
-            self.togglePauseProcess_button.setEnabled(True)
         elif state == "Paused":
             self.enable_move_controls()
-            self.startProcess_button.setEnabled(False)
-            self.cancelProcess_button.setEnabled(True)
-            self.togglePauseProcess_button.setEnabled(True)
         else:
             self.enable_move_controls()
             self.enable_wp_setters()
-            self.startProcess_button.setEnabled(True)
-            self.cancelProcess_button.setEnabled(False)
-            self.togglePauseProcess_button.setEnabled(False)
-    
+            
     def disable_move_controls(self):
         self.plus_x_button.setEnabled(False)
         self.minus_x_button.setEnabled(False)
@@ -279,49 +224,53 @@ class ArtisanInterface(BaseClass):
     def enable_wp_setters(self):
         self.set_wp_button.setEnabled(True)
         self.home_axis_button.setEnabled(True)
-    
-class SignalEmitter(QObject):
-    list_signal = pyqtSignal(list)
-    string_signal = pyqtSignal(str)
 
-class ProcessStartHandler():
-    def __init__(self, artisan_controller):
-        self.artisan_controller = artisan_controller
+
+'MOVED TO BASE CLASSES'
+# class SignalEmitter(QObject):
+#     list_signal = pyqtSignal(list)
+#     string_signal = pyqtSignal(str)
+
+
+'DEPRECIATED CLASS, build a new handler up from scratch'
+# class ProcessStartHandler():
+#     def __init__(self, artisan_controller):
+#         self.artisan_controller = artisan_controller
     
-    def check_work_position(self):  
-        present_position = self.artisan_controller.get_position()
-        if present_position != [0,0,0]:
-            title = "Work Position Mismatch"
-            text = "The current position does not match the work position. Do you want to use the current position as the work position?"
-            custom_label = "No - Move to Old Work Position"
-            result = self.show_custom_message(title, text, custom_label)
-            if result == "Yes":
-                self.artisan_controller.set_work_position()
-                return "Starting Process"
-            elif result == custom_label:
-                self.artisan_controller.move_to_work_position(speed=30)
-                return "Moveing to Old Work Position and Starting Process"
-            elif result == "Cancel":
-                return None
-        else:
-            return "Starting Process"
+#     def check_work_position(self):  
+#         present_position = self.artisan_controller.get_position()
+#         if present_position != [0,0,0]:
+#             title = "Work Position Mismatch"
+#             text = "The current position does not match the work position. Do you want to use the current position as the work position?"
+#             custom_label = "No - Move to Old Work Position"
+#             result = self.show_custom_message(title, text, custom_label)
+#             if result == "Yes":
+#                 self.artisan_controller.set_work_position()
+#                 return "Starting Process"
+#             elif result == custom_label:
+#                 self.artisan_controller.move_to_work_position(speed=30)
+#                 return "Moveing to Old Work Position and Starting Process"
+#             elif result == "Cancel":
+#                 return None
+#         else:
+#             return "Starting Process"
         
-    def show_custom_message(self, title, text, custom_label="Custom"):
-        msg_box = QMessageBox()
-        msg_box.setWindowTitle(title)
-        msg_box.setText(text)
-        msg_box.setIcon(QMessageBox.Icon.Question)
-        yes_button = msg_box.addButton(QMessageBox.StandardButton.Yes)
-        cancel_button = msg_box.addButton(QMessageBox.StandardButton.Cancel)
-        custom_button = msg_box.addButton(custom_label, QMessageBox.ButtonRole.ActionRole)
-        msg_box.setDefaultButton(cancel_button)
-        msg_box.exec()
+#     def show_custom_message(self, title, text, custom_label="Custom"):
+#         msg_box = QMessageBox()
+#         msg_box.setWindowTitle(title)
+#         msg_box.setText(text)
+#         msg_box.setIcon(QMessageBox.Icon.Question)
+#         yes_button = msg_box.addButton(QMessageBox.StandardButton.Yes)
+#         cancel_button = msg_box.addButton(QMessageBox.StandardButton.Cancel)
+#         custom_button = msg_box.addButton(custom_label, QMessageBox.ButtonRole.ActionRole)
+#         msg_box.setDefaultButton(cancel_button)
+#         msg_box.exec()
 
-        if msg_box.clickedButton() == yes_button:
-            return "Yes"
-        elif msg_box.clickedButton() == cancel_button:
-            return "Cancel"
-        elif msg_box.clickedButton() == custom_button:
-            return custom_label
-        else:
-            return "Cancle"
+#         if msg_box.clickedButton() == yes_button:
+#             return "Yes"
+#         elif msg_box.clickedButton() == cancel_button:
+#             return "Cancel"
+#         elif msg_box.clickedButton() == custom_button:
+#             return custom_label
+#         else:
+#             return "Cancle"

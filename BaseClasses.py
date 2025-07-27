@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 
-from PyQt6 import QtWidgets, uic, QtCore
+from PyQt6 import QtWidgets
 
-class BaseClass:
+class BaseClass():
     def __init__(self):
         self.widget_dict = {}
 
@@ -47,3 +47,34 @@ class BaseClass:
                 button.setChecked(False)
         
         button_sender.setChecked(True)
+
+
+from PyQt6.QtCore import pyqtSignal, QObject
+import datetime
+
+class SignalEmitter(QObject):
+    list_signal = pyqtSignal(list)
+    string_signal = pyqtSignal(str)
+
+class TextLogger():
+    def __init__(self, log_object, log_widget, add_stamp=True):
+
+        self.LogObject = log_object
+        self.log_widget=log_widget
+        self.add_stamp=add_stamp
+        self.log_emitter = SignalEmitter()
+        self.log_emitter.string_signal.connect(self.append_log)
+
+    def log(self, log_msg):
+        # This method is called from any thread
+        self.log_emitter.string_signal.emit(log_msg)
+        
+    def append_log(self, log_msg):
+        if self.add_stamp:
+            timestamp = datetime.datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+            log_msg = f"{timestamp} - {self.LogObject}: {log_msg}"
+        if isinstance(self.log_widget, QtWidgets.QPlainTextEdit):
+            self.log_widget.appendPlainText(log_msg)
+
+        elif isinstance(self.log_widget, QtWidgets.QLineEdit):
+            self.log_widget.setText(log_msg)

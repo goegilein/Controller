@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1089</width>
+    <width>1450</width>
     <height>926</height>
    </rect>
   </property>
@@ -102,7 +102,7 @@ background-color: rgb(255,255,255);
 border-radius: 5px;  /* Rounded edges */
 }
 
-QLineEdit{
+QLineEdit:endabled{
 background-color: rgb(255,255,255);
 color: rgb(0, 0, 150);  /* Text color */
 border: 3px solid rgb(255,155,50);  /* Border color */
@@ -110,8 +110,16 @@ border-radius: 5px;  /* Rounded edges */
 padding : 2px;
 }
 
+QLineEdit:disabled{
+background-color: rgb(230,230,230);
+color: rgb(0, 0, 150);  /* Text color */
+border: 1px solid rgb(255,255,255);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
 QComboBox{
-background-color: rgb(255,255,255);
+background-color: rgb(220,220,220);
 color: rgb(0, 0, 150);  /* Text color */
 border: 3px solid rgb(255,155,50);  /* Border color */
 border-radius: 5px;  /* Rounded edges */
@@ -146,73 +154,7 @@ QTabBar::tab:hover {
    <property name="styleSheet">
     <string notr="true"/>
    </property>
-   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0,0" columnstretch="1,0,0">
-    <item row="1" column="0" colspan="2">
-     <widget class="QGroupBox" name="process_groupBox">
-      <property name="title">
-       <string>Process:</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="startProcess_button">
-         <property name="text">
-          <string>StartProcess</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QPushButton" name="loadFile_button">
-         <property name="text">
-          <string>Load File</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QPushButton" name="togglePauseProcess_button">
-         <property name="text">
-          <string>Pause Process</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QPushButton" name="cancelProcess_button">
-         <property name="text">
-          <string>Cancel Process</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="5">
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="0" column="3">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-    </item>
+   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0,0" columnstretch="2,0,0,1">
     <item row="2" column="0" colspan="2">
      <widget class="QPlainTextEdit" name="log_textEdit">
       <property name="enabled">
@@ -1251,6 +1193,112 @@ is OFF</string>
       </widget>
      </widget>
     </item>
+    <item row="0" column="3">
+     <widget class="QGroupBox" name="groupBox">
+      <property name="title">
+       <string>Process</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Process Steps</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_10">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="add_process_step_button">
+            <property name="text">
+             <string>Add Proces Step</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QListWidget" name="process_steps_listWidget">
+            <property name="dragDropMode">
+             <enum>QAbstractItemView::InternalMove</enum>
+            </property>
+            <property name="defaultDropAction">
+             <enum>Qt::MoveAction</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="process_groupBox">
+         <property name="title">
+          <string>Process Control</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="1" column="4">
+           <widget class="QPushButton" name="cancelProcess_button">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>resources/stop.png</normaloff>resources/stop.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="startProcess_button">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>resources/start.png</normaloff>resources/start.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QPushButton" name="togglePauseProcess_button">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>resources/pause.png</normaloff>resources/pause.png</iconset>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3" colspan="2">
+           <widget class="QLineEdit" name="process_state_edit">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Idle</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>Process State:</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -1258,7 +1306,7 @@ is OFF</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1089</width>
+     <width>1450</width>
      <height>21</height>
     </rect>
    </property>
