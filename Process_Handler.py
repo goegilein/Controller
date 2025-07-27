@@ -224,7 +224,7 @@ class ProcessHandler(BaseClass):
             self.last_log = "Error: Cannot change process step's NC-file while a process is still active."
             return
         
-        process_step.set_nc_file(file_path)
+        self.last_log = process_step.set_nc_file(file_path)
 
     def start_process(self):
         """
@@ -251,8 +251,6 @@ class ProcessHandler(BaseClass):
             if not process_step.gcode_file:
                 self.last_log = "Error: One or more process steps do not have a valid NC file set."
                 return
-        
-        
 
         def execute():
             try:
@@ -266,8 +264,10 @@ class ProcessHandler(BaseClass):
                     self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, job_save=True)
                     self.controller.move_axis_to("relative", self.controller.laser_offset[0], self.controller.laser_offset[1], self.controller.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
                     self.controller.set_work_position(job_save=True)  # Set the current position as the new work position with the laser offset applied
-                
-                    for command in commands:
+
+                    time_list=GCodeInterpreter.get_move_times(commands)
+
+                    for idx, command in enumerate(commands):
 
                         self.execution_running.wait()  # Wait if paused
 
@@ -277,7 +277,7 @@ class ProcessHandler(BaseClass):
 
                         self.controller.send_command(command)
                         #self.last_log = '\n'.join(self.last_response)
-                        time.sleep(0.01)  # Add a small delay between commands
+                        time.sleep(time_list[idx])  # Add a small delay between commands
                     else:
                         self.last_log = f"Execution of process_step {idx+1} completed successfully."
 
@@ -377,3 +377,37 @@ class ProcessStep:
         :param z: Z-coordinate of the work position.
         """
         self.work_position = work_position
+
+
+import numpy as np
+class GCodeInterpreter():
+    def get_move_times(command_list):
+        """
+        Returns all G0 and G1 commands as arrays of doubles: [x, y, z, speed].
+        Only commands with X, Y, Z, and F (speed) are included.
+        """
+        result = [0.01 for _ in command_list]
+        f=6000
+        x = y = z = 0
+        x_new = y_new = z_new = 0
+        for idx,command in enumerate(command_list):
+            if command.startswith("G0") or command.startswith("G1"):
+                # Example: "G1 X10.0 Y20.0 Z5.0 F1200"
+                parts = command.split()
+                for part in parts:
+                    if part.startswith("X"):
+                        x_new = float(part[1:])
+                    elif part.startswith("Y"):
+                        y_new = float(part[1:])
+                    elif part.startswith("Z"):
+                        z_new = float(part[1:])
+                    elif part.startswith("F"):
+                        f = float(part[1:])
+                command_time = np.sqrt((x-x_new)**2+(y-y_new)**2+(z-z_new)**2)/f*60*0.5
+                if command_time>0.01:
+                    result[idx]=command_time
+                x=x_new
+                y=y_new
+                z=z_new
+  
+        return result

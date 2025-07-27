@@ -10,7 +10,6 @@ class ProcessInterface(BaseClass):
         self.process_handler = process_handler
         self.widget_path = "GUI_files/process_step_widget.ui"
 
-
         # Add gui callbacks
         self.add_process_step_button = gui.add_process_step_button
         self.add_process_step_button.clicked.connect(self.add_process_step)
@@ -33,7 +32,7 @@ class ProcessInterface(BaseClass):
         logger = TextLogger(log_object="Process", log_widget=self.log_textEdit)
         self.process_handler.set_log_callback(logger.log)
 
-        #update UI
+        #update UI for Process State
         self.process_state_edit = gui.process_state_edit
         process_logger = logger = TextLogger(log_object="Process", log_widget=self.process_state_edit, add_stamp=False)
         self.process_handler.set_process_state_callback(process_logger.log)
@@ -61,6 +60,11 @@ class ProcessInterface(BaseClass):
         widget.load_file_button.clicked.connect(lambda _, s=step, w=widget: self.set_step_nc_file(s,w))
         widget.step_name_edit.setText(f"Process Step {len(self.process_handler.process_step_list)}")
         widget.set_current_pos_button.clicked.connect(lambda _, s=step, w=widget, b=True: self.set_step_wp(s,w,b))
+
+        # widget.wp_x_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
+        # widget.wp_y_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
+        # widget.wp_z_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
+        # widget.filename_edit.editingFinished.connect(lambda _, s=step, w=widget, b=False: self.set_step_nc_file(s,w,b))
 
     def remove_process_step(self, process_step, widget):
         """
@@ -101,18 +105,26 @@ class ProcessInterface(BaseClass):
             if new_work_position is None:
                 return
             else:
+                #block signal to avoid recursion
+                widget.wp_x_spinbox.blockSignals(True)
+                widget.wp_y_spinbox.blockSignals(True)
+                widget.wp_z_spinbox.blockSignals(True)
                 widget.wp_x_spinbox.setValue(new_work_position[0])
                 widget.wp_y_spinbox.setValue(new_work_position[1])
                 widget.wp_z_spinbox.setValue(new_work_position[2])
+                widget.wp_x_spinbox.blockSignals(False)
+                widget.wp_y_spinbox.blockSignals(False)
+                widget.wp_z_spinbox.blockSignals(False)
+
         else:
-            new_work_position = [widget.wp_x_spinbox.Value(),
-                                 widget.wp_y_spinbox.Value(),
-                                 widget.wp_z_spinbox.Value(),
+            new_work_position = [widget.wp_x_spinbox.value(),
+                                 widget.wp_y_spinbox.value(),
+                                 widget.wp_z_spinbox.value(),
                                 ]
             self.process_handler.set_step_wp_to(process_step, new_work_position)
 
     
-    def set_step_nc_file(self, process_step, widget, file_path=None):
+    def set_step_nc_file(self, process_step, widget, browse_file=True):
         """
         Set the NC file for a process step based on UI input.
         :param process_step: handle to the process step of type ProcessStep.
@@ -120,18 +132,23 @@ class ProcessInterface(BaseClass):
         :param file_path: Path to the NC file (optional).
         """
         
-        if file_path is None:
+        if browse_file:
             file_path, _ = QFileDialog.getOpenFileName(
             parent=widget,
             caption="Select a file for this step",
             directory="",
             filter="NC Files (*.nc)"
         )
-        if file_path is None:
-            return
-        else:
+            if file_path is None:
+                return
             self.process_handler.set_step_nc_file(process_step, file_path)
+            widget.filename_edit.blockSignals(True)
             widget.filename_edit.setText(file_path)
+            widget.filename_edit.blockSignals(False)
+        else:
+            file_path=widget.filename_edit.currentText()
+            self.process_handler.set_step_nc_file(process_step, file_path)
+
 
     def start_process(self):
         # workposition_check = ProcessStartHandler(self.artisan_controller).check_work_position()
