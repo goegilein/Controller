@@ -233,6 +233,7 @@ class ArtisanInterface(BaseClass):
     def update_process_state(self, state):
         if state == "Running":
             self.disable_move_controls()
+            self.disable_wp_setters()
             self.startProcess_button.setEnabled(False)
             self.cancelProcess_button.setEnabled(True)
             self.togglePauseProcess_button.setEnabled(True)
@@ -243,6 +244,7 @@ class ArtisanInterface(BaseClass):
             self.togglePauseProcess_button.setEnabled(True)
         else:
             self.enable_move_controls()
+            self.enable_wp_setters()
             self.startProcess_button.setEnabled(True)
             self.cancelProcess_button.setEnabled(False)
             self.togglePauseProcess_button.setEnabled(False)
@@ -256,9 +258,8 @@ class ArtisanInterface(BaseClass):
         self.minus_z_button.setEnabled(False)
         self.move_abs_button.setEnabled(False)
         self.move_rel_button.setEnabled(False)
-        self.set_wp_button.setEnabled(False)
         self.move_to_wp_button.setEnabled(False)
-        self.home_axis_button.setEnabled(False)
+
     
     def enable_move_controls(self):
         self.plus_x_button.setEnabled(True)
@@ -269,8 +270,14 @@ class ArtisanInterface(BaseClass):
         self.minus_z_button.setEnabled(True)
         self.move_abs_button.setEnabled(True)
         self.move_rel_button.setEnabled(True)
-        self.set_wp_button.setEnabled(True)
         self.move_to_wp_button.setEnabled(True)
+    
+    def disable_wp_setters(self):
+        self.set_wp_button.setEnabled(False)
+        self.home_axis_button.setEnabled(False)
+
+    def enable_wp_setters(self):
+        self.set_wp_button.setEnabled(True)
         self.home_axis_button.setEnabled(True)
     
 class SignalEmitter(QObject):

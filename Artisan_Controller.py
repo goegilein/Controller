@@ -45,7 +45,7 @@ class ArtisanController():
         # Add internal variables thatare tracked and callbacks that can be connected to from a receiving class
         self._current_position = [0, 0, 0]
         self._last_log = ''
-        self._process_state = "Not Started"  # Possible states: "Not Started", "Running", "Paused", "Canceled"
+        self._process_state = "Idle"  # Possible states: "Idle", "Running", "Paused",
 
         self.position_changed_callback = None
         self.log_callback = None
@@ -88,6 +88,14 @@ class ArtisanController():
         self._process_state = value
         if self.process_state_callback:
             self.process_state_callback(value)
+    
+    @property
+    def laser_offset(self):
+        return self._laser_offset
+    
+    @property
+    def tool_head(self):
+        return self._tool_head
 
     def set_process_state_callback(self, callback):
         self.process_state_callback = callback
@@ -220,12 +228,17 @@ class ArtisanController():
                 self.last_log = "Error: 'ok' not received from Artisan!"
             return lines
 
-    def move_axis_continuous(self, axis, direction, speed=None):
+    def move_axis_continuous(self, axis, direction, speed=None, job_save=False):
         """
         Move an axis continuously while the button is pressed.
         :param axis: Axis to move ('X', 'Y', or 'Z').
         :param speed: Speed of movement (positive or negative).
         """
+        
+        if self.process_state == "Running" and not job_save:
+            self.last_log = "Error: Cannot move axis while a process is running. Please pause or cancel the process first."
+            return
+
         if speed is None:
             speed = self.speed
 
@@ -250,13 +263,19 @@ class ArtisanController():
         thread = threading.Thread(target=move)
         thread.start()
     
-    def move_axis_step(self, axis, direction, distance=None, speed=None):
+    def move_axis_step(self, axis, direction, distance=None, speed=None, job_save=False):
         """
         Move an axis by a certain distance.
         :param axis: Axis to move ('X', 'Y', or 'Z').
         :param distance: Distance to move.
         :param speed: Speed of movement.
         """
+
+        if self.process_state == "Running" and not job_save:
+            self.last_log = "Error: Cannot move axis while a process is running. Please pause or cancel the process first."
+            return
+
+
         if speed is None:
             speed = self.speed
 
@@ -276,13 +295,17 @@ class ArtisanController():
         self.send_command("G90")
 
     
-    def move_axis_to(self, mode, x, y, z, speed=None):
+    def move_axis_to(self, mode, x, y, z, speed=None, job_save=False):
         """
         Move an axis to a specific position.
         :param axis: Axis to move ('X', 'Y', or 'Z').
         :param position: Position to move to.
         :param speed: Speed of movement.
         """
+
+        if self.process_state == "Running" and not job_save:
+            self.last_log = "Error: Cannot move axis while a process is running. Please pause or cancel the process first."
+            return
 
         if speed is None:
             speed = self.speed
@@ -306,7 +329,7 @@ class ArtisanController():
         # Switch back to absolute positioning
         self.send_command("G90")
     
-    def move_axis_absolute(self, x, y, z, speed):
+    def move_axis_absolute(self, x, y, z, speed=None, job_save=False):
         """
         Move the axis in absolute machine coordinates.
         :param x: X-coordinate to move to.
@@ -314,6 +337,10 @@ class ArtisanController():
         :param z: Z-coordinate to move to.
         :param speed: Speed of movement.
         """
+
+        if self.process_state == "Running" and not job_save:
+            self.last_log = "Error: Cannot move axis while a process is running. Please pause or cancel the process first."
+            return
 
         if speed is None:
             speed = self.speed
@@ -332,11 +359,15 @@ class ArtisanController():
         # Move the axis
         self.send_command(f"G0 X{x} Y{y} Z{z} F{speed*60}")
     
-    def move_to_work_position(self, speed=None):
+    def move_to_work_position(self, speed=None, job_save=False):
         """
         Move the axis to the work position.
         :param speed: Speed of movement.
         """
+
+        if self.process_state == "Running" and not job_save:
+            self.last_log = "Error: Cannot move to work position while a process is running. Please pause or cancel the process first."
+            return
 
         if speed is None:
             speed = self.speed
@@ -347,11 +378,16 @@ class ArtisanController():
         # Move to work position
         self.move_axis_to("absolute", 0, 0, 0, speed=speed)
     
-    def home_axis(self, axis=''):
+    def home_axis(self, axis='', job_save=False):
         """
         Home an axis.
         :param axis: Axis to home ('X', 'Y', or 'Z').
         """
+
+        if self.process_state not in ["Idle"] and not job_save:
+            self.last_log = "Error: Cannot only home axis while Idle"
+            return
+
         self.send_command(f"G28 {axis}") #if axis is empty, all axes will be homed
         self.origin_offset = [0, 0, 0] # Reset origin offset after homing
     
@@ -373,14 +409,29 @@ class ArtisanController():
         except Exception as e:
             self.last_log = f"Failed to get position: {e}"
             return None
+    
+    def get_absolute_position(self):
+        """
+        Get the absolute position of all axis.
+        :return: Absolute position of all axis.
+        """
+        pos = self.get_position()
+        if pos is None:
+            return None
+        return [pos[0] + self.origin_offset[0], pos[1] + self.origin_offset[1], pos[2] + self.origin_offset[2]]
         
-    def set_work_position(self):
+    def set_work_position(self, job_save=False):
         """
         Set the work position (origin) of the machine.
         :param x: X-coordinate of the work position.
         :param y: Y-coordinate of the work position.
         :param z: Z-coordinate of the work position.
         """
+
+        if self.process_state not in ["Idle"] and not job_save:
+            self.last_log = "Error: Can only set a new work position while Idle"
+            return
+
         pos = self.get_position()
         self.origin_offset[0] += pos[0]
         self.origin_offset[1] += pos[1]
@@ -391,11 +442,17 @@ class ArtisanController():
         # if self.work_position is None: 
         #     self.last_log = "Error: Could not set work position."
         #     return
-    def set_speed(self, speed):
+
+    def set_speed(self, speed, job_save=False):
         """
         Change the speed of the machine.
         :param speed: New speed to set.
         """
+
+        if self.process_state not in ["Idle"] and not job_save:
+            self.last_log = "Error: Can only change speed while Idle"
+            return
+
         if speed < 0 or speed > 100:
             self.last_log = "Error: Speed must be between 0 and 100."
             return
@@ -475,48 +532,48 @@ class ArtisanController():
             self.last_log = "No commands to execute."
             return
         
+        #Here the Process state is set to running. Will use the threading events to control the execution interanlly
+        self.process_state = "Running"  # Update state to Running
+
         # Now apply the laser offset
-        if not self._laser_offset:
+        if not self.laser_offset:
             self.last_log = "Error: No Laser Offset defined. Cannot start process."
             return
         else:
-            self.move_axis_to("relative", self._laser_offset[0], self._laser_offset[1], self._laser_offset[2], speed=30)
-            self.set_work_position()  # Set the current position as the new work position with the laser offset applied
+            self.move_axis_to("relative", self.laser_offset[0], self.laser_offset[1], self.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
+            self.set_work_position(job_save=True)  # Set the current position as the new work position with the laser offset applied
 
         def execute():
             try:
-                self.process_state = "Running"  # Update state to Running
-
+                
                 for command in self.process_commands:
 
                     self.execution_running.wait()  # Wait if paused
 
                     if self.execution_canceled.is_set():
-                        self.last_log = "Execution canceled."
+                        self.last_log = "Execution canceled. Returning to work position."
                         break
 
                     self.send_command(command)
                     #self.last_log = '\n'.join(self.last_response)
                     time.sleep(0.01)  # Add a small delay between commands
                 else:
-                    if not self.execution_canceled.is_set():
-                        self.last_log = "Execution completed successfully."
-                        self.process_state = "Not Started"  # Reset state after completion
+                    self.last_log = "Execution completed successfully. Returning to work position."
+
+                #Restore the old work position after execution
+                self.move_to_work_position(speed=30,job_save=True)
+                self.move_axis_to("relative", -self.laser_offset[0], -self.laser_offset[1], -self.laser_offset[2], speed=30,job_save=True)
+                self.set_work_position(job_save=True)  # Reset the work position to the original position
+                self.process_state = "Idle"  # Reset state after completion
             except Exception as e:
-                #self.last_log = f"Error during execution: {e}"
-                self.process_state = "Not Started"  # Reset state on error
+                self.last_log = f"Error during execution: {e}"
+                self.process_state = "Idle"  # Reset state on error
             finally:
-                #Restore the old work position
-                self.move_to_work_position(speed=30)
-                self.move_axis_to("relative", -self._laser_offset[0], -self._laser_offset[1], -self._laser_offset[2], speed=30)
-                self.set_work_position()  # Reset the work position to the original position
-
-
-                self.last_log = "Execution thread finished."
+                
                 self.execution_thread = None
 
         # Start execution in a separate thread
-        if self.process_state == "Not Started" or self.process_state == "Canceled":
+        if self.process_state == "Idle":
             self.last_log= "Start Processing..."
             self.execution_canceled.clear()
             self.execution_running.set()
@@ -526,8 +583,6 @@ class ArtisanController():
         else:
             self.last_log = "Execution already in progress or paused. Please cancel or resume first."
             
-        
-
     def pause_process(self):
         """
         Pause the execution of the NC file.
@@ -569,9 +624,6 @@ class ArtisanController():
                 self.execution_thread.join()  # Wait for the thread to finish
 
             self.last_log = "Execution canceled."
-
-            # Reset the execution state
-            self.process_state = "Canceled"
 
     def is_connection_active(self):
         #first check if there is even a connection of any type that could be active
@@ -626,4 +678,250 @@ class ArtisanController():
             return None
         return toolhead_info
 
+class ArtisanJobHandler():
+    def __init__(self, controller):
+        self.controller = controller
+        self.process_state = "Idle"  # Possible states: "Idle", "Running", "Paused", "Canceled"
+        self.execution_thread = None
+        self.execution_running = threading.Event()
+        self.execution_canceled = threading.Event()
+        self.process_steps = []  # List to hold G-code commands to execute
+        self._last_log = ''
+        self._process_state = "Idle"  # Track the process state
+        
+        # Callbacks for GUI updates
+        self.log_callback = None
+        self.process_state_callback = None
 
+    @property
+    def last_log(self):
+        return self._last_log
+    @last_log.setter
+    def last_log(self, value):
+        self._last_log = value
+        if self.log_callback:
+            self.log_callback(value)
+
+    @property
+    def process_state(self):
+        return self._process_state
+    @process_state.setter
+    def process_state(self, value):
+        self._process_state = value
+        self.controller.process_state = value  # Update the controller's process state
+        if self.process_state_callback:
+            self.process_state_callback(value)
+
+    def add_process_step(self):
+        """
+        Add a new process step to the job handler.
+        """
+        work_position = self.controller.get_absolute_position()
+        if work_position is None:
+            self.last_log = "Error: Could not retrieve current position."
+            return
+        if self.process_state != "Idle":
+            self.last_log = "Error: Cannot add process step while a process is still active."
+            return
+        
+        step = ProcessStep(work_position)
+        self.process_steps.append(step)
+        return
+    
+    def remove_process_step(self, index):
+        """
+        Remove a process step from the job handler.
+        :param index: Index of the process step to remove.
+        """
+        if self.process_state != "Idle":
+            self.last_log = "Error: Cannot remove process step while a process is still active."
+            return
+        
+        if 0 <= index < len(self.process_steps):
+            del self.process_steps[index]
+            self.last_log = f"Process step {index} removed successfully."
+        else:
+            self.last_log = "Error: Invalid process step index."
+    
+    def set_step_wp(self, step_index, new_work_position=None):
+        """
+        Edit the work position of a process step.
+        :param step_index: Index of the process step to edit.
+        :param new_work_position: New work position coordinates as a list [x, y, z].
+        """
+        if self.process_state != "Idle":
+            self.last_log = "Error: Cannot edit process step while a process is still active."
+            return
+        
+        if 0 <= step_index < len(self.process_steps):
+            if new_work_position is None:
+                new_work_position = self.controller.get_absolute_position()
+            else:
+                self.process_steps[step_index].work_position = new_work_position
+        else:
+            self.last_log = "Error: Invalid process step index."
+    
+    def set_step_nc_file(self, step_index, file_path):
+        """
+        Set the NC file for a process step.
+        :param step_index: Index of the process step to set the NC file for.
+        :param file_path: Path to the NC file.
+        """
+        if self.process_state != "Idle":
+            self.last_log = "Error: Cannot set NC file while a process is still active."
+            return
+        
+        if 0 <= step_index < len(self.process_steps):
+            self.process_steps[step_index].set_nc_file(file_path)
+        else:
+            self.last_log = "Error: Invalid process step index."
+
+    def start_process(self):
+        """
+        Execute all process steps in the job handler.
+        1. Move to work position of this step
+        2. Move to the laser offset position.
+        3. Set the current position as the new work position with the laser offset applied.
+        4. Execute each command in the process steps.
+        5. Restore the old work position after execution.
+        6. Move back to the laser offset position.
+        """
+        if not self.controller.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
+        if not self.process_steps:
+            self.last_log = "Error: No process steps defined. Please add process steps before starting."
+            return
+        # Check if all process steps have a valid work position and a NC file set
+        for process_step in self.process_steps:
+            if process_step.work_position is None:
+                self.last_log = "Error: One or more process steps do not have a valid work position set."
+                return
+            if not process_step.gcode_file:
+                self.last_log = "Error: One or more process steps do not have a valid NC file set."
+                return
+        
+        #Here the Process state is set to running. Will use the threading events to control the execution interanlly
+        self.process_state = "Running"  # Update state to Running
+
+        def execute():
+            try:
+                start_position = self.controller.get_absolute_position()
+                for idx, process_step in enumerate(self.process_steps):
+                    wp= process_step.work_position
+                    commands = process_step.command_list
+
+                    self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, job_save=True)
+                    self.controller.move_axis_to("relative", self.controller.laser_offset[0], self.controller.laser_offset[1], self.controller.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
+                    self.set_work_position(job_save=True)  # Set the current position as the new work position with the laser offset applied
+                
+                    for command in self.commands:
+
+                        self.execution_running.wait()  # Wait if paused
+
+                        if self.execution_canceled.is_set():
+                            self.last_log = "Execution canceled. Returning to work position."
+                            break
+
+                        self.controller.send_command(command)
+                        #self.last_log = '\n'.join(self.last_response)
+                        time.sleep(0.01)  # Add a small delay between commands
+                    else:
+                        self.last_log = f"Execution of process_step {idx+1} completed successfully."
+
+                #Restore the old position after execution
+                self.controller.move_axis_absolute(start_position[0], start_position[1], start_position[2], speed=30, job_save=True)
+                self.process_state = "Idle"  # Reset state after completion
+            except Exception as e:
+                self.last_log = f"Error during execution: {e}"
+                self.process_state = "Idle"  # Reset state on error
+            finally:
+                self.execution_thread = None
+
+        # Start execution in a separate thread
+        if self.process_state == "Idle":
+            self.last_log= "Start Processing..."
+            self.process_state = "Running"  # Set process state to Running
+            self.execution_canceled.clear()
+            self.execution_running.set()
+            self.execution_thread = threading.Thread(target=execute)
+            self.execution_thread.daemon = True  # Make thread a daemon
+            self.execution_thread.start()
+        else:
+            self.last_log = "Execution already in progress or paused. Please cancel or resume first."
+            
+    def pause_process(self):
+        """
+        Pause the execution of the NC file.
+        """
+        if not self.controller.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
+        
+        self.execution_running.clear()
+        self.last_log = "Execution paused."
+        self.process_state = "Paused" # Update state to Paused
+
+    def resume_process(self):
+        """
+        Resume the execution of the NC file.
+        """
+        if not self.controller.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
+        
+        self.execution_running.set()
+        self.last_log = "Execution resumed."
+        self.process_state = "Running"  # Update state to Running
+
+    def cancel_process(self):
+        """
+        Cancel the execution of the NC file.
+        """
+        if not self.controller.connected:
+            self.last_log = "Error: Not connected to Artisan!"
+            return
+        
+        if self.process_state in ["Running", "Paused"]:  # Only allow canceling if running or paused
+            self.execution_canceled.set()
+            self.execution_running.set() #Ensure the thread can exit if it is waiting
+            
+            # Wait for the execution thread to finish
+            if self.execution_thread and self.execution_thread.is_alive():
+                self.execution_thread.join()  # Wait for the thread to finish
+
+            self.last_log = "Execution canceled."
+
+class ProcessStep:
+    def __init__(self, work_position):
+        self.work_position = work_position  # Work position coordinates
+        self.gcode_file = None
+        self.file_name = None
+        self.command_list = []  # List to hold G-code commands for this step
+
+    def set_nc_file(self, file_path):
+        """
+        Read NC data (G-code) from a file.
+        :param file_path: Path to the NC file.
+        :return: List of G-code commands.
+        """
+        try:
+            with open(file_path, 'r') as file:
+                self.command_list = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+                self.gcode_file = file_path
+                self.file_name = file_path.split('/')[-1]  # Store the file name
+            return f"Successfully read NC file: {file_path}"
+        except Exception as e:
+            self.gcode_file = None
+            self.file_name = None
+            self.command_list = []
+            return f"Failed to read NC file: {e}"
+        
+    def set_work_position(self, x, y, z):
+        """
+        Set the work position for this step.
+        :param x: X-coordinate of the work position.
+        :param y: Y-coordinate of the work position.
+        :param z: Z-coordinate of the work position.
+        """
+        self.work_position = [x, y, z]
