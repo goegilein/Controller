@@ -258,14 +258,24 @@ class ProcessHandler(BaseClass):
                 self.process_state = "Running"  # Update state to Running
                 start_position = self.controller.get_absolute_position()
                 for idx, process_step in enumerate(self.process_step_list):
+
+                    #get wp, commands, and time for each command
                     wp= process_step.work_position
                     commands = process_step.command_list
+                    time_list=GCodeInterpreter.get_move_times(commands)
 
+                    #Move to Work Position, then switch to laser tool.
+                    pos_now=self.controller.get_absolute_position()
                     self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, job_save=True)
+                    time.sleep(np.sqrt((wp[0]-pos_now[0])**2 + (wp[1]-pos_now[1])**2 + (wp[2]-pos_now[2])**2)/30*0.5)
+                    if self.execution_canceled.is_set():
+                        break
                     self.controller.move_axis_to("relative", self.controller.laser_offset[0], self.controller.laser_offset[1], self.controller.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
+                    time.sleep(np.sqrt(self.controller.laser_offset[0]**2 + self.controller.laser_offset[1]**2 + self.controller.laser_offset[2]**2)/30*0.5)
+                    if self.execution_canceled.is_set():
+                        break
                     self.controller.set_work_position(job_save=True)  # Set the current position as the new work position with the laser offset applied
 
-                    time_list=GCodeInterpreter.get_move_times(commands)
 
                     for idx, command in enumerate(commands):
 
@@ -276,10 +286,12 @@ class ProcessHandler(BaseClass):
                             break
 
                         self.controller.send_command(command)
-                        #self.last_log = '\n'.join(self.last_response)
-                        time.sleep(time_list[idx])  # Add a small delay between commands
+                        time.sleep(time_list[idx])  # Add a delay between commands
                     else:
                         self.last_log = f"Execution of process_step {idx+1} completed successfully."
+                    
+                    if self.execution_canceled.is_set():
+                        break
 
                 #Restore the old position after execution
                 self.controller.move_axis_absolute(start_position[0], start_position[1], start_position[2], speed=30, job_save=True)

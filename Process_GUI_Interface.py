@@ -1,7 +1,7 @@
 from PyQt6 import uic
 from PyQt6.QtWidgets import QListWidgetItem, QFileDialog
 from BaseClasses import BaseClass, TextLogger
-import datetime
+from PyQt6.QtGui import QIcon
 
 class ProcessInterface(BaseClass):
     def __init__(self, gui, process_handler):
@@ -18,21 +18,21 @@ class ProcessInterface(BaseClass):
         self.process_steps_listWidget.model().rowsMoved.connect(self.on_rows_moved)
 
         # Process Control
-        self.startProcess_button=gui.startProcess_button
-        self.startProcess_button.clicked.connect(self.start_process)
+        self.toggle_process_button=gui.toggle_process_button
+        self.toggle_process_button.clicked.connect(self.toggle_process)
 
-        self.cancelProcess_button=gui.cancelProcess_button
-        self.cancelProcess_button.clicked.connect(self.cancel_process)
+        self.cancel_process_button=gui.cancel_process_button
+        self.cancel_process_button.clicked.connect(self.cancel_process)
 
-        self.togglePauseProcess_button=gui.togglePauseProcess_button
-        self.togglePauseProcess_button.clicked.connect(self.toggle_process_pause)
+        # self.togglePauseProcess_button=gui.togglePauseProcess_button
+        # self.togglePauseProcess_button.clicked.connect(self.toggle_process_pause)
 
         #Log tracking
         self.log_textEdit=gui.log_textEdit
         logger = TextLogger(log_object="Process", log_widget=self.log_textEdit)
         self.process_handler.set_log_callback(logger.log)
 
-        #update UI for Process State
+        # update UI for Process State
         self.process_state_edit = gui.process_state_edit
         process_logger = logger = TextLogger(log_object="Process", log_widget=self.process_state_edit, add_stamp=False)
         self.process_handler.set_process_state_callback(process_logger.log)
@@ -150,42 +150,40 @@ class ProcessInterface(BaseClass):
             self.process_handler.set_step_nc_file(process_step, file_path)
 
 
-    def start_process(self):
-        # workposition_check = ProcessStartHandler(self.artisan_controller).check_work_position()
-        # if workposition_check is None:
-        #     self.append_log("Process cancelled by user.")
-        #     return
-        # else:
-        #     self.append_log(workposition_check)
-        self.process_handler.start_process()
-        # self.togglePauseProcess_button.setChecked(False)
-        # self.togglePauseProcess_button.setText("Pause Process")
+    def toggle_process(self):
+        state =self.process_handler.process_state
+        if state=="Idle":
+            self.process_handler.start_process()
+            # icon = QIcon("GUI_files/resources/pause.png")
+            # self.toggle_process_button.setIcon(icon)
+        elif state == "Running":
+            self.process_handler.pause_process()
+            # icon = QIcon("GUI_files/resources/start.png")
+            # self.toggle_process_button.setIcon(icon)
+        elif state == "Paused":
+            self.process_handler.resume_process()
+            # icon = QIcon("GUI_files/resources/pause.png")
+            # self.toggle_process_button.setIcon(icon)
     
     def cancel_process(self):
         self.process_handler.cancel_process()
-        # self.togglePauseProcess_button.setChecked(False)
-        # self.togglePauseProcess_button.setText("Pause Process")
+        # icon = QIcon("GUI_files/resources/start.png")
+        # self.toggle_process_button.setIcon(icon)
     
-    def toggle_process_pause(self):
-        # if self.togglePauseProcess_button.isChecked():
-        #     self.artisan_controller.pause_process()
-        #     self.togglePauseProcess_button.setText("Resume Process")
-        # else:
-        #     self.artisan_controller.resume_process()
-        #     self.togglePauseProcess_button.setText("Pause Process")
-        self.process_handler.pause_process()
-    
+
     def update_process_state(self, state):
         if state == "Running":
-            self.startProcess_button.setEnabled(False)
-            self.cancelProcess_button.setEnabled(True)
-            self.togglePauseProcess_button.setEnabled(True)
+            icon = QIcon("GUI_files/resources/pause.png")
+            self.toggle_process_button.setIcon(icon)
+            self.cancel_process_button.setEnabled(True)
         elif state == "Paused":
-            self.startProcess_button.setEnabled(False)
-            self.cancelProcess_button.setEnabled(True)
-            self.togglePauseProcess_button.setEnabled(True)
-        else:
-            self.startProcess_button.setEnabled(True)
-            self.cancelProcess_button.setEnabled(False)
-            self.togglePauseProcess_button.setEnabled(False)
+            pass
+            icon = QIcon("GUI_files/resources/start.png")
+            self.toggle_process_button.setIcon(icon)
+            self.cancel_process_button.setEnabled(True)
+        elif state == "Idle":
+            pass
+            icon = QIcon("GUI_files/resources/start.png")
+            self.toggle_process_button.setIcon(icon)
+            self.cancel_process_button.setEnabled(False)
         
