@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.2.0",
+  "artisan": {
+    "default_connection_type": "usb",
+    "port": "COM6",
+    "baudrate": 115200,
+    "ip": "192.168.178.44",
+    "tcp_port": "None",
+    "motion": {
+      "default_speed": 30,
+      "default_step_width": 10,
+      "max_z_speed": 30
+    },
+    "laser1064": {
+      "laser_offset": [
+        21.3,
+        -11.3,
+        0
+      ]
+    }
+  },
+  "overview_camera": {
+    "camera_index": -1,
+    "frame_rate": 30
+  },
+  "ui": {
+    "theme": "dark",
+    "language": "de-DE"
+  }
+}

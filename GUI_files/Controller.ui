@@ -1305,6 +1305,7 @@ is OFF</string>
     <property name="title">
      <string>Settings</string>
     </property>
+    <addaction name="edit_settings_action"/>
    </widget>
    <addaction name="menuConnection"/>
    <addaction name="menuSettings"/>
@@ -1328,6 +1329,11 @@ is OFF</string>
   <action name="disconnect_all_action">
    <property name="text">
     <string>Disconnect_All</string>
+   </property>
+  </action>
+  <action name="edit_settings_action">
+   <property name="text">
+    <string>Edit Settings</string>
    </property>
   </action>
  </widget>

@@ -1,14 +1,19 @@
 from PyQt6 import QtWidgets, uic, QtCore
+from PyQt6.QtWidgets import QDialog, QVBoxLayout
+from Settings_Binder import SettingsEditorWidget
+from Settings_Manager import SettingsManager
 from BaseClasses import BaseClass
+from pathlib import Path
 import os
 import wmi
 
 
 class MainInterface(BaseClass):
-    def __init__(self, gui, controllers):
+    def __init__(self, gui, controllers, settings: SettingsManager):
         super().__init__()
         self.gui = gui
         self.controllers=controllers
+        self.sm = settings
         self.artisan_controller = controllers["artisan_controller"]
         self.OCam_controller = controllers["OCam_controller"]
 
@@ -23,6 +28,9 @@ class MainInterface(BaseClass):
         self.connection_status_action=gui.connection_status_action
         self.connection_status_action.triggered.connect(self.show_connection_status)
 
+        self.edit_settings_action = gui.edit_settings_action
+        self.edit_settings_action.triggered.connect(self.open_settings_dialog)
+
     def connect_all(self):
         self.artisan_controller.connect()
         self.OCam_controller.connect()
@@ -36,6 +44,18 @@ class MainInterface(BaseClass):
             self.connection_status_window.close()
         self.connection_status_window = ConnectionStatusWindow(self.controllers)
         self.connection_status_window.show()
+    
+    def open_settings_dialog(self):
+        dlg = QDialog()
+        dlg.setWindowTitle("Settings")
+        lay = QVBoxLayout(dlg)
+        lay.setContentsMargins(0,0,0,0)
+        BASE_DIR = Path(__file__).resolve().parent
+        GUI_DIR = BASE_DIR / "GUI_files"
+        SETTINGS_GUI_PATH = GUI_DIR / "Settings_widget.ui"
+        lay.addWidget(SettingsEditorWidget(self.sm, SETTINGS_GUI_PATH, parent=dlg))
+        dlg.resize(700, 800)
+        dlg.exec()
 
 class ConnectionStatusWindow(QtWidgets.QWidget):
     def __init__(self, controllers):       
