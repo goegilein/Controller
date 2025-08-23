@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy, QLayout
 )
 
-# Passe den Import an deinen Modulnamen an
+# Adjust import to your module name
 import Settings_Manager as settings_module
 SettingsManager = settings_module.SettingsManager
 
@@ -20,8 +20,8 @@ JsonVal = Union[dict, list, str, int, float, bool, None]
 
 class SettingsEditorWidget(QWidget):
     """
-    Lädt ein vorformatiertes UI-Widget (.ui) und befüllt das darin enthaltene
-    vertikale Layout 'settings_verticalLayout' dynamisch aus dem Settings-JSON.
+    Loads a preformatted UI widget (.ui) and populates the contained
+    vertical layout 'settings_verticalLayout' dynamically from the settings JSON.
     """
     def __init__(self, settings: SettingsManager, ui_path: Path, parent: Optional[QWidget]=None):
         super().__init__(parent)
@@ -31,85 +31,96 @@ class SettingsEditorWidget(QWidget):
         self._path_setters: Dict[str, Callable[[Any], None]] = {}
         self._path_readers: Dict[str, Callable[[], Any]] = {}
 
-        # --- UI laden ---
+        # --- Load UI ---
         if not self._ui_path.exists():
             raise FileNotFoundError(f"Settings UI file not found: {self._ui_path}")
-        # lädt die .ui in diese Instanz, damit Widgets als Attribute verfügbar sind
+        # load the .ui into this instance so widgets are available as attributes
         uic.loadUi(str(self._ui_path), self)
 
-        # Referenz auf das Ziel-Layout
+        # Reference to the target layout
         obj = getattr(self, "settings_verticalLayout", None)
         if obj is None:
             raise RuntimeError(
-                "Im UI fehlt ein Objekt namens 'settings_verticalLayout' (Widget oder Layout)."
+                "The UI does not contain an object named 'settings_verticalLayout' (widget or layout)."
             )
 
         if isinstance(obj, QLayout):
-            # Perfekt: wir haben direkt das Layout
+            # Perfect: we already have the layout
             self._target_layout: QVBoxLayout = obj  # type: ignore[assignment]
         elif isinstance(obj, QWidget):
-            # Es ist ein Widget – nimm sein Layout oder gib ihm eins
+            # It's a widget — take its layout or give it one
             lay = obj.layout()
             if lay is None:
                 lay = QVBoxLayout(obj)
             if not isinstance(lay, QVBoxLayout):
-                # wenn's kein VBox ist, geht auch QLayout – wir behandeln es generisch
+                # if it's not a VBox, QLayout is fine — we handle it generically
                 pass
             self._target_layout = lay  # type: ignore[assignment]
         else:
             raise RuntimeError(
-                f"'settings_verticalLayout' ist ein {type(obj).__name__}, erwarte Widget oder Layout."
+                f"'settings_verticalLayout' is a {type(obj).__name__}, expected QWidget or QLayout."
             )
 
-        # Buttons (optional) verbinden – passe die Namen bei Bedarf an
-        self._connect_button("btnLoadSettings", self._action_load)
-        self._connect_button("btnSaveSettings", self._action_save)
-        self._connect_button("btnSaveAsSettings", self._action_save_as)
+        # Connect Buttons
+        self._connect_button("load_settings_button", self._action_load)
+        self._connect_button("save_default_button", self._action_save_default)
+        self._connect_button("save_settings_button", self._action_save_as)
+        self._connect_button("load_default_button", lambda: self._action_load(default=True))
 
-        # initialer Aufbau
+        # initial build
         self.rebuild_from_settings()
 
-        # Settings-Events
+        # Settings events
         self.s.settingChanged.connect(self._on_setting_changed)
         self.s.settingsReplaced.connect(self.rebuild_from_settings)
 
-    # ---------------- Buttons finden & verbinden ----------------
+    # ---------------- Find & connect buttons ----------------
     def _connect_button(self, object_name: str, slot: Callable[[], None]):
         btn = self.findChild(QPushButton, object_name)
         if btn is not None:
             btn.clicked.connect(slot)
 
-    # ---------------- File-Aktionen ----------------
-    def _action_load(self):
-        fn, _ = QFileDialog.getOpenFileName(self, "Settings laden", "", "JSON (*.json)")
+    # ---------------- File actions ----------------
+    def _action_load(self,default: bool=False):
+        if default:
+            try:
+                self.s.load_default()
+                QMessageBox.information(self, "Settings", "Loaded default settings.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error loading", str(e))
+            return
+        fn, _ = QFileDialog.getOpenFileName(self, "Load settings", "", "JSON (*.json)")
         if not fn:
             return
         try:
             self.s.load_user_file(Path(fn))
-            QMessageBox.information(self, "Settings", f"Geladen:\n{fn}")
+            QMessageBox.information(self, "Settings", f"Loaded:\n{fn}")
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Laden", str(e))
+            QMessageBox.critical(self, "Error loading", str(e))
 
-    def _action_save(self):
-        last = getattr(self.s, "_last_user_file", None)
-        if last is None:
-            self._action_save_as()
-            return
+    def _action_save_default(self):
         try:
-            self.s.save_user_file_as(last)
-            QMessageBox.information(self, "Settings", f"Gespeichert:\n{last}")
+            msg = QMessageBox()
+            ret = msg.question(self, "Confirm Overwrite",
+                                 "This will overwrite the default settings file. Continue?",
+                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            #msg.exec()
+            if ret == QMessageBox.StandardButton.No:
+                return
+            self.s.save_default()
+            QMessageBox.information(self, "Settings", f"Saved as default settings.")
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Speichern", str(e))
+            QMessageBox.critical(self, "Error saving", str(e))
 
     def _action_save_as(self):
-        fn, _ = QFileDialog.getSaveFileName(self, "Settings speichern als…", "settings.json", "JSON (*.json)")
+        fn, _ = QFileDialog.getSaveFileName(self, "Save settings as…", "settings.json", "JSON (*.json)")
         if not fn:
             return
         try:
             self.s.save_user_file_as(Path(fn))
-            QMessageBox.information(self, "Settings", f"Gespeichert als:\n{fn}")
+            QMessageBox.information(self, "Settings", f"Saved as:\n{fn}")
         except Exception as e:
-            QMessageBox.critical(self, "Fehler beim Speichern", str(e))
+            QMessageBox.critical(self, "Error saving", str(e))
 
     # ---------------- Rebuild ----------------
     def rebuild_from_settings(self):
@@ -119,7 +130,7 @@ class SettingsEditorWidget(QWidget):
         self._path_readers.clear()
 
         if not isinstance(data, dict):
-            # defensive: root sollte dict sein
+            # defensive: root should be a dict
             box = self._make_group_box("Settings", self._target_layout)
             self._add_value_widget("(root)", data, "root", box.layout())
         else:
@@ -129,11 +140,11 @@ class SettingsEditorWidget(QWidget):
                 if isinstance(val, dict):
                     self._add_group_for_dict(title=key, d=val, base_path=path, parent_layout=self._target_layout)
                 else:
-                    # Top-Level-Scalar -> eigene GroupBox mit einer Zeile
+                    # Top-level scalar -> its own GroupBox with a single row
                     box = self._make_group_box(key, self._target_layout)
                     self._add_value_widget(key, val, path, box.layout())
 
-        # Stretch am Ende, damit oben nicht gequetscht
+        # Stretch at the end so the top isn't cramped
         self._target_layout.addStretch(1)
 
     def _clear_layout(self, layout: QVBoxLayout):
@@ -143,7 +154,7 @@ class SettingsEditorWidget(QWidget):
             if w:
                 w.deleteLater()
 
-    # ---------------- Builder (rekursiv) ----------------
+    # ---------------- Builder (recursive) ----------------
     def _add_group_for_dict(self, title: str, d: JsonObj, base_path: str, parent_layout: QVBoxLayout):
         box = self._make_group_box(title, parent_layout)
         layout = box.layout()
@@ -162,10 +173,10 @@ class SettingsEditorWidget(QWidget):
                 self._add_scalar_list_row(key, v, path, parent_layout)
             else:
                 row = self._make_row(parent_layout)
-                row.addWidget(QLabel(f"{key} (Liste mit Objekten derzeit nicht unterstützt)"))
+                row.addWidget(QLabel(f"{key} (list of objects currently not supported)"))
             return
 
-        # --- Scalar Werte (String/Int/Float/Bool/None) ---
+        # --- Scalar values (String/Int/Float/Bool/None) ---
         self._add_scalar_row(key, v, path, parent_layout)
 
     def _list_is_scalar(self, arr: List[Any]) -> bool:
@@ -174,7 +185,7 @@ class SettingsEditorWidget(QWidget):
         scalar_types = (str, int, float, bool)
         return all(isinstance(x, scalar_types) or x is None for x in arr)
 
-    # ---------------- Leaf-Renderer ----------------
+    # ---------------- Leaf renderer ----------------
     def _add_scalar_row(self, key: str, value: Any, path: str, parent_layout: QVBoxLayout):
         row = self._make_row(parent_layout)
 
@@ -197,8 +208,10 @@ class SettingsEditorWidget(QWidget):
         # UI -> Settings
         connect_change(lambda *_: self._on_ui_scalar_changed(path, getter))
 
-        # Initialwert aus Settings (falls nicht vorhanden, den Default-Wert nutzen)
+        # initial value from settings (if missing, use the default value)
         apply(self.s.get(path, value))
+        row.addWidget(editor, 1)
+        
 
         row.addStretch(1)
 
@@ -214,7 +227,7 @@ class SettingsEditorWidget(QWidget):
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(6)
 
-        # aktuelle Werte holen
+        # get current values
         current_vals = self.s.get(path, values)
         if not isinstance(current_vals, list):
             current_vals = list(values)
@@ -232,7 +245,7 @@ class SettingsEditorWidget(QWidget):
 
         def apply_list(new_vals):
             if not isinstance(new_vals, list) or len(new_vals) != len(element_editors):
-                # Struktur/Laenge geändert -> kompletter Rebuild
+                # structure/length changed -> full rebuild
                 self.rebuild_from_settings()
                 return
             self._updating_from_settings = True
@@ -257,7 +270,7 @@ class SettingsEditorWidget(QWidget):
         row.addWidget(container, 1)
         row.addStretch(0)
 
-    # ---------------- Editor-Fabrik ----------------
+    # ---------------- Editor factory ----------------
     def _make_scalar_editor(self, sample: Any) -> tuple[QWidget, Callable[[], Any], Callable[[Callable], None]]:
         # Bool
         if isinstance(sample, bool):
@@ -266,7 +279,7 @@ class SettingsEditorWidget(QWidget):
             def connect(cb): w.stateChanged.connect(cb)
             return w, getter, connect
 
-        # Int (nicht-Bool)
+        # Int (non-bool)
         if isinstance(sample, int) and not isinstance(sample, bool):
             w = QSpinBox()
             w.setRange(-2_000_000_000, 2_000_000_000)
@@ -287,7 +300,7 @@ class SettingsEditorWidget(QWidget):
         # String / None -> LineEdit
         w = QLineEdit()
         def getter(): return w.text()
-        # „fertig getippt“ reicht oft, andernfalls textEdited für live
+        # "finished editing" is often enough; otherwise use textEdited for live updates
         def connect(cb): w.editingFinished.connect(cb)
         return w, getter, connect
 
@@ -318,7 +331,7 @@ class SettingsEditorWidget(QWidget):
     # ---------------- Helpers ----------------
     def _make_group_box(self, title: str, parent_layout: QVBoxLayout) -> QGroupBox:
         box = QGroupBox(title)
-        # Wichtig: nicht „Maximum“, sonst kann Inhalt „verschwinden“
+        # Important: not 'Maximum', otherwise content may "disappear"
         box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         lay = QVBoxLayout(box)
         lay.setContentsMargins(8, 8, 8, 8)

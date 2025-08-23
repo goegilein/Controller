@@ -26,6 +26,7 @@ class SettingsManager(QObject):
         self._user: Dict[str, Any] = {}          # current user layer
         self._session: Dict[str, Any] = {}       # ephemeral overrides
         self._last_user_file: Optional[pathlib.Path] = None
+        self.load_user_file(default_path)
 
     # ---------- Public API ----------
     def get(self, path: str, fallback: Any=None) -> Any:
@@ -47,8 +48,8 @@ class SettingsManager(QObject):
             self._set_in(target, path, value)
 
             # 3) persist (only user layer)
-            if persist and layer == "user" and self._last_user_file:
-                self._atomic_write_json(self._last_user_file, self._user)
+            # if persist and layer == "user" and self._last_user_file:
+            #     self._atomic_write_json(self._last_user_file, self._user)
 
         self.settingChanged.emit(path, value)
 
@@ -72,11 +73,17 @@ class SettingsManager(QObject):
             self._user = data or {}
             self._last_user_file = path
         self.settingsReplaced.emit()
+    
+    def load_default(self):
+        self.load_user_file(self._default_path)
 
     def save_user_file_as(self, path: pathlib.Path):
         with self._lock:
             self._atomic_write_json(path, self._user)
             self._last_user_file = path
+        
+    def save_default(self):
+        self.save_user_file_as(self._default_path)
 
     def export_full_merged(self, path: pathlib.Path):
         with self._lock:
@@ -139,10 +146,11 @@ class SettingsManager(QObject):
     @staticmethod
     def _atomic_write_json(p: pathlib.Path, data: Dict[str, Any]):
         p.parent.mkdir(parents=True, exist_ok=True)
-        tmp = pathlib.Path(tempfile.mkstemp(dir=p.parent, prefix=p.name, suffix=".tmp")[1])
-        try:
-            tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-            shutil.move(str(tmp), str(p))
-        finally:
-            if tmp.exists():
-                tmp.unlink(missing_ok=True)
+        p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        # tmp = pathlib.Path(tempfile.mkstemp(dir=p.parent, prefix=p.name, suffix=".tmp")[1])
+        # try:
+        #     tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        #     shutil.move(str(tmp), str(p))
+        # finally:
+        #     if tmp.exists():
+        #         tmp.unlink(missing_ok=True)
