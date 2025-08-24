@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/laser-settings.schema.json",
+  "title": "Laser Controller Settings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artisan", "overview_camera", "ui"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Semantic version of this settings schema",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artisan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_connection_type", "motion", "laser1064"],
+      "properties": {
+        "default_connection_type": {
+          "type": "string",
+          "enum": ["usb", "tcp"]
+        },
+        "port": {
+          "type": "string",
+          "description": "Serial port name, e.g. COM6 or /dev/ttyUSB0"
+        },
+        "baudrate": {
+          "type": "integer",
+          "minimum": 1200,
+          "maximum": 2000000
+        },
+        "ip": {
+          "type": "string",
+          "format": "ipv4"
+        },
+        "tcp_port": {
+          "description": "TCP port if using tcp; allow legacy \"None\" string",
+          "oneOf": [
+            { "type": "integer", "minimum": 1, "maximum": 65535 },
+            { "type": "null" },
+            { "type": "string", "enum": ["None"] }
+          ]
+        },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default_speed", "default_step_width", "max_z_speed"],
+          "properties": {
+            "default_speed": { "type": "integer", "minimum": 0, "maximum": 100000 },
+            "default_step_width": { "type": "integer", "minimum": 0, "maximum": 100000 },
+            "max_z_speed": { "type": "integer", "minimum": 0, "maximum": 100000 }
+          }
+        },
+        "laser1064": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["laser_offset"],
+          "properties": {
+            "laser_offset": {
+              "type": "array",
+              "description": "XYZ offset",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": { "type": "number" }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "default_connection_type": { "const": "usb" } },
+            "required": ["default_connection_type"]
+          },
+          "then": {
+            "required": ["port", "baudrate"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "default_connection_type": { "const": "tcp" } },
+            "required": ["default_connection_type"]
+          },
+          "then": {
+            "required": ["ip", "tcp_port"]
+          }
+        }
+      ]
+    },
+    "overview_camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["camera_index", "frame_rate"],
+      "properties": {
+        "camera_index": {
+          "description": "-1 to auto-select, >=0 for explicit camera index",
+          "anyOf": [
+            { "type": "integer", "enum": [-1] },
+            { "type": "integer", "minimum": 0 }
+          ]
+        },
+        "frame_rate": { "type": "integer", "minimum": 1, "maximum": 240 }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["theme", "language"],
+      "properties": {
+        "theme": { "type": "string", "enum": ["dark", "light"] },
+        "language": {
+          "type": "string",
+          "description": "BCP47-ish tag like en, en-US, de-DE",
+          "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+        }
+      }
+    }
+  }
+}

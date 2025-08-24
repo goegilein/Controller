@@ -1,19 +1,24 @@
 import sys
 import cv2
 from PyQt6 import QtWidgets, uic, QtGui, QtCore
-import time
-
+from Settings_Manager import SettingsManager
 class USBCameraController:
-    def __init__(self, camera_index=-1):
-        self.camera_index = camera_index
-        self.camera_name = f"Camera {camera_index}"
+    def __init__(self, settings: SettingsManager,camera_type):
+        self.s = settings
+        self.camera_type=camera_type
+        self.timer = QtCore.QTimer()
+        self.load_settings()
+        # self.camera_index = settings.get(camera_type+".camera_index", -1)
+        # self.camera_name = f"Camera {self.camera_index}"
         self.cap = None
         self.connected = False
         self._current_frame = None
         self.frame_changed_callback = None
-        self.timer = QtCore.QTimer()
-        self._frame_rate = 30
+        # self._frame_rate = settings.get(camera_type+".frame_rate", 30)
         self._last_log = ''
+
+        settings.settingChanged.connect(self.load_settings)  # Reload settings if they change
+        settings.settingsReplaced.connect(self.load_settings)  # Reload settings if they are replaced
 
     @property
     def current_frame(self):
@@ -40,6 +45,14 @@ class USBCameraController:
 
     def set_log_callback(self, callback):
         self.log_callback = callback
+
+
+    def load_settings(self):
+        """Load settings from the SettingsManager."""
+        self.camera_index = self.s.get(self.camera_type + ".camera_index", -1)
+        self.camera_name = f"Camera {self.camera_index}"
+        self._frame_rate = self.s.get(self.camera_type + ".frame_rate", 30)
+        self.set_frame_rate(self._frame_rate)        
 
     def connect(self):
         try:

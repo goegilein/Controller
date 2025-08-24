@@ -3,23 +3,26 @@ import socket
 import threading
 import time
 from PyQt6 import QtWidgets
+from Settings_Manager import SettingsManager
 
 class ArtisanController():
-    def __init__(self, connection_type="usb", port=None, baudrate=115200, ip=None, tcp_port=None):
+    #def __init__(self, connection_type="usb", port=None, baudrate=115200, ip=None, tcp_port=None):
+    def __init__(self, settings: SettingsManager):
+
         """
         Initialize the Snapmaker controller.
-        :param connection_type: "usb" or "tcp"
-        :param port: USB port (e.g., 'COM3' or '/dev/ttyUSB0') if using USB.
-        :param baudrate: Baud rate for USB communication.
-        :param ip: IP address of Snapmaker if using TCP/IP.
-        :param tcp_port: Port number for TCP/IP communication.
+        parameters are loaded from the settings manager.
         """
-        self.port=port
-        self.baudrate=baudrate
-        self.ip=ip
-        self.tcp_port=tcp_port
+        #load settings from the SettingsManager
+        self.s = settings
+        self.load_settings()
+        settings.settingChanged.connect(self.load_settings) #reload settings if they change
+        settings.settingsReplaced.connect(self.load_settings) #reload settings if they are replaced
+
+        # Initialize parameters
+        self.comand_lock = threading.Lock()
+        self.is_homed = False
         self.connection = None
-        self.connection_type = connection_type
         self.is_moving = False
         self.last_response = None
         self.abs_position = None   
@@ -27,15 +30,9 @@ class ArtisanController():
         self.origin_offset = [0, 0, 0] # Offset from the work position to the maschine origin
         self._laser_offset = None # Offset for the laser. set in get_maschine_info()
         self._tool_head = None # Tool head type, set in get_maschine_info(). Can be "laser1064" or "laser455"
-
-        self.speed=30
-        self.step_width=10
         
-        
-        self.comand_lock = threading.Lock()
-        self.is_homed = False
 
-        # Add internal variables thatare tracked and callbacks that can be connected to from a receiving class
+        # Add internal variables that are tracked and callbacks that can be connected to from a receiving class
         self._current_position = [0, 0, 0]
         self._last_log = ''
         self._process_state = "Idle"  # Possible states: "Idle", "Running", "Paused",
@@ -92,6 +89,18 @@ class ArtisanController():
     @property
     def tool_head(self):
         return self._tool_head
+
+    def load_settings(self):
+
+        self.port=self.s.get("artisan.port", "COM6")
+        self.baudrate=self.s.get("artisan.baudrate", 115200)
+        self.ip=self.s.get("artisan.ip", "192.168.178.44")
+        self.tcp_port=self.s.get("artisan.tcp_port", None)
+        self.connection_type = self.s.get("artisan.default_connection_type", "usb")  # "usb" or "tcp"
+
+        self.speed=self.s.get("artisan.motion.default_speed", 30) # Default speed for axis movement
+        self.step_width=self.s.get("artisan.motion.default_step_width", 10) # Default step width for axis movement
+        self.max_z_speed=self.s.get("artisan.motoin.max_z_speed", 30) # Maximum speed for Z-axis, to prevent crashing into the bed
 
     def connect(self):
         if self.connection_type == "usb" and self.port:
@@ -237,8 +246,8 @@ class ArtisanController():
 
         self.is_moving = True
         #limit speed for Z-Axis!
-        if axis=="Z" and speed >30:
-                speed=30
+        if axis=="Z" and speed >self.max_z_speed:
+                speed=self.max_z_speed
 
         def move():
             # Set to relative positioning
@@ -278,8 +287,8 @@ class ArtisanController():
         self.send_command("G91")
 
         #limit speed for Z-Axis!
-        if axis=="Z" and speed >30:
-                speed=30
+        if axis=="Z" and speed >self.max_z_speed:
+                speed=self.max_z_speed
 
         # Move the axis
         self.send_command(f"G0 {axis}{direction*distance} F{speed*60}")
@@ -313,8 +322,8 @@ class ArtisanController():
             self.last_log = "Error: Invalid move mode. Must be 'absolute' or 'relative'."
 
         #limit speed for Z-Axis!
-        if speed >30:
-            speed=30
+        if speed >self.max_z_speed:
+            speed=self.max_z_speed
 
         # Move the axis
         self.send_command(f"G0 X{x} Y{y} Z{z} F{speed*60}")
@@ -342,8 +351,8 @@ class ArtisanController():
         self.send_command("G90")
 
         #limit speed for Z-Axis!
-        if speed >30:
-            speed=30
+        if speed >self.max_z_speed:
+            speed=self.max_z_speed
 
         # Adjust coordinates based on origin offset
         x-=self.origin_offset[0]
@@ -534,7 +543,7 @@ class ArtisanController():
                 #this ius a 2W 1064 pulsed laser
                 self.last_log = "2W 1064 pulsed laser detected. Setting offsets for this laser."
                 self._tool_head = "laser1064"
-                self._laser_offset = [21.2, -11.3, 0]
+                self._laser_offset = self.s.get("artisan.laser1064.laser_offset",[21.2, -11.3, 0])
             elif tool_head == "LASER" and len(toolhead_info) == 34:
                 # this is a 40W 455 cw laser
                 self.last_log = "40W 455 cw laser detected. Setting offsets for this laser."
