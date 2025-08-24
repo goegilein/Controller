@@ -29,7 +29,7 @@ gui.show()
 
 #setup Settings Manager
 
-settings = Settings_Manager.SettingsManager(default_path=DEFAULT_SETTINGS_PATH, schema_validator=None)
+settings = Settings_Manager.SettingsManager(default_settings_path=DEFAULT_SETTINGS_PATH, schema_path=SCHEMA_PATH, use_validation=True)
 
 
 #setup controllers

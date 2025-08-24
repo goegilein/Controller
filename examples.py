@@ -37,7 +37,7 @@ def make_schema_validator_or_none():
 
 def create_settings_manager() -> SettingsManager:
     validator = make_schema_validator_or_none()
-    sm = SettingsManager(default_path=DEFAULT_SETTINGS_PATH, schema_validator=validator)
+    sm = SettingsManager(default_settings_path=DEFAULT_SETTINGS_PATH, schema_validator=validator)
     return sm
 
 # ------------------------------------------------------------
@@ -119,7 +119,7 @@ class MainWindow(QMainWindow):
         # Wenn bereits eine User-Datei zugewiesen ist, speichern; sonst Save As…
         if getattr(self.sm, "_last_user_file", None):
             try:
-                self.sm.save_user_file_as(self.sm._last_user_file)
+                self.sm.save_user_file_as(self.sm._last_active_file)
                 QMessageBox.information(self, "Settings", "Settings gespeichert.")
             except Exception as e:
                 QMessageBox.critical(self, "Fehler beim Speichern", str(e))
