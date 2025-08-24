@@ -1,5 +1,5 @@
 from PyQt6 import QtWidgets, uic, QtCore
-from PyQt6.QtWidgets import QDialog, QVBoxLayout
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QMessageBox
 from Settings_Binder import SettingsEditorWidget
 from Settings_Manager import SettingsManager
 from BaseClasses import BaseClass
@@ -31,6 +31,9 @@ class MainInterface(BaseClass):
         self.edit_settings_action = gui.edit_settings_action
         self.edit_settings_action.triggered.connect(self.open_settings_dialog)
 
+        #Signal connections
+        self.sm.settingValidationError.connect(self._on_validation_error)
+
     def connect_all(self):
         self.artisan_controller.connect()
         self.OCam_controller.connect()
@@ -56,6 +59,14 @@ class MainInterface(BaseClass):
         lay.addWidget(SettingsEditorWidget(self.sm, SETTINGS_GUI_PATH, parent=dlg))
         dlg.resize(700, 800)
         dlg.exec()
+    
+    def _on_validation_error(self, error):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Critical)
+        msg.setWindowTitle("Settings Validation Error")
+        msg.setText(f"There was an error validating the settings:")
+        msg.setDetailedText(str(error))
+        msg.exec()
 
 class ConnectionStatusWindow(QtWidgets.QWidget):
     def __init__(self, controllers):       

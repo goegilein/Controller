@@ -73,7 +73,6 @@ class SettingsEditorWidget(QWidget):
         # Settings events
         self.s.settingChanged.connect(self._on_setting_changed)
         self.s.settingsReplaced.connect(self.rebuild_from_settings)
-        self.s.settingValidationError.connect(self._on_validation_error)
 
     # ---------------- Find & connect buttons ----------------
     def _connect_button(self, object_name: str, slot: Callable[[], None]):
@@ -348,10 +347,3 @@ class SettingsEditorWidget(QWidget):
         parent_layout.addWidget(row_container)
         return row
     
-    def _on_validation_error(self, error):
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Icon.Critical)
-        msg.setWindowTitle("Settings Validation Error")
-        msg.setText(f"There was an error validating the settings: \n{error}")
-        msg.setDetailedText(str(error))
-        msg.exec()
