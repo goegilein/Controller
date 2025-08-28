@@ -15,7 +15,8 @@ class MainInterface(BaseClass):
         self.controllers=controllers
         self.sm = settings
         self.artisan_controller = controllers["artisan_controller"]
-        self.OCam_controller = controllers["OCam_controller"]
+        self.overview_camera_controller = controllers["overview_camera_controller"]
+        self.laser_camera_controller = controllers["laser_camera_controller"]
 
         # Store the options window as an instance attribute
         self.connection_status_window = None
@@ -36,11 +37,13 @@ class MainInterface(BaseClass):
 
     def connect_all(self):
         self.artisan_controller.connect()
-        self.OCam_controller.connect()
+        self.overview_camera_controller.connect()
+        self.laser_camera_controller.connect()
 
     def disconnect_all(self):
         self.artisan_controller.disconnect()
-        self.OCam_controller.disconnect()
+        self.overview_camera_controller.disconnect()
+        self.laser_camera_controller.disconnect()
     
     def show_connection_status(self):
         if self.connection_status_window:
@@ -77,7 +80,8 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
 
         #controllers
         self.artisan_controller = controllers["artisan_controller"]
-        self.OCam_controller = controllers["OCam_controller"]
+        self.overview_camera_controller = controllers.get("overview_camera_controller", None)  # Optional
+        self.laser_camera_controller = controllers.get("laser_camera_controller", None)  # Optional
 
         #artisan connect gui
         self.artisan_port_lineEdit = gui.artisan_port_lineEdit
@@ -87,15 +91,23 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         self.artisan_connect_button.clicked.connect(lambda: self.connect_disconnect(self.artisan_controller))
         self.artisan_port_lineEdit.textChanged.connect(lambda: self.set_port(self.artisan_controller))
         
-        #OCam connect gui
-        self.OCam_connect_button = gui.OCam_connect_button
-        self.OCam_connect_label = gui.OCam_connect_label
-        self.OCam_select_comboBox = gui.OCam_select_comboBox
-        #self.OCam_select_comboBox.addItems([f"Camera {i}" for i in range(5)]) #need to change this to get items
-        self.populate_camera_list(self.OCam_select_comboBox)
+        #overview_camera connect gui
+        self.overview_camera_connect_button = gui.overview_camera_connect_button
+        self.overview_camera_connect_label = gui.overview_camera_connect_label
+        self.overview_camera_select_comboBox = gui.overview_camera_select_comboBox
+        self.populate_camera_list(self.overview_camera_select_comboBox)
         
-        self.OCam_connect_button.clicked.connect(lambda: self.connect_disconnect(self.OCam_controller))
-        self.OCam_select_comboBox.currentIndexChanged.connect(lambda: self.change_camera(self.OCam_controller))
+        self.overview_camera_connect_button.clicked.connect(lambda: self.connect_disconnect(self.overview_camera_controller))
+        self.overview_camera_select_comboBox.currentIndexChanged.connect(lambda: self.change_camera(self.overview_camera_controller))
+
+        #Laser connect gui
+        self.laser_camera_connect_button = gui.laser_camera_connect_button
+        self.laser_camera_connect_label = gui.laser_camera_connect_label
+        self.laser_camera_select_comboBox = gui.laser_camera_select_comboBox
+        self.populate_camera_list(self.laser_camera_select_comboBox)
+        
+        self.laser_camera_connect_button.clicked.connect(lambda: self.connect_disconnect(self.laser_camera_controller))
+        self.laser_camera_select_comboBox.currentIndexChanged.connect(lambda: self.change_camera(self.laser_camera_controller))
         
         
         self.update_gui()
@@ -112,16 +124,27 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
             self.artisan_connect_label.setText('Disconnected')
             self.artisan_connect_label.setStyleSheet("color: red;")
         
-        #Overview Camera (OCam)
-        self.OCam_select_comboBox.setCurrentIndex(self.OCam_controller.camera_index+1)  # +1 to account for the placeholder
-        if self.OCam_controller.connected:
-            self.OCam_connect_button.setText('disconnect')
-            self.OCam_connect_label.setText(f'Connected on Camera {self.OCam_controller.camera_index}')
-            self.OCam_connect_label.setStyleSheet("color: green;")
+        #Overview Camera (Overview Camera)
+        self.overview_camera_select_comboBox.setCurrentIndex(self.overview_camera_controller.camera_index+1)  # +1 to account for the placeholder
+        if self.overview_camera_controller.connected:
+            self.overview_camera_connect_button.setText('disconnect')
+            self.overview_camera_connect_label.setText(f'Connected on Camera {self.overview_camera_controller.camera_index}')
+            self.overview_camera_connect_label.setStyleSheet("color: green;")
         else:
-            self.OCam_connect_button.setText('connect')
-            self.OCam_connect_label.setText('Disconnected')
-            self.OCam_connect_label.setStyleSheet("color: red;")
+            self.overview_camera_connect_button.setText('connect')
+            self.overview_camera_connect_label.setText('Disconnected')
+            self.overview_camera_connect_label.setStyleSheet("color: red;")
+
+        #Laser Camera (Laser Camera)
+        self.laser_camera_select_comboBox.setCurrentIndex(self.laser_camera_controller.camera_index+1)  # +1 to account for the placeholder
+        if self.laser_camera_controller.connected:
+            self.laser_camera_connect_button.setText('disconnect')
+            self.laser_camera_connect_label.setText(f'Connected on Camera {self.laser_camera_controller.camera_index}')
+            self.laser_camera_connect_label.setStyleSheet("color: green;")
+        else:
+            self.laser_camera_connect_button.setText('connect')
+            self.laser_camera_connect_label.setText('Disconnected')
+            self.laser_camera_connect_label.setStyleSheet("color: red;")
     
     def connect_disconnect(self,controller):
         sender=self.sender()
@@ -136,7 +159,7 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         controller.port=sender.text()
     
     def populate_camera_list(self, combobox):
-        self.OCam_select_comboBox.clear()
+        combobox.clear()
         c = wmi.WMI()
         available_cameras = ['None']
         # 'usbvideo' is the service name for USB Video Class devices

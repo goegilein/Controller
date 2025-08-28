@@ -229,11 +229,11 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     <item row="0" column="0">
      <widget class="QTabWidget" name="Cameras_tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="Cam1_tab">
        <attribute name="title">
-        <string>Camera 1</string>
+        <string>Overview</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_7">
         <item row="2" column="0">
@@ -246,16 +246,23 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>
            <item row="0" column="0">
-            <widget class="QPushButton" name="OCam_start_button">
+            <widget class="QPushButton" name="overview_camera_start_button">
              <property name="text">
-              <string>start</string>
+              <string>Start</string>
              </property>
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QPushButton" name="OCam_stop_button">
+            <widget class="QPushButton" name="overview_camera_stop_button">
              <property name="text">
-              <string>stop</string>
+              <string>Stop</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="overview_camera_save_image_button">
+             <property name="text">
+              <string>Save Image</string>
              </property>
             </widget>
            </item>
@@ -263,7 +270,7 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
          </widget>
         </item>
         <item row="1" column="0">
-         <widget class="QGraphicsView" name="OCam_View">
+         <widget class="QGraphicsView" name="overview_camera_view">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>100</horstretch>
@@ -279,8 +286,43 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
       </widget>
       <widget class="QWidget" name="Cam2_tab">
        <attribute name="title">
-        <string>Camera 2</string>
+        <string>Laser</string>
        </attribute>
+       <layout class="QGridLayout" name="gridLayout_11">
+        <item row="0" column="0">
+         <widget class="QGraphicsView" name="laser_camera_view"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_3">
+          <property name="title">
+           <string>Camera</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_12">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="laser_camera_start_button">
+             <property name="text">
+              <string>Start</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="laser_camera_stop_button">
+             <property name="text">
+              <string>Stop</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="laser_camera_save_image_button">
+             <property name="text">
+              <string>Save Image</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
@@ -1280,6 +1322,13 @@ is OFF</string>
         </widget>
        </item>
       </layout>
+     </widget>
+    </item>
+    <item row="2" column="2">
+     <widget class="QPushButton" name="test_button">
+      <property name="text">
+       <string>TestButton</string>
+      </property>
      </widget>
     </item>
    </layout>

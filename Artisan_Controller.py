@@ -3,6 +3,7 @@ import socket
 import threading
 import time
 from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import QMessageBox
 from Settings_Manager import SettingsManager
 
 class ArtisanController():
@@ -119,13 +120,19 @@ class ArtisanController():
         
         self.connected=True
         if not self.is_homed:
-            dialog = QtWidgets.QMessageBox()
-            dialog.setWindowTitle("Homing Required")
-            dialog.setText("Artisan must be homed before use.\nPlease ensure the workspace is clear and press OK to continue.")
-            dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-            dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-            dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Ok)
-            dialog.exec()
+            # dialog = QtWidgets.QMessageBox()
+            # dialog.setWindowTitle("Homing Required")
+            # dialog.setText("Artisan must be homed before use.\nPlease ensure the workspace is clear and press OK to continue.")
+            # dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+            # dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+            # dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Ok)
+            # dialog.exec()
+            msg = QMessageBox()
+            ret = msg.question(None, "Homing Required",
+                                 "Upon Starting it is recommended to home all axes first, to avoid unexpected behavior. \nRun homing routine now?",
+                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if ret == QMessageBox.StandardButton.No:
+                return
             self.home_axis()
             self.is_homed = True
         

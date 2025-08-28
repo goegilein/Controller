@@ -17,6 +17,7 @@ class USBCameraController:
         # self._frame_rate = settings.get(camera_type+".frame_rate", 30)
         self._last_log = ''
 
+        #Callbacks for Setting changes
         settings.settingChanged.connect(self.load_settings)  # Reload settings if they change
         settings.settingsReplaced.connect(self.load_settings)  # Reload settings if they are replaced
 
@@ -52,7 +53,9 @@ class USBCameraController:
         self.camera_index = self.s.get(self.camera_type + ".camera_index", -1)
         self.camera_name = f"Camera {self.camera_index}"
         self._frame_rate = self.s.get(self.camera_type + ".frame_rate", 30)
-        self.set_frame_rate(self._frame_rate)        
+        self.set_frame_rate(self._frame_rate)
+        self.flip_vertical = self.s.get(self.camera_type + ".flip_vertical", False)
+        self.flip_horizontal = self.s.get(self.camera_type + ".flip_horizontal", False)   
 
     def connect(self):
         try:
@@ -72,9 +75,16 @@ class USBCameraController:
     def capture_frame(self):
         if self.cap is None or not self.cap.isOpened():
             raise Exception(f"Camera {self.camera_name} is not opened")
-        ret, self.current_frame = self.cap.read()
+        ret, frame = self.cap.read()
         if not ret:
             raise Exception(f"Failed to capture frame on camera {self.camera_name}")
+        
+        if self.flip_vertical:
+            frame = cv2.flip(frame, 0)
+        if self.flip_horizontal:
+            frame = cv2.flip(frame, 1)
+
+        self.current_frame = frame
         #return frame
     
     def start_camera(self):

@@ -21,10 +21,40 @@
   },
   "overview_camera": {
     "camera_index": -1,
-    "frame_rate": 30
+    "frame_rate": 30,
+    "flip_vertical": false,
+    "flip_horizontal": false,
+    "crosshair_overlay": {
+      "active": false,
+      "horizontal_position": 0.5,
+      "vertical_position": 0.5,
+      "color": [
+        0,
+        255,
+        0
+      ],
+      "thickness": 1
+    }
+  },
+  "laser_camera": {
+    "camera_index": 1,
+    "frame_rate": 30,
+    "flip_vertical": true,
+    "flip_horizontal": true,
+    "crosshair_overlay": {
+      "active": true,
+      "horizontal_position": 0.45,
+      "vertical_position": 0.531,
+      "color": [
+        0,
+        255,
+        0
+      ],
+      "thickness": 1
+    }
   },
   "ui": {
-    "theme": "dark",
-    "language": "de-DE"
+    "theme": "bright",
+    "language": "en-EN"
   }
 }
