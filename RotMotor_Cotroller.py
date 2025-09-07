@@ -155,7 +155,7 @@ class RotMotorCotroller:
             return "Done"
         raise RuntimeError("Selected series module not available")
 
-    def move_motor(self, sid: int= None, blocking: bool=False):
+    def move_motor_to_target(self, sid: int= None, blocking: bool=False):
         if sid == None:
             ids = self.get_motor_ids()
         else: 
@@ -167,15 +167,30 @@ class RotMotorCotroller:
             acc = self.get_motor_by_id(id).acc
 
             self.write_pos(id, pos, speed, acc, blocking)
-
-    def home_motor(self, sid: int= None):
+    
+    def move_motor_by_deg(self, sid: int = None, delta_deg: float = 0.1, blocking: bool=False):
         if sid == None:
             ids = self.get_motor_ids()
         else: 
             ids = [sid]
         
         for id in ids:
-            home_pos = self.get_motor_by_id(id).home_position
+            current_pos_deg = self.read_pos_deg(sid)
+            target_pos = int(((current_pos_deg + delta_deg) / 360) * 4095)
+            speed = self.get_motor_by_id(id).speed
+            acc = self.get_motor_by_id(id).acc
+            self.write_pos(sid, target_pos, speed, acc, blocking)
+            return True
+        return False
+
+    def move_motor_to_wp(self, sid: int= None):
+        if sid == None:
+            ids = self.get_motor_ids()
+        else: 
+            ids = [sid]
+        
+        for id in ids:
+            home_pos = self.get_motor_by_id(id).work_position
             speed = self.get_motor_by_id(id).speed
             acc = self.get_motor_by_id(id).acc
             self.write_pos(id, home_pos, speed, acc, blocking=True)
@@ -186,6 +201,13 @@ class RotMotorCotroller:
         if self.series in ("ST", "STS") and sms_sts:
             return sms_sts(self.portHandler).ReadPos(sid)[0]
         raise RuntimeError("Selected series module not available")
+    
+    def read_pos_deg(self, sid: int) -> float:
+        motor = self.get_motor_by_id(sid)
+        if motor:
+            pos = self.read_pos(sid)
+            return round((pos / 4095) * 360, 2)
+        return None
     
     def read_moving(self, sid: int = None) -> bool:
         if sid == None:
@@ -232,37 +254,37 @@ class RotMotorCotroller:
     def get_acc(self, sid: int) -> int:
         return self.get_motor_by_id(sid).acc
     
-    def set_target_position(self, sid: int, position_deg: float):
+    def set_target_position_deg(self, sid: int, position_deg: float):
         motor = self.get_motor_by_id(sid)
         if motor:
             motor.target_position_deg = position_deg
             return True
         return False
     
-    def get_target_position(self, sid: int) -> float:
+    def get_target_position_deg(self, sid: int) -> float:
         motor = self.get_motor_by_id(sid)
         if motor:
             return motor.target_position_deg
         return None
     
-    def set_home_position(self, sid: int):
+    def set_work_position(self, sid: int):
         motor = self.get_motor_by_id(sid)
         if motor:
             pos = self.read_pos(sid)
-            motor.home_position = pos
+            motor.work_position = pos
             return True
         return False
     
-    def get_home_position(self, sid: int) -> int:
+    def get_work_position(self, sid: int) -> int:
         motor = self.get_motor_by_id(sid)
         if motor:
-            return motor.home_position
+            return motor.work_position
         return None
     
-    def get_home_position_deg(self, sid: int) -> float:
+    def get_work_position_deg(self, sid: int) -> float:
         motor = self.get_motor_by_id(sid)
         if motor:
-            return motor.convert_position_to_degrees(motor.home_position)
+            return motor.convert_position_to_degrees(motor.work_position)
         return None
     
     def is_connection_active(self) -> bool:
@@ -280,13 +302,13 @@ class RotMotorCotroller:
         return [motor.ID for motor in self.motors]
     
 class RotMotor():
-    def __init__(self, ID, position=0, speed=1000, acc=50):
+    def __init__(self, ID, position=0, speed=100, acc=5):
         self.ID = ID
         self._position = position
         self._position_deg = self.convert_position_to_degrees(position)
         self._target_position_deg = 0
         self._target_position = self.convert_degrees_to_position(self._target_position_deg)
-        self.home_position = position
+        self.work_position = position
         self.speed = speed
         self.acc = acc
 
@@ -317,8 +339,8 @@ class RotMotor():
     
     @target_position_deg.setter
     def target_position_deg(self, value):
-        self._target_position_deg = value
-        self._target_position = self.convert_degrees_to_position(value)
+        self._target_position_deg = value%360
+        self._target_position = self.convert_degrees_to_position(value%360)
     
     def convert_position_to_degrees(self, position):
         # Assuming a linear conversion for demonstration purposes

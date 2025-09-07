@@ -86,24 +86,32 @@ class RotMotorInterface(BaseClass):
         widget.acc_spinbox.setValue(motor.acc)
         widget.target_pos_spinbox.setValue(motor.target_position)
         
-        widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor(id,b))
-        widget.target_pos_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_target_position(i, w.target_pos_spinbox.value()))
+        widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor_to_target(id,b))
+        widget.target_pos_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_target_position_deg(i, w.target_pos_spinbox.value()))
         widget.speed_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_speed(i, w.speed_spinbox.value()))
         widget.acc_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_acc(i, w.acc_spinbox.value()))
-        widget.move_to_home_button.clicked.connect(lambda _, i=id: self.rot_mot_controller.home_motor(i))
+        widget.move_to_home_button.clicked.connect(lambda _, i=id: self.rot_mot_controller.move_motor_to_wp(i))
         
-
-        #set home position
-        def set_home_pos():
-            self.rot_mot_controller.set_home_position(id)
-            home_pos = self.rot_mot_controller.get_home_position_deg(id)
+        #set work position
+        def set_work_pos():
+            self.rot_mot_controller.set_work_position(id)
+            home_pos = self.rot_mot_controller.get_work_position_deg(id)
             widget.home_pos_spinbox.blockSignals(True)
             widget.home_pos_spinbox.setValue(home_pos)
             widget.home_pos_spinbox.blockSignals(False)
 
-        widget.set_home_button.clicked.connect(set_home_pos)
-    
+        widget.set_home_button.clicked.connect(set_work_pos)
+
+        #move by steps
+        def move_by_steps(dir):
+            # current_pos = self.rot_mot_controller.read_pos_deg(id)
+            # target_pos = current_pos + widget.step_size_spinbox.value()*dir
+            delta = widget.step_size_spinbox.value()*dir
+            # self.rot_mot_controller.set_target_position_deg(id, target_pos)
+            self.rot_mot_controller.move_motor_by_deg(id, delta, blocking=True)
         
+        widget.pos_step_button.clicked.connect(lambda _, d=1: move_by_steps(d))
+        widget.neg_step_button.clicked.connect(lambda _, d=-1: move_by_steps(d))
 
         #position tracking
         self.position_emitter = SignalEmitter()
