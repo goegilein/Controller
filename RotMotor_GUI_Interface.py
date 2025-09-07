@@ -80,16 +80,29 @@ class RotMotorInterface(BaseClass):
     def connect_widget_callbacks(self, widget, motor):
         blocking = False
         id= motor.ID
+
+        #set start values
+        widget.speed_spinbox.setValue(motor.speed)
+        widget.acc_spinbox.setValue(motor.acc)
+        widget.target_pos_spinbox.setValue(motor.target_position)
+        
         widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor(id,b))
         widget.target_pos_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_target_position(i, w.target_pos_spinbox.value()))
-        # widget.current_pos_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_current_position(motor.ID, w.current_pos_spinbox.value()))
         widget.speed_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_speed(i, w.speed_spinbox.value()))
         widget.acc_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_acc(i, w.acc_spinbox.value()))
         widget.move_to_home_button.clicked.connect(lambda _, i=id: self.rot_mot_controller.home_motor(i))
-        widget.set_home_button.clicked.connect(lambda _, i=id: self.rot_mot_controller.set_home_position(i))
-
         
 
+        #set home position
+        def set_home_pos():
+            self.rot_mot_controller.set_home_position(id)
+            home_pos = self.rot_mot_controller.get_home_position_deg(id)
+            widget.home_pos_spinbox.blockSignals(True)
+            widget.home_pos_spinbox.setValue(home_pos)
+            widget.home_pos_spinbox.blockSignals(False)
+
+        widget.set_home_button.clicked.connect(set_home_pos)
+    
         
 
         #position tracking
@@ -100,8 +113,11 @@ class RotMotorInterface(BaseClass):
 
         def update_current_position(position):
             widget.current_pos_spinbox.blockSignals(True)
+            widget.home_pos_spinbox.blockSignals(True)
             widget.current_pos_spinbox.setValue(position)
+            widget.rel_pos_spinbox.setValue(position-widget.home_pos_spinbox.value())
             widget.current_pos_spinbox.blockSignals(False)
+            widget.home_pos_spinbox.blockSignals(False)
 
         self.position_emitter.float_signal.connect(update_current_position)
         motor.set_position_changed_callback(update_pos_threadsave)

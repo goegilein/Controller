@@ -259,6 +259,12 @@ class RotMotorCotroller:
             return motor.home_position
         return None
     
+    def get_home_position_deg(self, sid: int) -> float:
+        motor = self.get_motor_by_id(sid)
+        if motor:
+            return motor.convert_position_to_degrees(motor.home_position)
+        return None
+    
     def is_connection_active(self) -> bool:
         return self.connected and self.portHandler is not None
 
