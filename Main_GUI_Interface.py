@@ -6,6 +6,7 @@ from BaseClasses import BaseClass
 from pathlib import Path
 import os
 import wmi
+import sys, serial, serial.tools.list_ports as list_ports
 
 
 class MainInterface(BaseClass):
@@ -17,6 +18,7 @@ class MainInterface(BaseClass):
         self.artisan_controller = controllers["artisan_controller"]
         self.overview_camera_controller = controllers["overview_camera_controller"]
         self.laser_camera_controller = controllers["laser_camera_controller"]
+        self.rot_mot_controller = controllers.get("rot_motor_controller", None)  # Optional
 
         # Store the options window as an instance attribute
         self.connection_status_window = None
@@ -39,11 +41,15 @@ class MainInterface(BaseClass):
         self.artisan_controller.connect()
         self.overview_camera_controller.connect()
         self.laser_camera_controller.connect()
+        if self.rot_mot_controller:
+            self.rot_mot_controller.connect()
 
     def disconnect_all(self):
         self.artisan_controller.disconnect()
         self.overview_camera_controller.disconnect()
         self.laser_camera_controller.disconnect()
+        if self.rot_mot_controller:
+            self.rot_mot_controller.disconnect()
     
     def show_connection_status(self):
         if self.connection_status_window:
@@ -82,14 +88,21 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         self.artisan_controller = controllers["artisan_controller"]
         self.overview_camera_controller = controllers.get("overview_camera_controller", None)  # Optional
         self.laser_camera_controller = controllers.get("laser_camera_controller", None)  # Optional
+        self.rot_mot_controller = controllers.get("rot_motor_controller", None)  # Optional
 
         #artisan connect gui
-        self.artisan_port_lineEdit = gui.artisan_port_lineEdit
+        self.artisan_port_combobox = gui.artisan_port_combobox
         self.artisan_connect_button = gui.artisan_connect_button
         self.artisan_connect_label = gui.artisan_connect_label
 
+        self.populate_comports(self.artisan_port_combobox)
+        for i in range(self.artisan_port_combobox.count()):
+            if self.artisan_port_combobox.itemText(i) == self.artisan_controller.port:
+                self.artisan_port_combobox.setCurrentIndex(i)
+                break
+
         self.artisan_connect_button.clicked.connect(lambda: self.connect_disconnect(self.artisan_controller))
-        self.artisan_port_lineEdit.textChanged.connect(lambda: self.set_port(self.artisan_controller))
+        self.artisan_port_combobox.currentIndexChanged.connect(lambda: self.set_port(self.artisan_controller))
         
         #overview_camera connect gui
         self.overview_camera_connect_button = gui.overview_camera_connect_button
@@ -108,13 +121,27 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         
         self.laser_camera_connect_button.clicked.connect(lambda: self.connect_disconnect(self.laser_camera_controller))
         self.laser_camera_select_comboBox.currentIndexChanged.connect(lambda: self.change_camera(self.laser_camera_controller))
+
+        #RotMot connect gui
+        self.rot_mot_port_combobox = gui.rot_mot_port_combobox
+        self.rot_mot_connect_button = gui.rot_mot_connect_button
+        self.rot_mot_connect_label = gui.rot_mot_connect_label
+
+        self.populate_comports(self.rot_mot_port_combobox)
+        for i in range(self.rot_mot_port_combobox.count()):
+            if self.rot_mot_port_combobox.itemText(i) == self.rot_mot_controller.port:
+                self.rot_mot_port_combobox.setCurrentIndex(i)
+                break
+
+        self.rot_mot_connect_button.clicked.connect(lambda: self.connect_disconnect(self.rot_mot_controller))
+        self.rot_mot_port_combobox.currentIndexChanged.connect(lambda: self.set_port(self.rot_mot_controller))
         
         
         self.update_gui()
 
     def update_gui(self):
         #artisan
-        self.artisan_port_lineEdit.setText(self.artisan_controller.port)
+        #self.artisan_port_combobox.setText(self.artisan_controller.port)
         if self.artisan_controller.is_connection_active():
             self.artisan_connect_button.setText('disconnect')
             self.artisan_connect_label.setText(f'Connected on {self.artisan_controller.port}')
@@ -145,6 +172,17 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
             self.laser_camera_connect_button.setText('connect')
             self.laser_camera_connect_label.setText('Disconnected')
             self.laser_camera_connect_label.setStyleSheet("color: red;")
+
+        #Rotary Motor Controller
+        #self.artisan_port_combobox.setText(self.artisan_controller.port)
+        if self.rot_mot_controller.is_connection_active():
+            self.rot_mot_connect_button.setText('disconnect')
+            self.rot_mot_connect_label.setText(f'Connected on {self.rot_mot_controller.port}')
+            self.rot_mot_connect_label.setStyleSheet("color: green;")
+        else:
+            self.rot_mot_connect_button.setText('connect')
+            self.rot_mot_connect_label.setText('Disconnected')
+            self.rot_mot_connect_label.setStyleSheet("color: red;")
     
     def connect_disconnect(self,controller):
         sender=self.sender()
@@ -156,7 +194,7 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
     
     def set_port(self,controller):
         sender=self.sender()
-        controller.port=sender.text()
+        controller.port=sender.currentText()
     
     def populate_camera_list(self, combobox):
         combobox.clear()
@@ -174,6 +212,11 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         sender = self.sender()
         #controller.camera_index = sender.currentIndex()
         controller.change_camera(sender.currentIndex()-1, sender.currentText()) # use index - 1 to skip the placeholder
+
+    def populate_comports(self, combobox):
+        combobox.clear()
+        ports = [p.device for p in list_ports.comports()]
+        combobox.addItems(ports)
 
 
 
