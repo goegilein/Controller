@@ -257,7 +257,7 @@ class ProcessHandler(BaseClass):
                 #Here the Process state is set to running. Will use the threading events to control the execution interanlly
                 self.process_state = "Running"  # Update state to Running
                 start_position = self.controller.get_absolute_position()
-                for idx, process_step in enumerate(self.process_step_list):
+                for step_idx, process_step in enumerate(self.process_step_list):
 
                     #get wp, commands, and time for each command
                     wp= process_step.work_position
@@ -286,9 +286,10 @@ class ProcessHandler(BaseClass):
                             break
 
                         self.controller.send_command(command)
-                        time.sleep(time_list[idx])  # Add a delay between commands
+                        time.sleep(time_list[idx])  # Add a delay between commands+
                     else:
-                        self.last_log = f"Execution of process_step {idx+1} completed successfully."
+                        #self.controller.add_sync_position(text=f"step_{step_idx+1}_done", timeout=10)  # Ensure all movements are finished before proceeding
+                        self.last_log = f"Execution of process_step {step_idx+1} completed successfully."
                     
                     if self.execution_canceled.is_set():
                         break

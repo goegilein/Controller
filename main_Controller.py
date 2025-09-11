@@ -11,6 +11,8 @@ import ArduinoController
 import Process_Handler
 import Process_GUI_Interface
 import Settings_Manager
+import RotMotor_Cotroller
+import RotMotor_GUI_Interface
 
 #first define paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -29,14 +31,21 @@ gui.show()
 
 #setup Settings Manager
 
-settings = Settings_Manager.SettingsManager(default_settings_path=DEFAULT_SETTINGS_PATH, schema_path=SCHEMA_PATH, use_validation=True)
+settings = Settings_Manager.SettingsManager(default_settings_path=DEFAULT_SETTINGS_PATH, schema_path=SCHEMA_PATH, use_validation=False)
 
 
 #setup controllers
 #artisan_controller=Artisan_Controller.ArtisanController(connection_type="usb", port="COM6")
 artisan_controller = Artisan_Controller.ArtisanController(settings=settings)
-OCam_controller = Camera_Controller.USBCameraController(settings=settings, camera_type="overview_camera")
-controllers={"artisan_controller":artisan_controller,"OCam_controller":OCam_controller}
+overview_camera_controller = Camera_Controller.USBCameraController(settings=settings, camera_type="overview_camera")
+laser_camera_controller = Camera_Controller.USBCameraController(settings=settings, camera_type="laser_camera")
+rot_motor_controller = RotMotor_Cotroller.RotMotorCotroller(settings=settings)
+controllers={"artisan_controller":artisan_controller,
+             "overview_camera_controller":overview_camera_controller, 
+             "laser_camera_controller":laser_camera_controller,
+             "rot_motor_controller":rot_motor_controller
+             }
+
 # arduino_controller = ArduinoController.ArduinoController(gui, artisan_controller=artisan_controller)
 # arduino_controller.connect(port="COM5", baudrate=9600)
 process_handler = Process_Handler.ProcessHandler(gui, artisan_controller)
@@ -44,7 +53,9 @@ process_handler = Process_Handler.ProcessHandler(gui, artisan_controller)
 #setup interfaces
 main_interface=Main_GUI_Interface.MainInterface(gui, controllers, settings)
 artisan_interface=Artisan_GUI_Interface.ArtisanInterface(gui, artisan_controller)
-OCam_gui_interface = Camera_GUI_Interface.CameraInterface(gui, OCam_controller) 
+overview_camera_gui_interface = Camera_GUI_Interface.CameraInterface(gui, settings, overview_camera_controller)
+laser_camera_gui_interface = Camera_GUI_Interface.CameraInterface(gui, settings, laser_camera_controller)
+rot_mot_interface = RotMotor_GUI_Interface.RotMotorInterface(gui, rot_motor_controller)
 process_gui_interface = Process_GUI_Interface.ProcessInterface(gui, process_handler)
 
 

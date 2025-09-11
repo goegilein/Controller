@@ -3,6 +3,7 @@ import socket
 import threading
 import time
 from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import QMessageBox
 from Settings_Manager import SettingsManager
 
 class ArtisanController():
@@ -119,13 +120,19 @@ class ArtisanController():
         
         self.connected=True
         if not self.is_homed:
-            dialog = QtWidgets.QMessageBox()
-            dialog.setWindowTitle("Homing Required")
-            dialog.setText("Artisan must be homed before use.\nPlease ensure the workspace is clear and press OK to continue.")
-            dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-            dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-            dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Ok)
-            dialog.exec()
+            # dialog = QtWidgets.QMessageBox()
+            # dialog.setWindowTitle("Homing Required")
+            # dialog.setText("Artisan must be homed before use.\nPlease ensure the workspace is clear and press OK to continue.")
+            # dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+            # dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+            # dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Ok)
+            # dialog.exec()
+            msg = QMessageBox()
+            ret = msg.question(None, "Homing Required",
+                                 "Upon Starting it is recommended to home all axes first, to avoid unexpected behavior. \nRun homing routine now?",
+                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if ret == QMessageBox.StandardButton.No:
+                return
             self.home_axis()
             self.is_homed = True
         
@@ -187,7 +194,7 @@ class ArtisanController():
                     self.connection.sendall((command + '\n').encode())
 
                 if wait_ok:
-                    lines = self._read_until_ok()
+                    lines = self._read_until(text="ok")
                     self.last_response = lines if lines else None
                 else:
                     self.last_response = self.get_response()
@@ -211,11 +218,11 @@ class ArtisanController():
             self.last_log = f"Failed to get response: {e}"
             return None
     
-    def _read_until_ok(self):
+    def _read_until(self, text="ok", timeout=5):
             lines = []
-            counter = 0
-            got_ok = False
-            while counter < 1000:  # Limit to 1000 lines to prevent infinite loop
+            got_text = False
+            start_time = time.time()
+            while start_time + timeout > time.time():
                 if self.connection_type == "usb":
                     line = self.connection.readline().decode().strip()
                 else:  # TCP/IP
@@ -223,11 +230,11 @@ class ArtisanController():
 
                 if line:
                     lines.append(line)
-                if line == "ok":
-                    got_ok = True
+                if line == text:
+                    got_text = True
                     break
-            if not got_ok:
-                self.last_log = "Error: 'ok' not received from Artisan!"
+            if not got_text:
+                self.last_log = f"Error: {text} not received from Artisan!"
             return lines
 
     def move_axis_continuous(self, axis, direction, speed=None, job_save=False):
@@ -507,6 +514,16 @@ class ArtisanController():
             self.send_command("M8")
         else:
             self.send_command("M9")
+    
+    def add_sync_position(self, text="sync_pos", timeout=999999):
+        """
+        Wait until all movements are finished and a specific text is received.
+        :param text: Text to wait for (e.g., "ok").
+        """
+        self.send_command("M400")  # Wait for all movements to finish
+        self.send_command(f"118 {text}") # get new position
+        self._read_until(text=text,timeout=timeout)
+
 
     def is_connection_active(self):
         #first check if there is even a connection of any type that could be active

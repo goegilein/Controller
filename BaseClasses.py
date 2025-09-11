@@ -55,6 +55,7 @@ import datetime
 class SignalEmitter(QObject):
     list_signal = pyqtSignal(list)
     string_signal = pyqtSignal(str)
+    float_signal = pyqtSignal(float)
 
 class TextLogger():
     def __init__(self, log_object, log_widget, add_stamp=True):
