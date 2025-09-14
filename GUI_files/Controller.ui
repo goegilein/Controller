@@ -154,11 +154,11 @@ QTabBar::tab:hover {
    <property name="styleSheet">
     <string notr="true"/>
    </property>
-   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,0,0,0">
+   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,0,0">
     <item row="0" column="0">
      <widget class="QTabWidget" name="Cameras_tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="Cam1_tab">
        <attribute name="title">
@@ -219,7 +219,11 @@ QTabBar::tab:hover {
        </attribute>
        <layout class="QGridLayout" name="gridLayout_11">
         <item row="0" column="0">
-         <widget class="QGraphicsView" name="laser_camera_view"/>
+         <widget class="QGraphicsView" name="laser_camera_view">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+         </widget>
         </item>
         <item row="1" column="0">
          <widget class="QGroupBox" name="groupBox_3">
@@ -561,8 +565,8 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>276</width>
-             <height>757</height>
+             <width>100</width>
+             <height>30</height>
             </rect>
            </property>
            <attribute name="label">
@@ -1527,6 +1531,7 @@ is OFF</string>
      <string>Settings</string>
     </property>
     <addaction name="edit_settings_action"/>
+    <addaction name="calibrate_interactive_movement_action"/>
    </widget>
    <addaction name="menuConnection"/>
    <addaction name="menuSettings"/>
@@ -1555,6 +1560,11 @@ is OFF</string>
   <action name="edit_settings_action">
    <property name="text">
     <string>Edit Settings</string>
+   </property>
+  </action>
+  <action name="calibrate_interactive_movement_action">
+   <property name="text">
+    <string>Calibrate Interactive Image Movement</string>
    </property>
   </action>
  </widget>

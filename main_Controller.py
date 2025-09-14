@@ -13,6 +13,7 @@ import Process_GUI_Interface
 import Settings_Manager
 import RotMotor_Cotroller
 import RotMotor_GUI_Interface
+import Interactive_Image_Control
 
 #first define paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -57,6 +58,8 @@ overview_camera_gui_interface = Camera_GUI_Interface.CameraInterface(gui, settin
 laser_camera_gui_interface = Camera_GUI_Interface.CameraInterface(gui, settings, laser_camera_controller)
 rot_mot_interface = RotMotor_GUI_Interface.RotMotorInterface(gui, rot_motor_controller)
 process_gui_interface = Process_GUI_Interface.ProcessInterface(gui, process_handler)
+
+interactive_image_control = Interactive_Image_Control.InteractiveImageControl(gui, laser_camera_gui_interface, artisan_controller, settings)
 
 
 sys.exit(app.exec())
