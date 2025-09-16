@@ -15,17 +15,12 @@ class ProcessHandler(BaseClass):
         self.process_step_list = []  # List to hold process steps
         self._last_log = ''
         self._process_state = "Idle"  # Track the process state
+        self._remaining_time = 0
         
         # Callbacks for GUI updates
         self.log_callbacks = []
         self.process_state_callbacks = []
-
-        # # Add gui callbacks
-        # self.add_process_step_button = gui.add_process_step_button
-        # self.add_process_step_button.clicked.connect(self.add_process_step)
-
-        # self.process_steps_listWidget = gui.process_steps_listWidget
-        # self.process_steps_listWidget.model().rowsMoved.connect(self.on_rows_moved)
+        self.remaining_time_callbacks = []
         
     @property
     def last_log(self):
@@ -55,6 +50,22 @@ class ProcessHandler(BaseClass):
     
     def set_process_state_callback(self, callback):
         self.process_state_callbacks.append(callback)
+
+    @property
+    def remaining_time(self):
+        return self._remaining_time
+
+    @remaining_time.setter
+    def remaining_time(self, value):
+        self._remaining_time = value
+        if self.remaining_time_callbacks:
+            for callback in self.remaining_time_callbacks:
+                callback(value)
+
+    def set_remaining_time_callback(self, callback):
+        self.remaining_time_callbacks.append(callback)
+    
+
         
     def add_process_step(self):
         """
@@ -76,22 +87,6 @@ class ProcessHandler(BaseClass):
 
         return step
 
-        # # put widget it into the list
-        # widget = uic.loadUi("GUI_files/process_step_widget.ui")
-        # item = QListWidgetItem()
-        # item.setSizeHint(widget.sizeHint())
-        # self.gui.process_steps_listWidget.addItem(item)
-        # self.gui.process_steps_listWidget.setItemWidget(item, widget)
-
-        # widget.wp_x_spinbox.setValue(work_position[0])
-        # widget.wp_y_spinbox.setValue(work_position[1])
-        # widget.wp_z_spinbox.setValue(work_position[2])
-        
-        # widget.remove_button.clicked.connect(lambda _, s=step, w=widget: self.remove_process_step(s,w))
-        # widget.load_file_button.clicked.connect(lambda _, s=step, w=widget: self.set_step_nc_file(s,w))
-        # widget.step_name_edit.setText(f"Process Step {len(self.process_step_list)}")
-        # widget.set_current_pos_button.clicked.connect(lambda _, s=step, w=widget, b=True: self.set_step_wp(s,w,b))
-        
     
     def remove_process_step(self, process_step):
         """
@@ -104,44 +99,7 @@ class ProcessHandler(BaseClass):
         else:
             self.process_step_list.remove(process_step)
             return True
-        
-        # for i in range(self.process_steps_listWidget.count()):
-        #     item = self.process_steps_listWidget.item(i)
-        #     if self.process_steps_listWidget.itemWidget(item) is widget:
-        #         self.process_steps_listWidget.takeItem(i)
-        #         # also remove from backend
-        #         #del self.process_step_list[i]
-        #         self.process_step_list.remove(process_step)
-        #         widget.deleteLater()
-        #         break
-
-    # def on_rows_moved(self, parent, start, end, dest, row):
-    #     # e.g. start==2, end==2, row==5 means item 2 moved to after index 4
-    #     step = self.process_step_list.pop(start)
-    #     # adjust target index:
-    #     if row > start:
-    #         row -= 1
-    #     self.process_step_list.insert(row, step)
-    
-    # def set_step_wp(self, process_step, widget, set_to_current=False):
-    #     """
-    #     :param process_step: handle to the process step of type ProcessStep.
-    #     :param widget: handle to the gui widget in the list.
-    #     """
-    #     if set_to_current:
-    #         new_work_position = self.controller.get_absolute_position()
-    #         if new_work_position is None:
-    #             return
-    #         else:
-    #             widget.wp_x_spinbox.setValue(new_work_position[0])
-    #             widget.wp_y_spinbox.setValue(new_work_position[1])
-    #             widget.wp_z_spinbox.setValue(new_work_position[2])
-    #     else:
-    #         new_work_position = [widget.wp_x_spinbox.Value(),
-    #                              widget.wp_y_spinbox.Value(),
-    #                              widget.wp_z_spinbox.Value(),
-    #                             ]
-    #     process_step.work_position = new_work_position
+ 
     def move_step (self, from_idx, to_idx):
         """
         move a step in the process list.
@@ -187,31 +145,6 @@ class ProcessHandler(BaseClass):
         else:
             process_step.work_position = new_work_position
             return new_work_position
-
-    
-    # def set_step_nc_file(self, process_step, widget, file_path=None):
-    #     """
-    #     Set the NC file for a process step.
-    #     :param process_step: handle to the process step of type ProcessStep.
-    #     :param widget: handle to the gui widget in the list.
-    #     :param file_path: Path to the NC file (optionl).
-    #     """
-    #     if self.process_state != "Idle":
-    #         self.last_log = "Error: Cannot set NC file while a process is still active."
-    #         return
-        
-    #     if file_path is None:
-    #         file_path, _ = QFileDialog.getOpenFileName(
-    #         parent=widget,
-    #         caption="Select a file for this step",
-    #         directory="",
-    #         filter="NC Files (*.nc)"
-    #     )
-    #     if file_path is None:
-    #         return
-    #     else:
-    #         process_step.set_nc_file(file_path)
-    #         widget.filename_edit.setText(file_path)
 
     def set_step_nc_file(self, process_step, file_path):
         """
@@ -263,6 +196,8 @@ class ProcessHandler(BaseClass):
                     wp= process_step.work_position
                     commands = process_step.command_list
                     time_list=GCodeInterpreter.get_move_times(commands)
+                    total_time=sum(time_list)
+                    time_passed=0
 
                     #Move to Work Position, then switch to laser tool.
                     pos_now=self.controller.get_absolute_position()
@@ -286,7 +221,14 @@ class ProcessHandler(BaseClass):
                             break
 
                         self.controller.send_command(command)
-                        time.sleep(time_list[idx])  # Add a delay between commands+
+                        time_passed+=time_list[idx]
+                        time_left=(total_time-time_passed)*2 # factor 2 probably accounts for acceleration/deceleration
+                        h=int(time_left//3600)
+                        m=int((time_left%3600)//60)
+                        s=int(time_left%60)
+                        self.remaining_time = f"Remaining - {h}:{m}:{s}"
+
+                        time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
                     else:
                         #self.controller.add_sync_position(text=f"step_{step_idx+1}_done", timeout=10)  # Ensure all movements are finished before proceeding
                         self.last_log = f"Execution of process_step {step_idx+1} completed successfully."
@@ -416,7 +358,7 @@ class GCodeInterpreter():
                         z_new = float(part[1:])
                     elif part.startswith("F"):
                         f = float(part[1:])
-                command_time = np.sqrt((x-x_new)**2+(y-y_new)**2+(z-z_new)**2)/f*60*0.5
+                command_time = np.sqrt((x-x_new)**2+(y-y_new)**2+(z-z_new)**2)/f*60
                 if command_time>0.01:
                     result[idx]=command_time
                 x=x_new

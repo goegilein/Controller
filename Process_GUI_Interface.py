@@ -34,10 +34,14 @@ class ProcessInterface(BaseClass):
 
         # update UI for Process State
         self.process_state_edit = gui.process_state_edit
-        process_logger = logger = TextLogger(log_object="Process", log_widget=self.process_state_edit, add_stamp=False)
+        process_logger = TextLogger(log_object="Process", log_widget=self.process_state_edit, add_stamp=False)
         self.process_handler.set_process_state_callback(process_logger.log)
         self.process_handler.set_process_state_callback(self.update_process_state)
 
+        # update UI for Remaining Time
+        self.time_remaining_edit = gui.time_remaining_edit
+        time_remaining_logger = TextLogger(log_object="Process", log_widget=self.time_remaining_edit, add_stamp=False)
+        self.process_handler.set_remaining_time_callback(time_remaining_logger.log)
     def add_process_step(self):
         """
         Add a new process step to the job handler and link a GUI element to it
