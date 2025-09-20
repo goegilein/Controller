@@ -1261,7 +1261,7 @@ is OFF</string>
     <item row="0" column="2">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -1318,9 +1318,16 @@ is OFF</string>
            <attribute name="label">
             <string>Circle Fit</string>
            </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0">
+           <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0">
             <item>
-             <widget class="QListWidget" name="listWidget"/>
+             <widget class="QListWidget" name="circle_fit_listWidget"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="circle_fit_add_point_button">
+              <property name="text">
+               <string>Add Point</string>
+              </property>
+             </widget>
             </item>
             <item>
              <widget class="QGroupBox" name="groupBox_4">
@@ -1331,6 +1338,51 @@ is OFF</string>
                <set>Qt::AlignCenter</set>
               </property>
               <layout class="QGridLayout" name="gridLayout_14">
+               <item row="0" column="1">
+                <widget class="QLabel" name="label_12">
+                 <property name="text">
+                  <string>Abs. X (mm)</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="4" rowspan="2">
+                <widget class="QPushButton" name="goto_circle_center_button">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>GoTo</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3">
+                <widget class="QDoubleSpinBox" name="circle_fit_z_spinbox">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-1000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>1000.000000000000000</double>
+                 </property>
+                </widget>
+               </item>
                <item row="0" column="2">
                 <widget class="QLabel" name="label_13">
                  <property name="text">
@@ -1352,7 +1404,7 @@ is OFF</string>
                 </widget>
                </item>
                <item row="1" column="2">
-                <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+                <widget class="QDoubleSpinBox" name="circle_fit_y_spinbox">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
@@ -1361,11 +1413,17 @@ is OFF</string>
                  </property>
                  <property name="buttonSymbols">
                   <enum>QAbstractSpinBox::NoButtons</enum>
+                 </property>
+                 <property name="minimum">
+                  <double>-1000.000000000000000</double>
+                 </property>
+                 <property name="maximum">
+                  <double>1000.000000000000000</double>
                  </property>
                 </widget>
                </item>
                <item row="1" column="1">
-                <widget class="QDoubleSpinBox" name="doubleSpinBox">
+                <widget class="QDoubleSpinBox" name="circle_fit_x_spinbox">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
@@ -1375,41 +1433,11 @@ is OFF</string>
                  <property name="buttonSymbols">
                   <enum>QAbstractSpinBox::NoButtons</enum>
                  </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_12">
-                 <property name="text">
-                  <string>Abs. X (mm)</string>
+                 <property name="minimum">
+                  <double>-1000.000000000000000</double>
                  </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="3">
-                <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignCenter</set>
-                 </property>
-                 <property name="buttonSymbols">
-                  <enum>QAbstractSpinBox::NoButtons</enum>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="4" rowspan="2">
-                <widget class="QPushButton" name="pushButton">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="text">
-                  <string>GoTo</string>
+                 <property name="maximum">
+                  <double>1000.000000000000000</double>
                  </property>
                 </widget>
                </item>
@@ -1423,8 +1451,8 @@ is OFF</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>100</width>
-             <height>30</height>
+             <width>352</width>
+             <height>757</height>
             </rect>
            </property>
            <attribute name="label">

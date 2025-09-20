@@ -14,6 +14,7 @@ import Settings_Manager
 import RotMotor_Cotroller
 import RotMotor_GUI_Interface
 import Interactive_Image_Control
+import Maschine_Helper
 
 #first define paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -62,6 +63,9 @@ process_gui_interface = Process_GUI_Interface.ProcessInterface(gui, process_hand
 #Maschine Helpers
 interactive_image_control_lasercam = Interactive_Image_Control.InteractiveImageControl(gui, settings, laser_camera_gui_interface, artisan_controller)
 interactive_image_control_overvoiew = Interactive_Image_Control.InteractiveImageControl(gui, settings, overview_camera_gui_interface, artisan_controller)
+
+maschine_helper = Maschine_Helper.MaschineHelpers(gui, artisan_controller)
+maschine_helper.setup_helpers()
 
 
 sys.exit(app.exec())

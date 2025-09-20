@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>547</width>
-    <height>42</height>
+    <width>279</width>
+    <height>59</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -141,19 +141,12 @@ QTabBar::tab:hover {
 	background-color: rgb(245, 245, 255); ;
 }</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
-   <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>X-Axis:</string>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="1">
+    <widget class="QDoubleSpinBox" name="abs_y_spinbox">
+     <property name="enabled">
+      <bool>false</bool>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QDoubleSpinBox" name="x_world_spinbox">
      <property name="alignment">
       <set>Qt::AlignCenter</set>
      </property>
@@ -168,44 +161,18 @@ QTabBar::tab:hover {
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Y-Axis:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QDoubleSpinBox" name="y_world_spinbox">
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
-     </property>
-     <property name="minimum">
-      <double>-1000.000000000000000</double>
-     </property>
-     <property name="maximum">
-      <double>1000.000000000000000</double>
-     </property>
-    </widget>
-   </item>
-   <item>
+   <item row="0" column="0">
     <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>X-Cross:</string>
+      <string>Abs. X (mm)</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QSpinBox" name="x_cross_spinbox">
+   <item row="1" column="0">
+    <widget class="QDoubleSpinBox" name="abs_x_spinbox">
      <property name="enabled">
       <bool>false</bool>
      </property>
@@ -216,25 +183,35 @@ QTabBar::tab:hover {
       <enum>QAbstractSpinBox::NoButtons</enum>
      </property>
      <property name="minimum">
-      <number>-10000</number>
+      <double>-1000.000000000000000</double>
      </property>
      <property name="maximum">
-      <number>10000</number>
+      <double>1000.000000000000000</double>
      </property>
     </widget>
    </item>
-   <item>
+   <item row="0" column="1">
     <widget class="QLabel" name="label_4">
      <property name="text">
-      <string>Y-Cross:</string>
+      <string>Abs. Y (mm)</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QSpinBox" name="y_cross_spinbox">
+   <item row="0" column="2">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Abs.Z (mm)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QDoubleSpinBox" name="abs_z_spinbox">
      <property name="enabled">
       <bool>false</bool>
      </property>
@@ -245,17 +222,44 @@ QTabBar::tab:hover {
       <enum>QAbstractSpinBox::NoButtons</enum>
      </property>
      <property name="minimum">
-      <number>-10000</number>
+      <double>-1000.000000000000000</double>
      </property>
      <property name="maximum">
-      <number>10000</number>
+      <double>1000.000000000000000</double>
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QPushButton" name="delete_button">
+   <item row="0" column="4" rowspan="2">
+    <widget class="QPushButton" name="remove_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="text">
-      <string>delete</string>
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>resources/trash.png</normaloff>resources/trash.png</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3" rowspan="2">
+    <widget class="QPushButton" name="set_current_pos_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>resources/crosshair.png</normaloff>resources/crosshair.png</iconset>
      </property>
     </widget>
    </item>

@@ -1,7 +1,5 @@
 import threading
 import time
-from PyQt6 import uic
-from PyQt6.QtWidgets import QListWidgetItem, QFileDialog
 from BaseClasses import BaseClass
 
 class ProcessHandler(BaseClass):
