@@ -4,18 +4,19 @@ from PyQt6 import QtWidgets, QtCore, QtGui, uic
 from pathlib import Path
 
 class InteractiveImageControl(QtCore.QObject):
-    def __init__(self, gui, camera_GUI, artisan_controller, settings):
+    def __init__(self, gui, settings, camera_GUI, artisan_controller):
         super().__init__()
         self.gui = gui
+        self.s = settings
         self.camera_GUI = camera_GUI
         self.artisan_controller = artisan_controller
-        self.settings = settings
         self.calibration_window = None
         self.coord_transformer = CoordinateSystemTransformer()
 
         self.camera_view = camera_GUI.camera_view
         self.camera_scene = camera_GUI.camera_scene
         self.pixmap_item = camera_GUI.pixmap_item
+        self.camera_type = camera_GUI.camera_type
 
         # track created cross items if you want to clear later
         self._cross_items = []
@@ -29,6 +30,18 @@ class InteractiveImageControl(QtCore.QObject):
 
         # Calibration button
         gui.calibrate_interactive_movement_action.triggered.connect(self.calibrate_coordinate_transformer)
+
+        # Load settings
+        self.load_settings()
+    
+    def load_settings(self):
+        if self.artisan_controller and self.camera_type == 'laser_camera':
+            tool_head = self.artisan_controller.tool_head
+            self.coord_transformer.H_21 = np.array(self.s.get(f"artisan.{tool_head}.camera_H21", None))
+        elif self.camera_type == 'overview_camera':
+            self.coord_transformer.H_21 = np.array(self.s.get(f"overview_camera.H21", None))
+        else:
+            print('Camera Type not supported!')
 
     def eventFilter(self, obj, event):
         # Only handle mouse presses on this view's viewport
@@ -370,21 +383,22 @@ class TransformerCalibrator(QtWidgets.QWidget):
         self.widget_ui=uic.loadUi(widget_path, self)
         
         self.coord_transformer = coord_transformer
-        self.interactive_image_controler = interactive_image_controller
+        self.interactive_image_controller = interactive_image_controller
 
         self.points_listWidget = self.widget_ui.points_listWidget
         self.widget_ui.add_point_button.clicked.connect(self.add_point)
-        self.widget_ui.accept_button.clicked.connect(self.accept)
+        self.widget_ui.calc_transform_button.clicked.connect(self.calc_transform)
+        self.widget_ui.save_default_button.clicked.connect(self.save_to_default)
 
     def add_point(self):
         """
         Add a new point to the calibrator and link a GUI element to it
         """
         
-        if not self.interactive_image_controler._cross_pos:
+        if not self.interactive_image_controller._cross_pos:
             return
         else:
-            cross_pos = self.interactive_image_controler._cross_pos
+            cross_pos = self.interactive_image_controller._cross_pos
 
         # put widget it into the list
         point_ui = uic.loadUi(self.point_ui_path)
@@ -408,7 +422,7 @@ class TransformerCalibrator(QtWidgets.QWidget):
             return removed
         point_ui.delete_button.clicked.connect(delete_self)
     
-    def accept(self):
+    def calc_transform(self):
         """
         Gather all points and compute the homography
         """
@@ -439,10 +453,26 @@ class TransformerCalibrator(QtWidgets.QWidget):
             # print("Inliers:", inliers)
             # print("Metrics:", metrics)
             QtWidgets.QMessageBox.information(self, "Calibration successful", f"Homography estimated with {inliers.sum()}/{len(inliers)} inliers.\nRMSE (world): {metrics['rmse_cs1']:.3f}\nRMSE (pixels): {metrics['rmse_cs2']:.3f}")
-            self.close()
+            #self.close()
+            #self.interactive_image_controler.s.set("artisan.laser1064.camera_H21", H_21.tolist())
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Calibration failed", f"Error estimating homography: {e}")
             return
+    
+    def save_to_default(self):
+        """
+        Save the current homography to the settings as default
+        """
+        if self.coord_transformer.H_21 is None:
+            QtWidgets.QMessageBox.warning(self, "No homography", "No homography has been computed yet.")
+            return
+        if self.interactive_image_controller.artisan_controller and self.interactive_image_controller.camera_type == 'laser_camera':
+            tool_head = self.interactive_image_controller.artisan_controller.tool_head
+            self.interactive_image_controller.s.set(f"artisan.{tool_head}.camera_H21", self.coord_transformer.H_21.tolist())
+        elif self.interactive_image_controller.camera_type == 'overview_camera':
+            self.interactive_image_controller.s.set(f"overview_camera.H21", self.coord_transformer.H_21.tolist())
+        self.interactive_image_controller.s.save_default()
+        QtWidgets.QMessageBox.information(self, "Saved", "Current homography saved to settings as default.")
 
 
 

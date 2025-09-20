@@ -5,7 +5,7 @@ from Settings_Manager import SettingsManager
 class USBCameraController:
     def __init__(self, settings: SettingsManager,camera_type):
         self.s = settings
-        self.camera_type=camera_type
+        self.camera_type=camera_type #'laser_camera' or 'overview_camera'
         self.timer = QtCore.QTimer()
         self.load_settings()
         # self.camera_index = settings.get(camera_type+".camera_index", -1)

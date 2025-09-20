@@ -24,8 +24,10 @@ class ProcessInterface(BaseClass):
         self.cancel_process_button=gui.cancel_process_button
         self.cancel_process_button.clicked.connect(self.cancel_process)
 
-        # self.togglePauseProcess_button=gui.togglePauseProcess_button
-        # self.togglePauseProcess_button.clicked.connect(self.toggle_process_pause)
+        self.run_bounding_box_button =gui.run_bounding_box_button
+        self.run_bounding_box_button.clicked.connect(self.run_bounding_box)
+        self.bounding_box_step_combobox = gui.bounding_box_step_combobox
+    
 
         #Log tracking
         self.log_textEdit=gui.log_textEdit
@@ -42,6 +44,8 @@ class ProcessInterface(BaseClass):
         self.time_remaining_edit = gui.time_remaining_edit
         time_remaining_logger = TextLogger(log_object="Process", log_widget=self.time_remaining_edit, add_stamp=False)
         self.process_handler.set_remaining_time_callback(time_remaining_logger.log)
+
+
     def add_process_step(self):
         """
         Add a new process step to the job handler and link a GUI element to it
@@ -70,6 +74,12 @@ class ProcessInterface(BaseClass):
         # widget.wp_z_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
         # widget.filename_edit.editingFinished.connect(lambda _, s=step, w=widget, b=False: self.set_step_nc_file(s,w,b))
 
+        #refresh combobox for bounding box run
+        self.bounding_box_step_combobox.clear()
+        self.bounding_box_step_combobox.addItem('All')
+        for idx,steps in enumerate(self.process_handler.process_step_list):
+            self.bounding_box_step_combobox.addItem(f'step {idx+1}')
+
     def remove_process_step(self, process_step, widget):
         """
         Remove a process step from the job handler and update the UI.
@@ -87,6 +97,12 @@ class ProcessInterface(BaseClass):
                     #self.process_step_list.remove(process_step)
                     widget.deleteLater()
                     break
+        
+        #refresh combobox for bounding box run
+        self.bounding_box_step_combobox.clear()
+        self.bounding_box_step_combobox.addItem('All')
+        for idx,steps in enumerate(self.process_handler.process_step_list):
+            self.bounding_box_step_combobox.addItem(f'step {idx+1}')
 
     def on_rows_moved(self, parent, start, end, dest, row):
         """
@@ -152,7 +168,9 @@ class ProcessInterface(BaseClass):
         else:
             file_path=widget.filename_edit.currentText()
             self.process_handler.set_step_nc_file(process_step, file_path)
-
+        
+        if file_path is not None:
+            self.process_handler.recalc_process_params()
 
     def toggle_process(self):
         state =self.process_handler.process_state
@@ -190,4 +208,13 @@ class ProcessInterface(BaseClass):
             icon = QIcon("GUI_files/resources/start.png")
             self.toggle_process_button.setIcon(icon)
             self.cancel_process_button.setEnabled(False)
+
+    def run_bounding_box(self):
+        step_to_run = self.bounding_box_step_combobox.currentIndex()
+
+        if step_to_run == 0:
+            for idx,steps in enumerate(self.process_handler.process_step_list):
+                self.process_handler.run_bounding_box(idx)
+        else:
+            self.process_handler.run_bounding_box(step_to_run-1)
         

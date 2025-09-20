@@ -59,7 +59,9 @@ laser_camera_gui_interface = Camera_GUI_Interface.CameraInterface(gui, settings,
 rot_mot_interface = RotMotor_GUI_Interface.RotMotorInterface(gui, rot_motor_controller)
 process_gui_interface = Process_GUI_Interface.ProcessInterface(gui, process_handler)
 
-interactive_image_control = Interactive_Image_Control.InteractiveImageControl(gui, laser_camera_gui_interface, artisan_controller, settings)
+#Maschine Helpers
+interactive_image_control_lasercam = Interactive_Image_Control.InteractiveImageControl(gui, settings, laser_camera_gui_interface, artisan_controller)
+interactive_image_control_overvoiew = Interactive_Image_Control.InteractiveImageControl(gui, settings, overview_camera_gui_interface, artisan_controller)
 
 
 sys.exit(app.exec())

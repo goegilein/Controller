@@ -132,9 +132,10 @@ class ArtisanController():
                                  "Upon Starting it is recommended to home all axes first, to avoid unexpected behavior. \nRun homing routine now?",
                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if ret == QMessageBox.StandardButton.No:
-                return
-            self.home_axis()
-            self.is_homed = True
+                pass
+            else:
+                self.home_axis()
+                self.is_homed = True
         
         #Identify the maschine tool
         toolhead_info = self.get_toolhead_info()
@@ -565,7 +566,7 @@ class ArtisanController():
                 # this is a 40W 455 cw laser
                 self.last_log = "40W 455 cw laser detected. Setting offsets for this laser."
                 self._tool_head = "laser455"
-                self._laser_offset = None # this has to be measured first!
+                self._laser_offset = self.s.get("artisan.laser455.laser_offset",[0, 0, 0]) # this has to be measured first!
             else:
                 self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
                 self._tool_head = None

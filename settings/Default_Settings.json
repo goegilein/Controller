@@ -16,12 +16,53 @@
         21.3,
         -11.3,
         0
+      ],
+      "camera_H21": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "laser455": {
+      "laser_offset": [
+        0,
+        0,
+        0
+      ],
+      "camera_H21": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
       ]
     }
   },
-  "rotary_motors":{
-	  "port": "COM7",
-	  "series": "STS"
+  "rotary_motors": {
+    "port": "COM7",
+    "series": "STS"
   },
   "overview_camera": {
     "camera_index": -1,
@@ -38,7 +79,24 @@
         0
       ],
       "thickness": 1
-    }
+    },
+    "H21": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0
+      ]
+    ]
   },
   "laser_camera": {
     "camera_index": 1,

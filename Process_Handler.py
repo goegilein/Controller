@@ -60,13 +60,15 @@ class ProcessHandler(BaseClass):
         self._remaining_time = value
         if self.remaining_time_callbacks:
             for callback in self.remaining_time_callbacks:
-                callback(value)
+                h=int(value//3600)
+                m=int((value%3600)//60)
+                s=int(value%60)
+                remaining_time_string = f"ETA. - {h}:{m}:{s}"
+                callback(remaining_time_string)
 
     def set_remaining_time_callback(self, callback):
         self.remaining_time_callbacks.append(callback)
-    
-
-        
+       
     def add_process_step(self):
         """
         Add a new process step to the job handler list.
@@ -195,9 +197,7 @@ class ProcessHandler(BaseClass):
                     #get wp, commands, and time for each command
                     wp= process_step.work_position
                     commands = process_step.command_list
-                    time_list=GCodeInterpreter.get_move_times(commands)
-                    total_time=sum(time_list)
-                    time_passed=0
+                    time_list=process_step.time_list
 
                     #Move to Work Position, then switch to laser tool.
                     pos_now=self.controller.get_absolute_position()
@@ -221,12 +221,9 @@ class ProcessHandler(BaseClass):
                             break
 
                         self.controller.send_command(command)
-                        time_passed+=time_list[idx]
-                        time_left=(total_time-time_passed)*2 # factor 2 probably accounts for acceleration/deceleration
-                        h=int(time_left//3600)
-                        m=int((time_left%3600)//60)
-                        s=int(time_left%60)
-                        self.remaining_time = f"Remaining - {h}:{m}:{s}"
+                        # time_passed+=time_list[idx]
+                        self.remaining_time=round((self.remaining_time-time_list[idx]) * (self.remaining_time > 0)) #
+                    
 
                         time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
                     else:
@@ -239,6 +236,7 @@ class ProcessHandler(BaseClass):
                 #Restore the old position after execution
                 self.controller.move_axis_absolute(start_position[0], start_position[1], start_position[2], speed=30, job_save=True)
                 self.process_state = "Idle"  # Reset state after completion
+                self.remaining_time = sum([step.process_time for step in self.process_step_list]) # reset remaining time
             except Exception as e:
                 self.last_log = f"Error during execution: {e}"
                 self.process_state = "Idle"  # Reset state on error
@@ -298,13 +296,51 @@ class ProcessHandler(BaseClass):
                 self.execution_thread.join()  # Wait for the thread to finish
 
             self.last_log = "Execution canceled."
+    
+    def recalc_process_params(self):
+        remaining_time = 0
+        for step in self.process_step_list:
+            remaining_time += step.process_time
+        self.remaining_time = remaining_time
 
+    def run_bounding_box(self, step_idx):
+        process_step = self.process_step_list[step_idx]
+        bounding_box = process_step.bounding_box
+        wp = process_step.work_position
+
+        #make sure to move to work position first
+        self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30)
+
+        #set workposition so we can work with absolute coordinates inside the workposition coordinate system
+        self.controller.set_work_position()
+
+        #run the upper X/Y bounding Box
+        self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][1], speed=30)
+        self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][0], bounding_box[2][1], speed=30)
+        self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][0], bounding_box[2][1], speed=30)
+        self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][1], bounding_box[2][1], speed=30)
+
+        #if it is not flat, also run the lower X/Y bounding Box
+        if bounding_box[2][0] != bounding_box[2][1]:
+            self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][0], speed=30)
+            self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][0], bounding_box[2][0], speed=30)
+            self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][0], bounding_box[2][0], speed=30)
+            self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][1], bounding_box[2][0], speed=30)
+
+        #return to the work position
+        self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30)
+
+
+        
 class ProcessStep:
     def __init__(self, work_position):
         self.work_position = work_position  # Work position coordinates
         self.gcode_file = None
         self.file_name = None
         self.command_list = []  # List to hold G-code commands for this step
+        self.process_time = 0  # in seconds
+        self.time_list = []  # in seconds for each command
+        self.bounding_box = [[0,0],[0,0],[0,0]]  #x min max, y min max, z min max
 
     def set_nc_file(self, file_path):
         """
@@ -317,11 +353,17 @@ class ProcessStep:
                 self.command_list = [line.strip() for line in file if line.strip() and not line.startswith(';')]
                 self.gcode_file = file_path
                 self.file_name = file_path.split('/')[-1]  # Store the file name
+            # when loading a new file, calculate the time list
+            self.time_list, self.bounding_box = GCodeInterpreter.interpret_code(self.command_list)
+            self.process_time = sum(self.time_list)
             return f"Successfully read NC file: {file_path}"
         except Exception as e:
             self.gcode_file = None
             self.file_name = None
             self.command_list = []
+            self.process_time = 0
+            self.time_list = []
+            self.bounding_box = [[0,0],[0,0],[0,0]]
             return f"Failed to read NC file: {e}"
         
     def set_work_position(self, work_position):
@@ -336,12 +378,13 @@ class ProcessStep:
 
 import numpy as np
 class GCodeInterpreter():
-    def get_move_times(command_list):
+    def interpret_code(command_list):
         """
         Returns all G0 and G1 commands as arrays of doubles: [x, y, z, speed].
         Only commands with X, Y, Z, and F (speed) are included.
         """
-        result = [0.01 for _ in command_list]
+        time_list = [0.01 for _ in command_list]
+        bounding_box = [[0,0],[0,0],[0,0]]  # x min max, y min max, z min max
         f=6000
         x = y = z = 0
         x_new = y_new = z_new = 0
@@ -359,10 +402,17 @@ class GCodeInterpreter():
                     elif part.startswith("F"):
                         f = float(part[1:])
                 command_time = np.sqrt((x-x_new)**2+(y-y_new)**2+(z-z_new)**2)/f*60
+                bounding_box[0][0] = min(bounding_box[0][0], x_new)
+                bounding_box[0][1] = max(bounding_box[0][1], x_new)
+                bounding_box[1][0] = min(bounding_box[1][0], y_new)
+                bounding_box[1][1] = max(bounding_box[1][1], y_new)
+                bounding_box[2][0] = min(bounding_box[2][0], z_new)
+                bounding_box[2][1] = max(bounding_box[2][1], z_new)
                 if command_time>0.01:
-                    result[idx]=command_time
+                    time_list[idx]=command_time
                 x=x_new
                 y=y_new
                 z=z_new
   
-        return result
+        return time_list, bounding_box
+

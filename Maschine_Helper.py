@@ -3,19 +3,12 @@ from __future__ import annotations
 import math
 import numpy as np
 
-# --- Qt imports: try PySide6 then PyQt5 ---
-try:
-    from PySide6.QtWidgets import (
-        QWidget, QListWidget, QListWidgetItem, QHBoxLayout, QPushButton,
-        QDoubleSpinBox, QMessageBox
-    )
-    from PySide6.QtCore import Qt, Signal, QObject
-except ImportError:  # fall back to PyQt5
-    from PyQt5.QtWidgets import (
-        QWidget, QListWidget, QListWidgetItem, QHBoxLayout, QPushButton,
-        QDoubleSpinBox, QMessageBox
-    )
-    from PyQt5.QtCore import Qt, pyqtSignal as Signal, QObject
+
+from PyQt6.QtWidgets import (
+    QWidget, QListWidget, QListWidgetItem, QHBoxLayout, QPushButton,
+    QDoubleSpinBox, QMessageBox
+)
+from PyQt6.QtCore import Qt, pyqtSignal as Signal, QObject
 
 
 class PointItemWidget(QWidget):
