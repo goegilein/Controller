@@ -120,13 +120,6 @@ class ArtisanController():
         
         self.connected=True
         if not self.is_homed:
-            # dialog = QtWidgets.QMessageBox()
-            # dialog.setWindowTitle("Homing Required")
-            # dialog.setText("Artisan must be homed before use.\nPlease ensure the workspace is clear and press OK to continue.")
-            # dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-            # dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-            # dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Ok)
-            # dialog.exec()
             msg = QMessageBox()
             ret = msg.question(None, "Homing Required",
                                  "Upon Starting it is recommended to home all axes first, to avoid unexpected behavior. \nRun homing routine now?",
@@ -159,6 +152,19 @@ class ArtisanController():
         tracking_thread.daemon = True
         tracking_thread.start()
 
+        #Debugging: Constantly read response
+        #once connected, constantly track the axis position
+        # def read_response():
+        #     while self.connected:
+        #         #response = self.get_response()
+        #         if self.last_response is not None:
+        #             response = self.last_response
+        #         print(response)
+        #         time.sleep(0.1)
+        # response_thread = threading.Thread(target=read_response)
+        # response_thread.daemon = True
+        # response_thread.start()
+
     def disconnect(self):
         if not self.is_connection_active():
             self.last_log = "No Connection to disconnect was found."
@@ -177,7 +183,7 @@ class ArtisanController():
             raise ValueError("Could not disconnect. Either no connection was established in the first place or something went wrong.")
         
 
-    def send_command(self, command, wait_ok=True):
+    def send_command(self, command, wait_text="ok", timeout=5):
         """
         Send a G-code command to Snapmaker.
         :param command: G-code command as a string.
@@ -194,11 +200,12 @@ class ArtisanController():
                 else:  # TCP/IP
                     self.connection.sendall((command + '\n').encode())
 
-                if wait_ok:
-                    lines = self._read_until(text="ok")
+                if wait_text:
+                    lines = self._read_until(wait_text,timeout)
                     self.last_response = lines if lines else None
                 else:
-                    self.last_response = self.get_response()
+                    pass
+                    #self.last_response = self.get_response()
                     
         except Exception as e:
             self.last_log = f"Failed to send command: {e}"
@@ -219,7 +226,7 @@ class ArtisanController():
             self.last_log = f"Failed to get response: {e}"
             return None
     
-    def _read_until(self, text="ok", timeout=5):
+    def _read_until(self, text="ok", timeout=20):
             lines = []
             got_text = False
             start_time = time.time()
@@ -231,7 +238,7 @@ class ArtisanController():
 
                 if line:
                     lines.append(line)
-                if line == text:
+                if text in line: #line == text:
                     got_text = True
                     break
             if not got_text:
@@ -406,7 +413,7 @@ class ArtisanController():
         Get the current position of all axis.
         :return: Current position of all axis.
         """
-        self.send_command("M114") # get new position     
+        self.send_command("M114", wait_text="X:") # get new position     
         try:
             position = []
             for line in self.last_response:
@@ -522,8 +529,8 @@ class ArtisanController():
         :param text: Text to wait for (e.g., "ok").
         """
         self.send_command("M400")  # Wait for all movements to finish
-        self.send_command(f"118 {text}") # get new position
-        self._read_until(text=text,timeout=timeout)
+        self.send_command(f"M118 {text}", wait_text=text, timeout=timeout) # get new position
+        #self._read_until(text=text,timeout=timeout)
 
 
     def is_connection_active(self):

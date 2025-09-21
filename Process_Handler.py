@@ -225,7 +225,9 @@ class ProcessHandler(BaseClass):
 
                         time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
                     else:
-                        #self.controller.add_sync_position(text=f"step_{step_idx+1}_done", timeout=10)  # Ensure all movements are finished before proceeding
+                        self.last_log = f"Commands of process_step {step_idx+1} sent. Waiting for finish. Pausing and Stopping no longer possible"
+                        self.controller.add_sync_position(text=f"step_{step_idx+1}_done", timeout=999)  # Ensure all movements are finished before proceeding
+                        time.sleep(0.5)
                         self.last_log = f"Execution of process_step {step_idx+1} completed successfully."
                     
                     if self.execution_canceled.is_set():
