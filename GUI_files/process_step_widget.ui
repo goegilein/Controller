@@ -164,10 +164,16 @@ QTabBar::tab:hover {
         <item>
          <widget class="QPushButton" name="load_file_button">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>20</horstretch>
-            <verstretch>20</verstretch>
+            <verstretch>30</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>50</width>
+            <height>0</height>
+           </size>
           </property>
           <property name="maximumSize">
            <size>
@@ -184,6 +190,12 @@ QTabBar::tab:hover {
           <property name="icon">
            <iconset>
             <normaloff>resources/load.png</normaloff>resources/load.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
           </property>
          </widget>
         </item>
@@ -207,11 +219,11 @@ QTabBar::tab:hover {
        <widget class="QLineEdit" name="step_name_edit"/>
       </item>
       <item row="2" column="0" colspan="2">
-       <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,1,0,1" columnstretch="1,1,1,0,0">
+       <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,1,0,1" columnstretch="1,1,1,0">
         <item row="0" column="1">
          <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>WP: Y</string>
+           <string>Work Pos: Y</string>
           </property>
          </widget>
         </item>
@@ -238,14 +250,14 @@ QTabBar::tab:hover {
         <item row="0" column="2">
          <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>WP: Z</string>
+           <string>Work Pos: Z</string>
           </property>
          </widget>
         </item>
         <item row="0" column="0">
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>WP: X</string>
+           <string>Work Pos: X</string>
           </property>
          </widget>
         </item>
@@ -317,7 +329,13 @@ QTabBar::tab:hover {
           </property>
           <property name="icon">
            <iconset>
-            <normaloff>resources/crosshair.png</normaloff>resources/crosshair.png</iconset>
+            <normaloff>resources/crosshair_new.png</normaloff>resources/crosshair_new.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
           </property>
          </widget>
         </item>
@@ -343,6 +361,12 @@ QTabBar::tab:hover {
         <property name="icon">
          <iconset>
           <normaloff>resources/trash.png</normaloff>resources/trash.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>

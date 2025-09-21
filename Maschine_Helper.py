@@ -34,6 +34,8 @@ class CircleFitter():
 
     def add_point(self):
         pos = self.controller.get_absolute_position()
+        if pos is None:
+            return
         point = Point(pos[0], pos[1], pos[2])
         self.point_list.append(point)
 
@@ -49,6 +51,7 @@ class CircleFitter():
         widget.abs_z_spinbox.setValue(point.Z)
 
         widget.remove_button.clicked.connect(lambda _, p=point, w=widget: self.remove_point(p,w))
+        widget.move_to_button.clicked.connect(lambda _, p=point: self.move_to_point(p))
         widget.set_current_pos_button.clicked.connect(lambda _, p=point, w=widget: self.set_current_point_pos(p,w))
 
         self.recalc_cicle_center()
@@ -84,7 +87,11 @@ class CircleFitter():
         self.recalc_cicle_center()
     
     def got_to_center(self):
-        self.controller. move_axis_absolute(self.circle_center.X, self.circle_center.Y, self.circle_center.Z, speed=30)
+        self.controller.move_axis_absolute(self.circle_center.X, self.circle_center.Y, self.circle_center.Z, speed=30)
+
+    def move_to_point(self, point):
+        self.controller.move_axis_absolute(point.X, point.Y, point.Z, speed=30)
+
 
     def recalc_cicle_center(self):
         self.compute_circle_center_or_mean()

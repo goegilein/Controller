@@ -391,7 +391,17 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
               </size>
              </property>
              <property name="text">
-              <string>Home All</string>
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset>
+               <normaloff>resources/home.png</normaloff>resources/home.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>50</width>
+               <height>50</height>
+              </size>
              </property>
             </widget>
            </item>
@@ -1261,7 +1271,7 @@ is OFF</string>
     <item row="0" column="2">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -1311,7 +1321,7 @@ is OFF</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>352</width>
+             <width>354</width>
              <height>757</height>
             </rect>
            </property>
@@ -1451,8 +1461,8 @@ is OFF</string>
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>352</width>
-             <height>757</height>
+             <width>100</width>
+             <height>30</height>
             </rect>
            </property>
            <attribute name="label">

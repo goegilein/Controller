@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>341</width>
-    <height>211</height>
+    <width>312</width>
+    <height>220</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -207,7 +207,7 @@ QTabBar::tab:hover {
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Target Poitions:</string>
+         <string>Targe Position:</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -307,21 +307,51 @@ QTabBar::tab:hover {
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Move to Target</string>
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/move_to.png</normaloff>resources/move_to.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>
       <item row="3" column="2">
        <widget class="QPushButton" name="move_to_home_button">
         <property name="text">
-         <string>Move To WP</string>
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/move_to_home.png</normaloff>resources/move_to_home.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>
       <item row="1" column="2">
        <widget class="QPushButton" name="set_home_button">
         <property name="text">
-         <string>Set WP</string>
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/reset_home.png</normaloff>resources/reset_home.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>

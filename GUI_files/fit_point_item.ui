@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>279</width>
+    <width>372</width>
     <height>59</height>
    </rect>
   </property>
@@ -142,25 +142,6 @@ QTabBar::tab:hover {
 }</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="1">
-    <widget class="QDoubleSpinBox" name="abs_y_spinbox">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::NoButtons</enum>
-     </property>
-     <property name="minimum">
-      <double>-1000.000000000000000</double>
-     </property>
-     <property name="maximum">
-      <double>1000.000000000000000</double>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="label_3">
      <property name="text">
@@ -171,8 +152,8 @@ QTabBar::tab:hover {
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QDoubleSpinBox" name="abs_x_spinbox">
+   <item row="1" column="1">
+    <widget class="QDoubleSpinBox" name="abs_y_spinbox">
      <property name="enabled">
       <bool>false</bool>
      </property>
@@ -200,13 +181,22 @@ QTabBar::tab:hover {
      </property>
     </widget>
    </item>
-   <item row="0" column="2">
-    <widget class="QLabel" name="label_5">
-     <property name="text">
-      <string>Abs.Z (mm)</string>
+   <item row="1" column="0">
+    <widget class="QDoubleSpinBox" name="abs_x_spinbox">
+     <property name="enabled">
+      <bool>false</bool>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
+     </property>
+     <property name="buttonSymbols">
+      <enum>QAbstractSpinBox::NoButtons</enum>
+     </property>
+     <property name="minimum">
+      <double>-1000.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>1000.000000000000000</double>
      </property>
     </widget>
    </item>
@@ -229,7 +219,7 @@ QTabBar::tab:hover {
      </property>
     </widget>
    </item>
-   <item row="0" column="4" rowspan="2">
+   <item row="0" column="5" rowspan="2">
     <widget class="QPushButton" name="remove_button">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
@@ -243,6 +233,22 @@ QTabBar::tab:hover {
      <property name="icon">
       <iconset>
        <normaloff>resources/trash.png</normaloff>resources/trash.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>25</width>
+       <height>25</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Abs.Z (mm)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
@@ -259,7 +265,36 @@ QTabBar::tab:hover {
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>resources/crosshair.png</normaloff>resources/crosshair.png</iconset>
+       <normaloff>resources/crosshair_new.png</normaloff>resources/crosshair_new.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>25</width>
+       <height>25</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4" rowspan="2">
+    <widget class="QPushButton" name="move_to_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>resources/move_to.png</normaloff>resources/move_to.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>25</width>
+       <height>25</height>
+      </size>
      </property>
     </widget>
    </item>

@@ -212,7 +212,9 @@ class ProcessInterface(BaseClass):
     def run_bounding_box(self):
         step_to_run = self.bounding_box_step_combobox.currentIndex()
 
-        if step_to_run == 0:
+        if step_to_run is None or step_to_run < 0:
+            return
+        elif step_to_run == 0:
             for idx,steps in enumerate(self.process_handler.process_step_list):
                 self.process_handler.run_bounding_box(idx)
         else:
