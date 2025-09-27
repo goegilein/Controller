@@ -155,188 +155,7 @@ QTabBar::tab:hover {
    <property name="styleSheet">
     <string notr="true"/>
    </property>
-   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,1">
-    <item row="0" column="0">
-     <widget class="QTabWidget" name="Cameras_tabWidget">
-      <property name="currentIndex">
-       <number>0</number>
-      </property>
-      <widget class="QWidget" name="Cam1_tab">
-       <attribute name="title">
-        <string>Overview</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_7">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <item row="2" column="0">
-         <widget class="QGroupBox" name="groupBox_7">
-          <property name="title">
-           <string>Camera</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_8">
-           <property name="sizeConstraint">
-            <enum>QLayout::SetDefaultConstraint</enum>
-           </property>
-           <item row="0" column="0">
-            <widget class="QPushButton" name="overview_camera_start_button">
-             <property name="text">
-              <string>Start</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QPushButton" name="overview_camera_stop_button">
-             <property name="text">
-              <string>Stop</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="overview_camera_save_image_button">
-             <property name="text">
-              <string>Save Image</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QGraphicsView" name="overview_camera_view">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>100</horstretch>
-            <verstretch>100</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="Cam2_tab">
-       <attribute name="title">
-        <string>Laser</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_11">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <item row="0" column="0">
-         <widget class="QGraphicsView" name="laser_camera_view">
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QGroupBox" name="groupBox_3">
-          <property name="title">
-           <string>Camera</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_12">
-           <item row="0" column="0">
-            <widget class="QPushButton" name="laser_camera_start_button">
-             <property name="text">
-              <string>Start</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QPushButton" name="laser_camera_stop_button">
-             <property name="text">
-              <string>Stop</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="laser_camera_save_image_button">
-             <property name="text">
-              <string>Save Image</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="GCode_tab">
-       <attribute name="title">
-        <string>G-code</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_13" rowstretch="1,0" rowminimumheight="1,0">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <item row="1" column="0">
-         <widget class="QGroupBox" name="groupBox_5">
-          <property name="title">
-           <string>GroupBox</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_15">
-           <item row="0" column="0">
-            <widget class="QPushButton" name="plot_gcode_button">
-             <property name="text">
-              <string>Plot G-Code</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QCheckBox" name="show_moves_checkBox">
-             <property name="text">
-              <string>Show Laser Off Moves</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QGroupBox" name="gcode_canvas">
-          <property name="title">
-           <string/>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_4"/>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </widget>
-    </item>
+   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,0">
     <item row="0" column="2">
      <widget class="QTabWidget" name="process_tabWidget">
       <property name="currentIndex">
@@ -351,7 +170,7 @@ QTabBar::tab:hover {
          <number>0</number>
         </property>
         <property name="topMargin">
-         <number>0</number>
+         <number>2</number>
         </property>
         <property name="rightMargin">
          <number>0</number>
@@ -380,6 +199,45 @@ QTabBar::tab:hover {
              <property name="defaultDropAction">
               <enum>Qt::MoveAction</enum>
              </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QGroupBox" name="groupBox_9">
+             <property name="title">
+              <string/>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_17">
+              <item row="0" column="1">
+               <widget class="QComboBox" name="bounding_box_step_combobox"/>
+              </item>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="bounding_box_mode_combobox">
+                <item>
+                 <property name="text">
+                  <string>Crosshair</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Laser</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="0" column="0" rowspan="2">
+               <widget class="QPushButton" name="run_bounding_box_button">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Run Bounding Box</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </item>
           </layout>
@@ -459,7 +317,7 @@ QTabWidget::pane {
            <enum>QTabWidget::Rounded</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <property name="usesScrollButtons">
            <bool>false</bool>
@@ -653,29 +511,31 @@ QTabWidget::pane {
              <number>2</number>
             </property>
             <item>
-             <widget class="QLabel" name="label_20">
-              <property name="text">
-               <string>Set Edge Points of Rectangle:</string>
+             <widget class="QGroupBox" name="groupBox_10">
+              <property name="title">
+               <string>Rectangle Edges to Set</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
               </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QListWidget" name="rectangle_fit_listWidget">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>280</height>
-               </size>
-              </property>
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <item>
+                <widget class="QListWidget" name="rectangle_fit_listWidget">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>280</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </widget>
             </item>
             <item>
@@ -972,6 +832,187 @@ QTabWidget::pane {
       </widget>
      </widget>
     </item>
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="Cameras_tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="Cam1_tab">
+       <attribute name="title">
+        <string>Overview</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_7">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item row="2" column="0">
+         <widget class="QGroupBox" name="groupBox_7">
+          <property name="title">
+           <string>Camera</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_8">
+           <property name="sizeConstraint">
+            <enum>QLayout::SetDefaultConstraint</enum>
+           </property>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="overview_camera_start_button">
+             <property name="text">
+              <string>Start</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="overview_camera_stop_button">
+             <property name="text">
+              <string>Stop</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="overview_camera_save_image_button">
+             <property name="text">
+              <string>Save Image</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGraphicsView" name="overview_camera_view">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>100</horstretch>
+            <verstretch>100</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="Cam2_tab">
+       <attribute name="title">
+        <string>Laser</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_11">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QGraphicsView" name="laser_camera_view">
+          <property name="mouseTracking">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_3">
+          <property name="title">
+           <string>Camera</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_12">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="laser_camera_start_button">
+             <property name="text">
+              <string>Start</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="laser_camera_stop_button">
+             <property name="text">
+              <string>Stop</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="laser_camera_save_image_button">
+             <property name="text">
+              <string>Save Image</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="GCode_tab">
+       <attribute name="title">
+        <string>G-code</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_13" rowstretch="1,0" rowminimumheight="1,0">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_5">
+          <property name="title">
+           <string>GroupBox</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_15">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="plot_gcode_button">
+             <property name="text">
+              <string>Plot G-Code</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QCheckBox" name="show_moves_checkBox">
+             <property name="text">
+              <string>Show Laser Off Moves</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="gcode_canvas">
+          <property name="title">
+           <string/>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_4"/>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
     <item row="0" column="1" rowspan="2">
      <widget class="QTabWidget" name="Controls_tabWidget">
       <property name="tabPosition">
@@ -1013,7 +1054,7 @@ QTabWidget::pane {
          <number>0</number>
         </property>
         <property name="topMargin">
-         <number>0</number>
+         <number>2</number>
         </property>
         <property name="rightMargin">
          <number>0</number>
@@ -1915,11 +1956,6 @@ is OFF</string>
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="AxisMeas_tab">
-       <attribute name="title">
-        <string>Axis Meas</string>
-       </attribute>
-      </widget>
      </widget>
     </item>
     <item row="1" column="0">
@@ -1996,81 +2032,66 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     <item row="1" column="2">
      <widget class="QGroupBox" name="groupBox">
       <property name="title">
-       <string>Process</string>
+       <string>Process Control</string>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QGroupBox" name="process_groupBox">
-         <property name="title">
-          <string>Process Control</string>
+      <layout class="QGridLayout" name="gridLayout_18">
+       <item row="1" column="0" colspan="3">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QPushButton" name="toggle_process_button">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>resources/start.png</normaloff>resources/start.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="cancel_process_button">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>resources/stop.png</normaloff>resources/stop.png</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>Process State:</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <item row="0" column="4">
-           <widget class="QLineEdit" name="time_remaining_edit">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Remaining - 00:00:00</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QLineEdit" name="process_state_edit">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Idle</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="4">
-           <widget class="QPushButton" name="run_bounding_box_button">
-            <property name="text">
-             <string>Run Bounding Box</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="3">
-           <widget class="QPushButton" name="cancel_process_button">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset>
-              <normaloff>resources/stop.png</normaloff>resources/stop.png</iconset>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_10">
-            <property name="text">
-             <string>Process State:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QPushButton" name="toggle_process_button">
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset>
-              <normaloff>resources/start.png</normaloff>resources/start.png</iconset>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="5">
-           <widget class="QComboBox" name="bounding_box_step_combobox"/>
-          </item>
-         </layout>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="process_state_edit">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Idle</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLineEdit" name="time_remaining_edit">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>Remaining - 00:00:00</string>
+         </property>
         </widget>
        </item>
       </layout>

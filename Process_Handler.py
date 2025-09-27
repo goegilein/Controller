@@ -302,9 +302,15 @@ class ProcessHandler(BaseClass):
             remaining_time += step.process_time
         self.remaining_time = remaining_time
 
-    def run_bounding_box(self, step_idx):
+    def run_bounding_box(self, step_idx, in_laser_coord=False):
         process_step = self.process_step_list[step_idx]
         bounding_box = process_step.bounding_box
+        if in_laser_coord: # offset the bounding box by laser offset
+            bounding_box[0][0]+=self.controller.laser_offset[0]
+            bounding_box[0][1]+=self.controller.laser_offset[0]
+            bounding_box[1][0]+=self.controller.laser_offset[1]
+            bounding_box[1][1]+=self.controller.laser_offset[1]
+
         wp = process_step.work_position
 
         #make sure to move to work position first

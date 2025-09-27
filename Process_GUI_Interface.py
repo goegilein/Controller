@@ -211,6 +211,10 @@ class ProcessInterface(BaseClass):
 
     def run_bounding_box(self):
         step_to_run = self.bounding_box_step_combobox.currentIndex()
+        
+        in_laser_coord=False
+        if self.gui.bounding_box_mode_combobox.currentText()=="Laser":
+            in_laser_coord=True
 
         if step_to_run is None or step_to_run < 0:
             return
@@ -218,5 +222,5 @@ class ProcessInterface(BaseClass):
             for idx,steps in enumerate(self.process_handler.process_step_list):
                 self.process_handler.run_bounding_box(idx)
         else:
-            self.process_handler.run_bounding_box(step_to_run-1)
+            self.process_handler.run_bounding_box(step_to_run-1, in_laser_coord)
         
