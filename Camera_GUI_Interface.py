@@ -1,8 +1,7 @@
 import cv2
-from PyQt6 import QtWidgets, uic, QtGui, QtCore
+from PyQt6 import QtWidgets, QtGui
 from PyQt6.QtCore import pyqtSignal, QObject
 import datetime
-import PIL.Image as Image
 import numpy as np
 import cv2
 

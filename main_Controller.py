@@ -15,6 +15,7 @@ import RotMotor_Cotroller
 import RotMotor_GUI_Interface
 import Interactive_Image_Control
 import Maschine_Helper
+import Gcode_Plotter
 
 #first define paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -66,6 +67,8 @@ interactive_image_control_overvoiew = Interactive_Image_Control.InteractiveImage
 
 maschine_helper = Maschine_Helper.MaschineHelpers(gui, artisan_controller)
 maschine_helper.setup_helpers()
+
+gcode_plotter = Gcode_Plotter.GCodePlotter(gui, process_handler)
 
 
 sys.exit(app.exec())

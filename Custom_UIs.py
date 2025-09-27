@@ -1,4 +1,4 @@
-from PyQt6 import QtWidgets, uic, QtGui, QtCore
+from PyQt6 import QtWidgets
 
 class CustomGraphicsView(QtWidgets.QGraphicsView):
     def __init__(self, parent=None):

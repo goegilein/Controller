@@ -159,7 +159,7 @@ class ProcessHandler(BaseClass):
         
         self.last_log = process_step.set_nc_file(file_path)
 
-    def start_process(self):
+    def start_process(self, fire_forget=False):
         """
         Execute all process steps in the job handler.
         1. Move to work position of this step
@@ -199,7 +199,7 @@ class ProcessHandler(BaseClass):
 
                     #Move to Work Position, then switch to laser tool.
                     pos_now=self.controller.get_absolute_position()
-                    self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, job_save=True)
+                    self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, z_save=True, job_save=True)
                     time.sleep(np.sqrt((wp[0]-pos_now[0])**2 + (wp[1]-pos_now[1])**2 + (wp[2]-pos_now[2])**2)/30*0.5)
                     if self.execution_canceled.is_set():
                         break
@@ -219,22 +219,21 @@ class ProcessHandler(BaseClass):
                             break
 
                         self.controller.send_command(command)
-                        # time_passed+=time_list[idx]
-                        self.remaining_time=round((self.remaining_time-time_list[idx]) * (self.remaining_time > 0)) #
-                    
-
-                        time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
+                        if not fire_forget:
+                            self.remaining_time=round((self.remaining_time-time_list[idx]) * (self.remaining_time > 0)) #
+                            time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
                     else:
-                        self.last_log = f"Commands of process_step {step_idx+1} sent. Waiting for finish. Pausing and Stopping no longer possible"
-                        self.controller.add_sync_position(text=f"step_{step_idx+1}_done", timeout=999)  # Ensure all movements are finished before proceeding
-                        time.sleep(0.5)
-                        self.last_log = f"Execution of process_step {step_idx+1} completed successfully."
+                        self.last_log = f"Commands of process_step {step_idx+1} sent. Waiting for finish. Pausing and Stopping in this step no longer possible"
+                        if not fire_forget:
+                            self.controller.add_sync_position(text=f"step_{step_idx+1}_done", timeout=999)  # Ensure all movements are finished before proceeding
+                            time.sleep(0.5)
+                            self.last_log = f"Execution of process_step {step_idx+1} completed successfully."
                     
                     if self.execution_canceled.is_set():
                         break
 
                 #Restore the old position after execution
-                self.controller.move_axis_absolute(start_position[0], start_position[1], start_position[2], speed=30, job_save=True)
+                self.controller.move_axis_absolute(start_position[0], start_position[1], start_position[2], speed=30, z_save=True, job_save=True)
                 self.process_state = "Idle"  # Reset state after completion
                 self.remaining_time = sum([step.process_time for step in self.process_step_list]) # reset remaining time
             except Exception as e:
