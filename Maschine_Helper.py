@@ -7,9 +7,11 @@ class MaschineHelpers():
         self.gui = gui
         self.controller = controller
     
-    def setup_helpers(self, circlefitter=True):
+    def setup_helpers(self, circlefitter=True, rectanglefitter=True):
         if circlefitter:
             self.circle_fitter = CircleFitter(self.gui, self.controller)
+        if rectanglefitter:
+            self.rectangle_fitter = RectangleFitter(self.gui, self.controller)
 
 
 class CircleFitter():
@@ -192,8 +194,124 @@ class CircleFitter():
             list.append([point.X, point.Y, point.Z])
         
         return np.array(list, dtype=float)
-        
     
+class RectangleFitter():
+    def __init__(self, gui, controller):
+        self.gui = gui
+        self.controller = controller
+
+        self.left_point = Point(None,None,None)
+        self.right_point = Point(None,None,None)
+        self.top_point = Point(None,None,None)
+        self.bottom_point = Point(None,None,None)
+
+        self.horz_center = Point(None,None,None)
+        self.vert_center = Point(None,None,None)
+        self.main_center = Point(None,None,None)
+
+
+        self.rectangle_fit_listWidget = gui.rectangle_fit_listWidget
+        gui.go_to_horz_center_button.clicked.connect(lambda _, i="horz": self.move_to_center(i))
+        gui.go_to_vert_center_button.clicked.connect(lambda _, i="vert": self.move_to_center(i))
+        gui.go_to_main_center_button.clicked.connect(lambda _, i="main": self.move_to_center(i))
+
+        self.widget_path = "GUI_files/fit_point_item.ui"
+
+        self.setup_gui()
+    
+    def setup_gui(self):
+        for text in ["LEFT:", "RIGHT:", "TOP:", "BOTTOM:"]:
+            # put widget it into the list
+            widget = uic.loadUi(self.widget_path)
+            item = QListWidgetItem()
+            item.setSizeHint(widget.sizeHint())
+            self.rectangle_fit_listWidget.addItem(item)
+            self.rectangle_fit_listWidget.setItemWidget(item, widget)
+
+            widget.abs_x_spinbox.setSpecialValueText("")
+            widget.abs_y_spinbox.setSpecialValueText("")
+            widget.abs_z_spinbox.setSpecialValueText("")
+
+            widget.point_name_label.setText(text)
+            widget.remove_button.setEnabled(False)
+            widget.remove_button.setStyleSheet("background-color: transparent;")
+            widget.move_to_button.clicked.connect(lambda _, i=text: self.move_to_fitpoint(i))
+            widget.set_current_pos_button.clicked.connect(lambda _, i=text, w=widget: self.set_current_point_pos(i,w))
+    
+    def move_to_fitpoint(self, identifier):
+        if identifier == "LEFT:":
+            if self.left_point.X is not None:
+                self.controller.move_axis_absolute(self.left_point.X, self.left_point.Y, self.left_point.Z, speed=30)
+        elif identifier == "RIGHT:":
+            if self.right_point.X is not None:
+                self.controller.move_axis_absolute(self.right_point.X, self.right_point.Y, self.right_point.Z, speed=30)
+        elif identifier == "TOP:":
+            if self.top_point.X is not None:
+                self.controller.move_axis_absolute(self.top_point.X, self.top_point.Y, self.top_point.Z, speed=30)
+        elif identifier == "BOTTOM:":
+            if self.bottom_point.X is not None:
+                self.controller.move_axis_absolute(self.bottom_point.X, self.bottom_point.Y, self.bottom_point.Z, speed=30)
+    
+    def set_current_point_pos(self, identifier, widget):
+
+        new_pos = self.controller.get_absolute_position()
+        if new_pos is None:
+            return
+            
+        if identifier == "LEFT:":
+            self.left_point.set_pos(new_pos[0], new_pos[1], new_pos[2])
+        elif identifier == "RIGHT:":
+            self.right_point.set_pos(new_pos[0], new_pos[1], new_pos[2])
+        elif identifier == "TOP:":
+            self.top_point.set_pos(new_pos[0], new_pos[1], new_pos[2])
+        elif identifier == "BOTTOM:":
+            self.bottom_point.set_pos(new_pos[0], new_pos[1], new_pos[2])
+
+        widget.abs_x_spinbox.setValue(new_pos[0])
+        widget.abs_y_spinbox.setValue(new_pos[1])
+        widget.abs_z_spinbox.setValue(new_pos[2])
+
+        self.recalc_centers()
+
+    def recalc_centers(self):
+        if self.left_point.X is None and self.top_point is None:
+            return #nothing to calculate
+        
+        if self.left_point.X and self.right_point.X:
+            self.horz_center = self.calc_mid(self.left_point, self.right_point)
+            self.gui.horz_center_x_spinbox.setValue(self.horz_center.X)
+            self.gui.horz_center_y_spinbox.setValue(self.horz_center.Y)
+            self.gui.horz_center_z_spinbox.setValue(self.horz_center.Z)
+            self.gui.go_to_horz_center_button.setEnabled(True)
+        
+        if self.top_point.X and self.bottom_point.X:
+            self.vert_center = self.calc_mid(self.top_point, self.bottom_point)
+            self.gui.vert_center_x_spinbox.setValue(self.vert_center.X)
+            self.gui.vert_center_y_spinbox.setValue(self.vert_center.Y)
+            self.gui.vert_center_z_spinbox.setValue(self.vert_center.Z)
+            self.gui.go_to_vert_center_button.setEnabled(True)
+        
+        if self.horz_center.X is not None and self.vert_center.X is not None:
+            self.main_center = self.calc_mid(self.horz_center, self.vert_center)
+            self.gui.main_center_x_spinbox.setValue(self.main_center.X)
+            self.gui.main_center_y_spinbox.setValue(self.main_center.Y)
+            self.gui.main_center_z_spinbox.setValue(self.main_center.Z)
+            self.gui.go_to_main_center_button.setEnabled(True)
+    
+    def move_to_center(self, identifier):
+        if identifier=="horz":
+            if self.horz_center.X is not None:
+                self.controller.move_axis_absolute(self.horz_center.X, self.horz_center.Y, self.horz_center.Z, speed=30)
+        elif identifier=="vert":
+            if self.vert_center.X is not None:
+                self.controller.move_axis_absolute(self.vert_center.X, self.vert_center.Y, self.vert_center.Z, speed=30)
+        elif identifier=="main":
+            if self.main_center.X is not None:
+                self.controller.move_axis_absolute(self.main_center.X, self.main_center.Y, self.main_center.Z, speed=30)
+    
+    def calc_mid(self, point1, point2):
+        return Point((point1.X+point2.X)/2, (point1.Y+point2.Y)/2, (point1.Z+point2.Z)/2)
+
 class Point():
     def __init__(self, x, y ,z):
         self.X = x

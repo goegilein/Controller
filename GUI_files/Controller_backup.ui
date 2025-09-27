@@ -158,26 +158,20 @@ QTabBar::tab:hover {
    <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,1">
     <item row="0" column="0">
      <widget class="QTabWidget" name="Cameras_tabWidget">
+      <property name="tabPosition">
+       <enum>QTabWidget::North</enum>
+      </property>
+      <property name="tabShape">
+       <enum>QTabWidget::Rounded</enum>
+      </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="Cam1_tab">
        <attribute name="title">
         <string>Overview</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_7">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item row="2" column="0">
          <widget class="QGroupBox" name="groupBox_7">
           <property name="title">
@@ -231,18 +225,6 @@ QTabBar::tab:hover {
         <string>Laser</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_11">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item row="0" column="0">
          <widget class="QGraphicsView" name="laser_camera_view">
           <property name="mouseTracking">
@@ -282,23 +264,11 @@ QTabBar::tab:hover {
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="GCode_tab">
+      <widget class="QWidget" name="tab_3">
        <attribute name="title">
         <string>G-code</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_13" rowstretch="1,0" rowminimumheight="1,0">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item row="1" column="0">
          <widget class="QGroupBox" name="groupBox_5">
           <property name="title">
@@ -338,27 +308,15 @@ QTabBar::tab:hover {
      </widget>
     </item>
     <item row="0" column="2">
-     <widget class="QTabWidget" name="process_tabWidget">
+     <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
-      <widget class="QWidget" name="process_tab">
+      <widget class="QWidget" name="tab">
        <attribute name="title">
         <string>Process</string>
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item>
          <widget class="QGroupBox" name="groupBox_2">
           <property name="title">
@@ -387,58 +345,28 @@ QTabBar::tab:hover {
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="position_meas_tab">
+      <widget class="QWidget" name="tab_2">
        <attribute name="title">
         <string>Position Meas.</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0">
-        <property name="spacing">
-         <number>6</number>
-        </property>
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QTabWidget" name="fit_methods_tabWidget">
+         <widget class="QTabWidget" name="tabWidget_2">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="styleSheet">
-           <string notr="true">QTabBar::tab {
-    color: rgb(0, 0, 150); 
-    border: 1px solid rgb(235, 135, 30);
-    padding: 2px;
-    border-top-left-radius: 0px;
-    border-top-right-radius: 0px;
-	min-width:1px;
-	min-height: 200px;
-}
-
-QTabBar::tab:selected {
-    color:rgb(0, 0, 150); 
-    font-weight: bold;
-	border: 2px solid rgb(235, 135, 30);
-}
-
-QTabBar::tab:hover {
-    color: rgb(0, 0, 200); /* Slightly lighter orange */
-	background-color: rgb(245, 245, 255); ;
-}
-
-QTabWidget::pane {
+           <string notr="true">QTabWidget::pane {
         border: 1px solid #444;
+    }
+    
+    QTabBar::tab {
+        padding: 1px;
+        min-width: 1px;
+		min-height: 200px;
     }
     
     QTabWidget QTabBar {
@@ -446,11 +374,10 @@ QTabWidget::pane {
     }
     
     QTabBar {
-		qproperty-documentMode: false;
-        qproperty-expanding: false;
+		qproperty-documentMode: true;
+        qproperty-expanding: true;
         qproperty-usesScrollButtons: false;  /* Disable scroll buttons */
-    }
-</string>
+    }</string>
           </property>
           <property name="tabPosition">
            <enum>QTabWidget::East</enum>
@@ -459,13 +386,13 @@ QTabWidget::pane {
            <enum>QTabWidget::Rounded</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <property name="usesScrollButtons">
            <bool>false</bool>
           </property>
           <property name="documentMode">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="tabsClosable">
            <bool>false</bool>
@@ -478,35 +405,14 @@ QTabWidget::pane {
           </property>
           <widget class="QWidget" name="tab_6">
            <attribute name="title">
-            <string>Circle Fit</string>
+            <string>Tab 1</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_7">
-            <property name="spacing">
-             <number>0</number>
-            </property>
             <property name="sizeConstraint">
              <enum>QLayout::SetDefaultConstraint</enum>
             </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>2</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>2</number>
-            </property>
             <item>
              <widget class="QPushButton" name="circle_fit_add_point_button">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
               <property name="text">
                <string>Add Point at current Position</string>
               </property>
@@ -634,49 +540,11 @@ QTabWidget::pane {
           </widget>
           <widget class="QWidget" name="tab_7">
            <attribute name="title">
-            <string>Rectangle Fit</string>
+            <string>Tab 2</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_8">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="leftMargin">
-             <number>0</number>
-            </property>
-            <property name="topMargin">
-             <number>2</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>2</number>
-            </property>
             <item>
-             <widget class="QLabel" name="label_20">
-              <property name="text">
-               <string>Set Edge Points of Rectangle:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QListWidget" name="rectangle_fit_listWidget">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>280</height>
-               </size>
-              </property>
-             </widget>
+             <widget class="QListWidget" name="rectangle_fit_listWidget"/>
             </item>
             <item>
              <widget class="QGroupBox" name="groupBox_8">
@@ -688,7 +556,7 @@ QTabWidget::pane {
               </property>
               <layout class="QGridLayout" name="gridLayout_16">
                <item row="3" column="3">
-                <widget class="QDoubleSpinBox" name="main_center_z_spinbox">
+                <widget class="QDoubleSpinBox" name="dia_center_z_spinbox">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
@@ -764,7 +632,7 @@ QTabWidget::pane {
                 </widget>
                </item>
                <item row="3" column="1">
-                <widget class="QDoubleSpinBox" name="main_center_x_spinbox">
+                <widget class="QDoubleSpinBox" name="dia_center_x_spinbox">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
@@ -802,7 +670,7 @@ QTabWidget::pane {
                 </widget>
                </item>
                <item row="3" column="2">
-                <widget class="QDoubleSpinBox" name="main_center_y_spinbox">
+                <widget class="QDoubleSpinBox" name="dia_center_y_spinbox">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
@@ -840,7 +708,7 @@ QTabWidget::pane {
                 </widget>
                </item>
                <item row="1" column="4">
-                <widget class="QPushButton" name="go_to_horz_center_button">
+                <widget class="QPushButton" name="got_horz_center_button">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
@@ -900,7 +768,7 @@ QTabWidget::pane {
                 </widget>
                </item>
                <item row="3" column="4">
-                <widget class="QPushButton" name="go_to_main_center_button">
+                <widget class="QPushButton" name="go_to_dia_center_button">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
@@ -922,7 +790,7 @@ QTabWidget::pane {
                <item row="3" column="0">
                 <widget class="QLabel" name="label_19">
                  <property name="text">
-                  <string>Rect. Center</string>
+                  <string>Diagonals</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignCenter</set>
@@ -948,21 +816,21 @@ QTabWidget::pane {
                  </property>
                 </widget>
                </item>
+               <item row="4" column="1">
+                <spacer name="verticalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
               </layout>
              </widget>
-            </item>
-            <item>
-             <spacer name="verticalSpacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>40</height>
-               </size>
-              </property>
-             </spacer>
             </item>
            </layout>
           </widget>
@@ -1009,18 +877,6 @@ QTabWidget::pane {
         <string>Axis Controls</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_9">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
         <item row="2" column="0">
          <widget class="QGroupBox" name="absolute_movement_controls_groupBox">
           <property name="title">
@@ -1833,7 +1689,7 @@ is OFF</string>
               <double>0.001000000000000</double>
              </property>
              <property name="maximum">
-              <double>400.000000000000000</double>
+              <double>100.000000000000000</double>
              </property>
              <property name="value">
               <double>10.000000000000000</double>

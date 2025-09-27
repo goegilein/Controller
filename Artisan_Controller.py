@@ -346,7 +346,7 @@ class ArtisanController():
         # Switch back to absolute positioning
         self.send_command("G90")
     
-    def move_axis_absolute(self, x, y, z, speed=None, z_save=False, job_save=False):
+    def move_axis_absolute(self, x, y, z, speed=None, z_save=True, job_save=False):
         """
         Move the axis in absolute machine coordinates.
         :param x: X-coordinate to move to.
@@ -370,18 +370,20 @@ class ArtisanController():
             speed=self.max_z_speed
 
         # Adjust coordinates based on origin offset
-        x_move-=self.origin_offset[0]
-        y_move-=self.origin_offset[1]
-        z_move-=self.origin_offset[2]
+        x_move = x-self.origin_offset[0]
+        y_move = y-self.origin_offset[1]
+        z_move = z-self.origin_offset[2]
 
         # Move the axis
         if z_save:
-            pos_now = self.get_absolute_position
-            if pos_now(2)>z:
+            pos_now = self.get_absolute_position()
+            if pos_now[2]>z:
                 self.send_command(f"G0 X{x_move} Y{y_move} F{speed*60}")
                 self.send_command(f"G0 Z{z_move} F{speed*60}")
-            else:
+            elif pos_now[2]<z:
                 self.send_command(f"G0 Z{z_move} F{speed*60}")
+                self.send_command(f"G0 X{x_move} Y{y_move} F{speed*60}")
+            else:
                 self.send_command(f"G0 X{x_move} Y{y_move} F{speed*60}")
         else:
             self.send_command(f"G0 X{x_move} Y{y_move} Z{z_move} F{speed*60}")
