@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1727</width>
-    <height>1048</height>
+    <width>1280</width>
+    <height>850</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,131 +20,164 @@
    <enum>Qt::LeftToRight</enum>
   </property>
   <property name="styleSheet">
-   <string notr="true">QWidget{
-background-color: rgb(230,230,230);
+   <string notr="true">
+/* --- Global ------------------------------------------------------------- */
+* { outline: 0; }
+QWidget {
+  background: #f7f7f9;
+  color: #222222;
+  font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-size: 10pt;
 }
-
-QGroupBox{
-color:  rgb(80, 0, 19);  /* Text color */
-font-weight: bold;  /* Bold text */
+QMainWindow, QDialog {
+  background: #ffffff;
 }
-
-QLabel{
-color:  rgb(80, 0, 19);;  /* Text color */
+QStatusBar, QMenuBar {
+  background: #ffffff;
+  border: none;
 }
-
+/* Containers */
+QGroupBox {
+  border: 1px solid #e6e6ea;
+  border-radius: 10px;
+  margin-top: 16px;
+  padding: 12px;
+}
+QGroupBox::title {
+  subcontrol-origin: margin;
+  left: 10px;
+  padding: 0 4px;
+  color: #111;
+  font-weight: 600;
+}
+QFrame[frameShape="4"], QFrame[frameShape="5"] { /* HLine, VLine */
+  color: #e6e6ea;
+}
+/* Inputs */
+QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox, QDateTimeEdit {
+  background: #ffffff;
+  border: 1px solid #d9d9df;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus, QDateTimeEdit:focus {
+  border: 1px solid #7a001c;
+  box-shadow: 0 0 0 2px rgba(122,0,28,0.08);
+}
+/* Buttons */
 QPushButton {
-	background-color: rgb(122,0,28);  /* Background color */
-	border: 1px solid rgb(0, 0, 0);
-    color: rgb(255, 255, 255);  /* Text color */
-    border-radius: 5px;  /* Rounded edges */
-	padding: 2px;
+  background: #ffffff;
+  border: 1px solid #d9d9df;
+  border-radius: 10px;
+  padding: 8px 14px;
 }
-
 QPushButton:hover {
-    background-color: rgb(142, 0, 38);  /* Background color when hovered */
-	color: rgb(245, 245, 245);
-    border-color:rgb(40, 40, 40);  /* Border color when hovered */
+  border-color: #7a001c;
 }
-
 QPushButton:pressed {
-   color:  rgb(80, 0, 19);  /* Background color when pressed */
-	borde-color: rgb(0, 0, 0);
+  background: #f3e9ec;
 }
-QPushButton:clicked {
-   background-color: rgb(80,0,19);  /* Background color when pressed */
-	borde-colorr:  rgb(0,0, 0);
-}
-
-QPushButton:checked {
-    background-color: rgb(255,255,255);
-	color:  rgb(80, 0, 19);
-	border: 2px solid rgb(122, 0, 28);
-	font-weight: bold;  /* Bold text */
-}
-
 QPushButton:disabled {
-    background-color: rgb(180,180, 180);
-	border: 1px solid rgb(0, 0,0);
+  color: #999;
+  background: #f2f2f4;
 }
-
-QDoubleSpinBox:enabled{
-background-color: rgb(255,255,255);
-color:  rgb(80, 0, 19);  /* Text color */
-border: 1px solid  rgb(122, 0, 28);  /* Border color */
-border-radius: 5px;  /* Rounded edges */
-padding : 2px;
+/* Default button as primary */
+QPushButton:default {
+  background: #7a001c;
+  color: #ffffff;
+  border: 1px solid #7a001c;
 }
-QDoubleSpinBox:disabled{
-color: rgb(80, 0, 19);  /* Text color */
-border: 1px solid rgb(255,255,255);  /* Border color */
-border-radius: 5px;  /* Rounded edges */
-padding : 2px;
+QPushButton:default:hover {
+  filter: brightness(1.05);
 }
-
-QSpinBox:enabled{
-background-color: rgb(255,255,255);
-color:  rgb(80, 0, 19);  /* Text color */
-border: 1px solid  rgb(122, 0, 28);  /* Border color */
-border-radius: 5px;  /* Rounded edges */
-padding : 2px;
-
+/* ToolButtons */
+QToolButton {
+  background: #ffffff;
+  border: 1px solid #d9d9df;
+  border-radius: 10px;
+  padding: 6px;
 }
-QSpinBox:disabled{
-color: rgb(80, 0, 19);  /* Text color */
-border: 1px solid rgb(255,255,255);  /* Border color */
-border-radius: 5px;  /* Rounded edges */
-padding : 2px;
+QToolButton:hover {
+  border-color: #7a001c;
 }
-
-QPlainTextEdit{
-background-color: rgb(255,255,255);
-border-radius: 5px;  /* Rounded edges */
+/* Tabs */
+QTabWidget::pane {
+  border: 1px solid #e6e6ea;
+  border-radius: 10px;
+  padding: 6px;
+  background: #ffffff;
 }
-
-QLineEdit:endabled{
-background-color: rgb(255,255,255);
-color:  rgb(80, 0, 19);  /* Text color */
-border: 1px solid rgb(0,0,0);  /* Border color */
-border-radius: 5px;  /* Rounded edges */
-padding : 2px;
-}
-
-QLineEdit:disabled{
-background-color: rgb(230,230,230);
-color:  rgb(80, 0, 19);  /* Text color */
-border: 1px solid rgb(0,0,0);  /* Border color */
-border-radius: 5px;  /* Rounded edges */
-padding : 2px;
-}
-
-QComboBox{
-background-color: rgb(255,255,255);
-color:  rgb(80, 0, 19);  /* Text color */
-border: 1px solid rgb(0,0,0);  /* Border color */
-border-radius: 5px;  /* Rounded edges */
-padding : 2px;
-}
-
 QTabBar::tab {
-    color:  rgb(80, 0, 19); 
-    border: 1px solid rgb(122,0,28);
-    padding: 5px;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-	min-width:80px;
+  background: #ffffff;
+  border: 1px solid #e6e6ea;
+  padding: 8px 14px;
+  margin-right: 4px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
-
 QTabBar::tab:selected {
-    color:  rgb(80, 0, 19); 
-    background-color: rgb(255, 255, 255); ;
-    font-weight: bold;
-	border: 2px solid rgb(122, 0, 28);
+  border-color: #7a001c;
+  color: #000;
 }
-
 QTabBar::tab:hover {
-    color:  rgb(122, 0, 28); /* Slightly lighter orange */
-	background-color: rgb(245, 245, 245); ;
+  border-color: #7a001c;
+}
+/* Tables */
+QHeaderView::section {
+  background: #fafafb;
+  padding: 8px;
+  border: 1px solid #e6e6ea;
+  font-weight: 600;
+}
+QTableView, QTreeView {
+  gridline-color: #efeff3;
+  selection-background-color: rgba(122,0,28,0.12);
+  selection-color: #111;
+  border: 1px solid #e6e6ea;
+  border-radius: 8px;
+}
+/* Sliders and progress */
+QSlider::groove:horizontal {
+  height: 6px;
+  border-radius: 3px;
+  background: #e6e6ea;
+}
+QSlider::handle:horizontal {
+  background: #7a001c;
+  width: 16px;
+  height: 16px;
+  margin: -6px 0;
+  border-radius: 8px;
+}
+QProgressBar {
+  border: 1px solid #e6e6ea;
+  border-radius: 8px;
+  text-align: center;
+  background: #ffffff;
+}
+QProgressBar::chunk {
+  background-color: #7a001c;
+  border-radius: 8px;
+}
+/* Checks / Radios */
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+  background: #7a001c;
+  border: 1px solid #7a001c;
+}
+QCheckBox::indicator, QRadioButton::indicator {
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  border: 1px solid #cfcfd6;
+  background: #fff;
+}
+/* Menus */
+QMenu {
+  background: #ffffff;
+  border: 1px solid #e6e6ea;
+  border-radius: 8px;
+}
+QMenu::item:selected {
+  background: rgba(122,0,28,0.12);
 }
 </string>
   </property>
@@ -153,7 +186,7 @@ QTabBar::tab:hover {
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
-    <string notr="true"/>
+    <string notr="true" />
    </property>
    <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,0">
     <item row="0" column="2">
@@ -183,28 +216,13 @@ QTabBar::tab:hover {
           <property name="title">
            <string>Process Steps</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
           <layout class="QGridLayout" name="gridLayout_10">
            <item row="0" column="0">
             <widget class="QPushButton" name="add_process_step_button">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>30</height>
-              </size>
-             </property>
              <property name="text">
               <string>Add Proces Step</string>
              </property>
-            </widget>
+            <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="1" column="0">
             <widget class="QListWidget" name="process_steps_listWidget">
@@ -219,11 +237,11 @@ QTabBar::tab:hover {
            <item row="2" column="0">
             <widget class="QGroupBox" name="groupBox_9">
              <property name="title">
-              <string/>
+              <string />
              </property>
              <layout class="QGridLayout" name="gridLayout_17">
               <item row="0" column="1">
-               <widget class="QComboBox" name="bounding_box_step_combobox"/>
+               <widget class="QComboBox" name="bounding_box_step_combobox" />
               </item>
               <item row="1" column="1">
                <widget class="QComboBox" name="bounding_box_mode_combobox">
@@ -250,7 +268,7 @@ QTabBar::tab:hover {
                 <property name="text">
                  <string>Run Bounding Box</string>
                 </property>
-               </widget>
+               <property name="icon"><iconset><normaloff>icons/play.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property><property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
               </item>
              </layout>
             </widget>
@@ -290,8 +308,8 @@ QTabBar::tab:hover {
           </property>
           <property name="styleSheet">
            <string notr="true">QTabBar::tab {
-    color:  rgb(80, 0, 19);
-    border: 1px solid rgb(122, 0, 28);
+    color: rgb(0, 0, 150); 
+    border: 1px solid rgb(235, 135, 30);
     padding: 2px;
     border-top-left-radius: 0px;
     border-top-right-radius: 0px;
@@ -300,9 +318,14 @@ QTabBar::tab:hover {
 }
 
 QTabBar::tab:selected {
-    color:  rgb(80, 0, 19);
+    color:rgb(0, 0, 150); 
     font-weight: bold;
-	border: 2px solid rgb(122, 0, 28);
+	border: 2px solid rgb(235, 135, 30);
+}
+
+QTabBar::tab:hover {
+    color: rgb(0, 0, 200); /* Slightly lighter orange */
+	background-color: rgb(245, 245, 255); ;
 }
 
 QTabWidget::pane {
@@ -368,32 +391,20 @@ QTabWidget::pane {
              <number>2</number>
             </property>
             <item>
-             <widget class="QGroupBox" name="groupBox_12">
-              <property name="title">
-               <string>Circle Points to set</string>
+             <widget class="QPushButton" name="circle_fit_add_point_button">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>34</height>
+               </size>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
+              <property name="text">
+               <string>Add Point at current Position</string>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_6">
-               <item>
-                <widget class="QPushButton" name="circle_fit_add_point_button">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>30</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>Add Point at current Position</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QListWidget" name="circle_fit_listWidget"/>
-               </item>
-              </layout>
-             </widget>
+             <property name="icon"><iconset><normaloff>icons/power.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property></widget>
+            </item>
+            <item>
+             <widget class="QListWidget" name="circle_fit_listWidget" />
             </item>
             <item>
              <widget class="QGroupBox" name="groupBox_4">
@@ -428,7 +439,7 @@ QTabWidget::pane {
                  <property name="text">
                   <string>GoTo</string>
                  </property>
-                </widget>
+                <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
                </item>
                <item row="1" column="3">
                 <widget class="QDoubleSpinBox" name="circle_fit_z_spinbox">
@@ -535,7 +546,7 @@ QTabWidget::pane {
             <item>
              <widget class="QGroupBox" name="groupBox_10">
               <property name="title">
-               <string>Rectangle Edges to set</string>
+               <string>Rectangle Edges to Set</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
@@ -729,7 +740,7 @@ QTabWidget::pane {
                  <property name="text">
                   <string>GoTo</string>
                  </property>
-                </widget>
+                <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
                </item>
                <item row="1" column="0">
                 <widget class="QLabel" name="label_17">
@@ -759,7 +770,7 @@ QTabWidget::pane {
                  <property name="text">
                   <string>GoTo</string>
                  </property>
-                </widget>
+                <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
                </item>
                <item row="0" column="1">
                 <widget class="QLabel" name="label_11">
@@ -789,7 +800,7 @@ QTabWidget::pane {
                  <property name="text">
                   <string>GoTo</string>
                  </property>
-                </widget>
+                <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
                </item>
                <item row="2" column="0">
                 <widget class="QLabel" name="label_18">
@@ -890,21 +901,21 @@ QTabWidget::pane {
              <property name="text">
               <string>Start</string>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/play.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property><property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="0" column="1">
             <widget class="QPushButton" name="overview_camera_stop_button">
              <property name="text">
               <string>Stop</string>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/stop.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property><property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="0" column="2">
             <widget class="QPushButton" name="overview_camera_save_image_button">
              <property name="text">
               <string>Save Image</string>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/save.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property><property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
           </layout>
          </widget>
@@ -959,21 +970,21 @@ QTabWidget::pane {
              <property name="text">
               <string>Start</string>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/play.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property><property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="0" column="1">
             <widget class="QPushButton" name="laser_camera_stop_button">
              <property name="text">
               <string>Stop</string>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/stop.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property><property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="0" column="2">
             <widget class="QPushButton" name="laser_camera_save_image_button">
              <property name="text">
               <string>Save Image</string>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/save.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property><property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
           </layout>
          </widget>
@@ -1008,7 +1019,7 @@ QTabWidget::pane {
              <property name="text">
               <string>Plot G-Code</string>
              </property>
-            </widget>
+            <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="0" column="1">
             <widget class="QCheckBox" name="show_moves_checkBox">
@@ -1026,9 +1037,9 @@ QTabWidget::pane {
         <item row="0" column="0">
          <widget class="QGroupBox" name="gcode_canvas">
           <property name="title">
-           <string/>
+           <string />
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_4"/>
+          <layout class="QVBoxLayout" name="verticalLayout_4" />
          </widget>
         </item>
        </layout>
@@ -1108,7 +1119,7 @@ QTabWidget::pane {
               </size>
              </property>
              <property name="text">
-              <string/>
+              <string />
              </property>
              <property name="icon">
               <iconset>
@@ -1120,7 +1131,7 @@ QTabWidget::pane {
                <height>50</height>
               </size>
              </property>
-            </widget>
+            <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="3" column="4">
             <widget class="QDoubleSpinBox" name="abs_z_box">
@@ -1259,7 +1270,7 @@ QTabWidget::pane {
              <property name="text">
               <string>Move Rel.</string>
              </property>
-            </widget>
+            <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="3" column="0">
             <widget class="QLabel" name="label_6">
@@ -1283,7 +1294,7 @@ QTabWidget::pane {
               </size>
              </property>
              <property name="styleSheet">
-              <string notr="true"/>
+              <string notr="true" />
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -1382,7 +1393,7 @@ QTabWidget::pane {
              <property name="text">
               <string>Move Abs.</string>
              </property>
-            </widget>
+            <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="2" column="2">
             <widget class="QDoubleSpinBox" name="rel_y_box">
@@ -1434,7 +1445,7 @@ QTabWidget::pane {
              <property name="text">
               <string>Set Work Pos.</string>
              </property>
-            </widget>
+            <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
            <item row="0" column="4">
             <widget class="QLabel" name="label_7">
@@ -1448,7 +1459,7 @@ QTabWidget::pane {
              <property name="text">
               <string>Move to WP</string>
              </property>
-            </widget>
+            <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
            </item>
           </layout>
          </widget>
@@ -1547,7 +1558,7 @@ QTabWidget::pane {
              <property name="text">
               <string>STOP</string>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/stop.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property></widget>
            </item>
            <item row="1" column="0">
             <widget class="QPushButton" name="minus_x_button">
@@ -1702,7 +1713,7 @@ is OFF</string>
              <property name="checkable">
               <bool>true</bool>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/power.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property></widget>
            </item>
            <item row="0" column="0">
             <widget class="QPushButton" name="laser_crosshair_button">
@@ -1740,7 +1751,7 @@ is OFF</string>
              <property name="checkable">
               <bool>true</bool>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/power.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property></widget>
            </item>
            <item row="0" column="1">
             <widget class="QPushButton" name="enclosure_light_button">
@@ -1769,7 +1780,7 @@ is OFF</string>
              <property name="checkable">
               <bool>true</bool>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/power.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property></widget>
            </item>
            <item row="0" column="3">
             <widget class="QPushButton" name="air_assist_button">
@@ -1798,7 +1809,7 @@ is OFF</string>
              <property name="checkable">
               <bool>true</bool>
              </property>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/power.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property></widget>
            </item>
           </layout>
          </widget>
@@ -1856,6 +1867,22 @@ is OFF</string>
              </property>
             </widget>
            </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Move Mode</string>
+             </property>
+             <property name="textFormat">
+              <enum>Qt::AutoText</enum>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="margin">
+              <number>5</number>
+             </property>
+            </widget>
+           </item>
            <item row="1" column="1">
             <widget class="QDoubleSpinBox" name="axis_step_size_box">
              <property name="minimumSize">
@@ -1887,6 +1914,28 @@ is OFF</string>
              </property>
             </widget>
            </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="axis_step_mode_button">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>34</height>
+              </size>
+             </property>
+             <property name="styleSheet">
+              <string notr="true" />
+             </property>
+             <property name="text">
+              <string>Step</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
            <item row="2" column="1">
             <widget class="QLabel" name="label_3">
              <property name="text">
@@ -1897,142 +1946,24 @@ is OFF</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="0" rowspan="4">
-            <widget class="QGroupBox" name="groupBox_11">
+           <item row="2" column="0">
+            <widget class="QPushButton" name="axis_continuous_mode_button">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>34</height>
+              </size>
+             </property>
              <property name="styleSheet">
-              <string notr="true"/>
+              <string notr="true" />
              </property>
-             <property name="title">
-              <string>Move Mode</string>
+             <property name="text">
+              <string>Continuous</string>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
+             <property name="checkable">
+              <bool>true</bool>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_5">
-              <property name="spacing">
-               <number>0</number>
-              </property>
-              <property name="sizeConstraint">
-               <enum>QLayout::SetDefaultConstraint</enum>
-              </property>
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>2</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>2</number>
-              </property>
-              <item>
-               <widget class="QPushButton" name="axis_step_mode_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>30</height>
-                 </size>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">QPushButton {
-	background-color: rgb(230,230,230);  /* Background color */
-	border: 1px solid rgb(122, 0, 28);
-    color: rgb(80, 0, 19);  /* Text color */
-    border-radius: 5px;  /* Rounded edges */
-	padding: 2px;
-}
-
-QPushButton:hover {
-    background-color: rgb(245, 245, 245);  /* Background color when hovered */
-	color: rgb(122, 0, 28);
-    border-color:rgb(40, 40, 40);  /* Border color when hovered */
-}
-
-QPushButton:pressed {
-    background-color: rgb(255,255,255);
-	color:  rgb(80, 0, 19);
-	border: 2px solid rgb(122, 0, 28);
-}
-QPushButton:clicked {
-    background-color: rgb(255,255,255);
-	color:  rgb(80, 0, 19);
-	border: 2px solid rgb(122, 0, 28);
-}
-
-QPushButton:checked {
-    background-color: rgb(255,255,255);
-	color:  rgb(80, 0, 19);
-	border: 2px solid rgb(122, 0, 28);
-	font-weight: bold;  /* Bold text */
-}</string>
-                </property>
-                <property name="text">
-                 <string>Step</string>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="axis_continuous_mode_button">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>30</height>
-                 </size>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">QPushButton {
-	background-color: rgb(230,230,230);  /* Background color */
-	border: 1px solid rgb(122, 0, 28);
-    color: rgb(80, 0, 19);  /* Text color */
-    border-radius: 5px;  /* Rounded edges */
-	padding: 2px;
-}
-
-QPushButton:hover {
-    background-color: rgb(245, 245, 245);  /* Background color when hovered */
-	color: rgb(122, 0, 28);
-    border-color:rgb(40, 40, 40);  /* Border color when hovered */
-}
-
-QPushButton:pressed {
-    background-color: rgb(255,255,255);
-	color:  rgb(80, 0, 19);
-	border: 2px solid rgb(122, 0, 28);
-}
-QPushButton:clicked {
-    background-color: rgb(255,255,255);
-	color:  rgb(80, 0, 19);
-	border: 2px solid rgb(122, 0, 28);
-}
-
-QPushButton:checked {
-    background-color: rgb(255,255,255);
-	color:  rgb(80, 0, 19);
-	border: 2px solid rgb(122, 0, 28);
-	font-weight: bold;  /* Bold text */
-}</string>
-                </property>
-                <property name="text">
-                 <string>Continuous</string>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
+            <property name="icon"><iconset><normaloff>icons/power.svg</normaloff></iconset></property><property name="iconSize"><size><width>20</width><height>20</height></size></property></widget>
            </item>
           </layout>
          </widget>
@@ -2046,13 +1977,13 @@ QPushButton:checked {
            <attribute name="title">
             <string>RotMot1</string>
            </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_2"/>
+           <layout class="QVBoxLayout" name="verticalLayout_2" />
           </widget>
           <widget class="QWidget" name="rot_mot_2">
            <attribute name="title">
             <string>RotMot2</string>
            </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_3"/>
+           <layout class="QVBoxLayout" name="verticalLayout_3" />
           </widget>
          </widget>
         </item>
@@ -2142,13 +2073,13 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
          <item>
           <widget class="QPushButton" name="toggle_process_button">
            <property name="text">
-            <string/>
+            <string />
            </property>
            <property name="icon">
             <iconset>
              <normaloff>resources/start.png</normaloff>resources/start.png</iconset>
            </property>
-          </widget>
+          <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
          </item>
          <item>
           <widget class="QPushButton" name="cancel_process_button">
@@ -2156,13 +2087,13 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
             <bool>false</bool>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
            <property name="icon">
             <iconset>
              <normaloff>resources/stop.png</normaloff>resources/stop.png</iconset>
            </property>
-          </widget>
+          <property name="minimumSize"><size><width>0</width><height>34</height></size></property></widget>
          </item>
         </layout>
        </item>
@@ -2214,21 +2145,21 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     <property name="title">
      <string>Connection</string>
     </property>
-    <addaction name="connect_all_action"/>
-    <addaction name="disconnect_all_action"/>
-    <addaction name="connection_status_action"/>
+    <addaction name="connect_all_action" />
+    <addaction name="disconnect_all_action" />
+    <addaction name="connection_status_action" />
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="edit_settings_action"/>
-    <addaction name="calibrate_interactive_movement_action"/>
+    <addaction name="edit_settings_action" />
+    <addaction name="calibrate_interactive_movement_action" />
    </widget>
-   <addaction name="menuConnection"/>
-   <addaction name="menuSettings"/>
+   <addaction name="menuConnection" />
+   <addaction name="menuSettings" />
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusbar" />
   <action name="actionConnect_2">
    <property name="text">
     <string>Connect Artisan</string>
@@ -2259,7 +2190,7 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     <string>Calibrate Interactive Image Movement</string>
    </property>
   </action>
- </widget>
- <resources/>
- <connections/>
+ <property name="font"><font><family>Inter, Segoe UI, Roboto, Helvetica Neue, Arial</family><pointsize>10</pointsize></font></property></widget>
+ <resources />
+ <connections />
 </ui>
