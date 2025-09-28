@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>341</width>
-    <height>211</height>
+    <width>308</width>
+    <height>220</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,79 +16,79 @@
   <property name="styleSheet">
    <string notr="true">QWidget{
 background-color: rgb(230,230,230);
+}
 
+QGroupBox{
+color:  rgb(80, 0, 19);  /* Text color */
+font-weight: bold;  /* Bold text */
+}
+
+QLabel{
+color:  rgb(80, 0, 19);;  /* Text color */
 }
 
 QPushButton {
-	background-color: rgb(255,255,255);  /* Background color */
-    color: rgb(0, 0, 150);  /* Text color */
-    border: 2px solid rgb(255,155, 50);  /* Border color */
+	background-color: rgb(122,0,28);  /* Background color */
+	border: 1px solid rgb(0, 0, 0);
+    color: rgb(255, 255, 255);  /* Text color */
     border-radius: 5px;  /* Rounded edges */
 	padding: 2px;
 }
 
 QPushButton:hover {
-    background-color: rgb(245, 245, 255);  /* Background color when hovered */
-	color: rgb(0, 0, 200);
-    border-color:rgb(225, 105, 0);  /* Border color when hovered */
+    background-color: rgb(142, 0, 38);  /* Background color when hovered */
+	color: rgb(245, 245, 245);
+    border-color:rgb(40, 40, 40);  /* Border color when hovered */
 }
 
 QPushButton:pressed {
-   background-color: rgb(200,200, 210);  /* Background color when pressed */
-	border: 3px solid rgb(205, 85, 0);
+   color:  rgb(80, 0, 19);  /* Background color when pressed */
+	border-color: rgb(0, 0, 0);
 }
 QPushButton:clicked {
-   background-color: rgb(200, 200, 210);  /* Background color when pressed */
-	border:  rgb(205, 85, 0);
+   background-color: rgb(80,0,19);  /* Background color when pressed */
+	border-color:  rgb(0,0, 0);
 }
 
 QPushButton:checked {
-    background-color: rgb(220,120, 15);
-	border: 3px solid rgb(205, 105, 0);
+    background-color: rgb(255,255,255);
+	color:  rgb(80, 0, 19);
+	border: 2px solid rgb(122, 0, 28);
 	font-weight: bold;  /* Bold text */
 }
 
 QPushButton:disabled {
-    background-color: rgb(220,220, 220);
-	border: 3px solid rgb(205, 105, 0);
-	font-weight: bold;  /* Bold text */
+    background-color: rgb(180,180, 180);
+	border: 1px solid rgb(0, 0,0);
 }
 
 QDoubleSpinBox:enabled{
 background-color: rgb(255,255,255);
-color: rgb(0, 0, 150);  /* Text color */
-border: 1px solid rgb(255,255,255);  /* Border color */
-border-radius: 1px;  /* Rounded edges */
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid  rgb(122, 0, 28);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
 padding : 2px;
 }
 QDoubleSpinBox:disabled{
-color: rgb(0, 0, 200);  /* Text color */
+color: rgb(80, 0, 19);  /* Text color */
 border: 1px solid rgb(255,255,255);  /* Border color */
-border-radius: 1px;  /* Rounded edges */
+border-radius: 5px;  /* Rounded edges */
 padding : 2px;
 }
 
 QSpinBox:enabled{
 background-color: rgb(255,255,255);
-color: rgb(0, 0, 150);  /* Text color */
-border: 1px solid rgb(255,255,255);  /* Border color */
-border-radius: 1px;  /* Rounded edges */
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid  rgb(122, 0, 28);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
 padding : 2px;
+
 }
 QSpinBox:disabled{
-color: rgb(0, 0, 200);  /* Text color */
+color: rgb(80, 0, 19);  /* Text color */
 border: 1px solid rgb(255,255,255);  /* Border color */
-border-radius: 1px;  /* Rounded edges */
+border-radius: 5px;  /* Rounded edges */
 padding : 2px;
-}
-
-QGroupBox{
-color: rgb(0, 0, 150);  /* Text color */
-font-weight: bold;  /* Bold text */
-}
-
-QLabel{
-color: rgb(0, 0, 150);  /* Text color */
 }
 
 QPlainTextEdit{
@@ -98,31 +98,31 @@ border-radius: 5px;  /* Rounded edges */
 
 QLineEdit:endabled{
 background-color: rgb(255,255,255);
-color: rgb(0, 0, 150);  /* Text color */
-border: 3px solid rgb(255,155,50);  /* Border color */
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(0,0,0);  /* Border color */
 border-radius: 5px;  /* Rounded edges */
 padding : 2px;
 }
 
 QLineEdit:disabled{
 background-color: rgb(230,230,230);
-color: rgb(0, 0, 150);  /* Text color */
-border: 1px solid rgb(255,255,255);  /* Border color */
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(0,0,0);  /* Border color */
 border-radius: 5px;  /* Rounded edges */
 padding : 2px;
 }
 
 QComboBox{
-background-color: rgb(220,220,220);
-color: rgb(0, 0, 150);  /* Text color */
-border: 3px solid rgb(255,155,50);  /* Border color */
+background-color: rgb(255,255,255);
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(0,0,0);  /* Border color */
 border-radius: 5px;  /* Rounded edges */
 padding : 2px;
 }
 
 QTabBar::tab {
-    color: rgb(0, 0, 150); 
-    border: 2px solid rgb(255,155,50);
+    color:  rgb(80, 0, 19); 
+    border: 1px solid rgb(122,0,28);
     padding: 5px;
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
@@ -130,16 +130,17 @@ QTabBar::tab {
 }
 
 QTabBar::tab:selected {
-    color:rgb(0, 0, 150); 
+    color:  rgb(80, 0, 19); 
     background-color: rgb(255, 255, 255); ;
     font-weight: bold;
-	border: 3px solid rgb(235, 135, 30);
+	border: 2px solid rgb(122, 0, 28);
 }
 
 QTabBar::tab:hover {
-    color: rgb(0, 0, 200); /* Slightly lighter orange */
-	background-color: rgb(245, 245, 255); ;
-}</string>
+    color:  rgb(122, 0, 28); /* Slightly lighter orange */
+	background-color: rgb(245, 245, 245); ;
+}
+</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="1" column="3">
@@ -207,7 +208,7 @@ QTabBar::tab:hover {
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Target Poitions:</string>
+         <string>Targe Position:</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -307,21 +308,51 @@ QTabBar::tab:hover {
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Move to Target</string>
+         <string>go to target</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/move_to.png</normaloff>resources/move_to.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>
       <item row="3" column="2">
        <widget class="QPushButton" name="move_to_home_button">
         <property name="text">
-         <string>Move To WP</string>
+         <string>go to home</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/move_to_home.png</normaloff>resources/move_to_home.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>
       <item row="1" column="2">
        <widget class="QPushButton" name="set_home_button">
         <property name="text">
-         <string>Set WP</string>
+         <string>set home</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/reset_home.png</normaloff>resources/reset_home.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
         </property>
        </widget>
       </item>

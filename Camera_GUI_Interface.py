@@ -1,8 +1,7 @@
 import cv2
-from PyQt6 import QtWidgets, uic, QtGui, QtCore
+from PyQt6 import QtWidgets, QtGui
 from PyQt6.QtCore import pyqtSignal, QObject
 import datetime
-import PIL.Image as Image
 import numpy as np
 import cv2
 
@@ -31,7 +30,7 @@ class CameraInterface():
         self.camera_save_image_button = gui.findChild(QtWidgets.QPushButton, self.camera_type+"_save_image_button")
         self.camera_save_image_button.clicked.connect(self.save_image)
 
-        gui.test_button.clicked.connect(self.fit_image)
+        #gui.test_button.clicked.connect(self.fit_image)
 
         #connect interface to camera controller callback to receive frames
         self.camera_controller.set_frame_changed_callback(self.update_frame)

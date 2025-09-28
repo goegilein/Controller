@@ -1,6 +1,6 @@
 from PyQt6 import uic
 from PyQt6.QtWidgets import QListWidgetItem, QFileDialog
-from BaseClasses import BaseClass, TextLogger
+from BaseClasses import BaseClass, TextLogger, SignalEmitter
 from PyQt6.QtGui import QIcon
 
 class ProcessInterface(BaseClass):
@@ -24,8 +24,10 @@ class ProcessInterface(BaseClass):
         self.cancel_process_button=gui.cancel_process_button
         self.cancel_process_button.clicked.connect(self.cancel_process)
 
-        # self.togglePauseProcess_button=gui.togglePauseProcess_button
-        # self.togglePauseProcess_button.clicked.connect(self.toggle_process_pause)
+        self.run_bounding_box_button =gui.run_bounding_box_button
+        self.run_bounding_box_button.clicked.connect(self.run_bounding_box)
+        self.bounding_box_step_combobox = gui.bounding_box_step_combobox
+    
 
         #Log tracking
         self.log_textEdit=gui.log_textEdit
@@ -34,9 +36,15 @@ class ProcessInterface(BaseClass):
 
         # update UI for Process State
         self.process_state_edit = gui.process_state_edit
-        process_logger = logger = TextLogger(log_object="Process", log_widget=self.process_state_edit, add_stamp=False)
+        process_logger = TextLogger(log_object="Process", log_widget=self.process_state_edit, add_stamp=False)
         self.process_handler.set_process_state_callback(process_logger.log)
         self.process_handler.set_process_state_callback(self.update_process_state)
+
+        # update UI for Remaining Time
+        self.time_remaining_edit = gui.time_remaining_edit
+        time_remaining_logger = TextLogger(log_object="Process", log_widget=self.time_remaining_edit, add_stamp=False)
+        self.process_handler.set_remaining_time_callback(time_remaining_logger.log)
+
 
     def add_process_step(self):
         """
@@ -60,11 +68,31 @@ class ProcessInterface(BaseClass):
         widget.load_file_button.clicked.connect(lambda _, s=step, w=widget: self.set_step_nc_file(s,w))
         widget.step_name_edit.setText(f"Process Step {len(self.process_handler.process_step_list)}")
         widget.set_current_pos_button.clicked.connect(lambda _, s=step, w=widget, b=True: self.set_step_wp(s,w,b))
+        widget.go_to_wp_button.clicked.connect(lambda _, s=step: self.go_to_step_wp(s))
 
-        # widget.wp_x_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
-        # widget.wp_y_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
-        # widget.wp_z_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
-        # widget.filename_edit.editingFinished.connect(lambda _, s=step, w=widget, b=False: self.set_step_nc_file(s,w,b))
+        #position tracking
+        position_emitter = SignalEmitter()
+
+        def update_axis_pos(position = None):
+            abs_pos = self.process_handler.controller.abs_position
+
+            widget.rel_x_spinbox.setValue(abs_pos[0]-step.work_position[0])
+            widget.rel_y_spinbox.setValue(abs_pos[1]-step.work_position[1])
+            widget.rel_z_spinbox.setValue(abs_pos[2]-step.work_position[2])
+        
+        def threadsave_update_axies(position):
+            position_emitter.list_signal.emit(position)
+            
+
+        
+        position_emitter.list_signal.connect(update_axis_pos)
+        self.process_handler.controller.add_position_changed_callback(threadsave_update_axies)  # Set the position changed callback to track position
+
+        #refresh combobox for bounding box run
+        self.bounding_box_step_combobox.clear()
+        self.bounding_box_step_combobox.addItem('All')
+        for idx,steps in enumerate(self.process_handler.process_step_list):
+            self.bounding_box_step_combobox.addItem(f'step {idx+1}')
 
     def remove_process_step(self, process_step, widget):
         """
@@ -83,6 +111,12 @@ class ProcessInterface(BaseClass):
                     #self.process_step_list.remove(process_step)
                     widget.deleteLater()
                     break
+        
+        #refresh combobox for bounding box run
+        self.bounding_box_step_combobox.clear()
+        self.bounding_box_step_combobox.addItem('All')
+        for idx,steps in enumerate(self.process_handler.process_step_list):
+            self.bounding_box_step_combobox.addItem(f'step {idx+1}')
 
     def on_rows_moved(self, parent, start, end, dest, row):
         """
@@ -123,7 +157,9 @@ class ProcessInterface(BaseClass):
                                 ]
             self.process_handler.set_step_wp_to(process_step, new_work_position)
 
-    
+    def go_to_step_wp(self, process_step):
+        self.process_handler.go_to_step_wp(process_step)
+
     def set_step_nc_file(self, process_step, widget, browse_file=True):
         """
         Set the NC file for a process step based on UI input.
@@ -148,7 +184,9 @@ class ProcessInterface(BaseClass):
         else:
             file_path=widget.filename_edit.currentText()
             self.process_handler.set_step_nc_file(process_step, file_path)
-
+        
+        if file_path is not None:
+            self.process_handler.recalc_process_params()
 
     def toggle_process(self):
         state =self.process_handler.process_state
@@ -186,4 +224,19 @@ class ProcessInterface(BaseClass):
             icon = QIcon("GUI_files/resources/start.png")
             self.toggle_process_button.setIcon(icon)
             self.cancel_process_button.setEnabled(False)
+
+    def run_bounding_box(self):
+        step_to_run = self.bounding_box_step_combobox.currentIndex()
+        
+        in_laser_coord=False
+        if self.gui.bounding_box_mode_combobox.currentText()=="Laser":
+            in_laser_coord=True
+
+        if step_to_run is None or step_to_run < 0:
+            return
+        elif step_to_run == 0:
+            for idx,steps in enumerate(self.process_handler.process_step_list):
+                self.process_handler.run_bounding_box(idx, in_laser_coord)
+        else:
+            self.process_handler.run_bounding_box(step_to_run-1, in_laser_coord)
         

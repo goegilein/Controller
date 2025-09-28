@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>435</width>
-    <height>533</height>
+    <width>400</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -142,51 +142,29 @@ QTabBar::tab:hover {
 }
 </string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" columnstretch="0,0,0,0">
-   <item row="1" column="1">
-    <widget class="QPushButton" name="save_settings_button">
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="0">
+    <widget class="QPushButton" name="add_point_button">
      <property name="text">
-      <string>Save Settings as</string>
+      <string>Add Point</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="3">
+   <item row="0" column="0">
+    <widget class="QListWidget" name="points_listWidget"/>
+   </item>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="calc_transform_button">
+     <property name="text">
+      <string>Calculate Transform Matrix</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
     <widget class="QPushButton" name="save_default_button">
      <property name="text">
-      <string>Save to Default</string>
+      <string>Save Current Matrix to Default Settings</string>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QPushButton" name="load_settings_button">
-     <property name="text">
-      <string>Load Settings</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="2">
-    <widget class="QPushButton" name="load_default_button">
-     <property name="text">
-      <string>Load Default</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="4">
-    <widget class="QScrollArea" name="scrollArea">
-     <property name="widgetResizable">
-      <bool>true</bool>
-     </property>
-     <widget class="QWidget" name="settings_verticalLayout">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>415</width>
-        <height>488</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout"/>
-     </widget>
     </widget>
    </item>
   </layout>

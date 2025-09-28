@@ -1,8 +1,5 @@
 from PyQt6 import QtWidgets
-from PyQt6.QtWidgets import QMessageBox
-from PyQt6.QtCore import pyqtSignal, QObject
 from BaseClasses import BaseClass, SignalEmitter, TextLogger
-import datetime
 
 class ArtisanInterface(BaseClass):
     def __init__(self, gui, artisan_controller):
@@ -66,7 +63,7 @@ class ArtisanInterface(BaseClass):
         #position tracking
         self.position_emitter = SignalEmitter()
         self.position_emitter.list_signal.connect(self.update_axis_pos)
-        self.artisan_controller.set_position_changed_callback(self.threadsafe_update_axis_pos)  # Set the position changed callback to track position
+        self.artisan_controller.add_position_changed_callback(self.threadsafe_update_axis_pos)  # Set the position changed callback to track position
         self.set_wp_button.clicked.connect(self.artisan_controller.set_work_position)
 
         #Laser Crosshair
@@ -225,52 +222,3 @@ class ArtisanInterface(BaseClass):
         self.set_wp_button.setEnabled(True)
         self.home_axis_button.setEnabled(True)
 
-
-'MOVED TO BASE CLASSES'
-# class SignalEmitter(QObject):
-#     list_signal = pyqtSignal(list)
-#     string_signal = pyqtSignal(str)
-
-
-'DEPRECIATED CLASS, build a new handler up from scratch'
-# class ProcessStartHandler():
-#     def __init__(self, artisan_controller):
-#         self.artisan_controller = artisan_controller
-    
-#     def check_work_position(self):  
-#         present_position = self.artisan_controller.get_position()
-#         if present_position != [0,0,0]:
-#             title = "Work Position Mismatch"
-#             text = "The current position does not match the work position. Do you want to use the current position as the work position?"
-#             custom_label = "No - Move to Old Work Position"
-#             result = self.show_custom_message(title, text, custom_label)
-#             if result == "Yes":
-#                 self.artisan_controller.set_work_position()
-#                 return "Starting Process"
-#             elif result == custom_label:
-#                 self.artisan_controller.move_to_work_position(speed=30)
-#                 return "Moveing to Old Work Position and Starting Process"
-#             elif result == "Cancel":
-#                 return None
-#         else:
-#             return "Starting Process"
-        
-#     def show_custom_message(self, title, text, custom_label="Custom"):
-#         msg_box = QMessageBox()
-#         msg_box.setWindowTitle(title)
-#         msg_box.setText(text)
-#         msg_box.setIcon(QMessageBox.Icon.Question)
-#         yes_button = msg_box.addButton(QMessageBox.StandardButton.Yes)
-#         cancel_button = msg_box.addButton(QMessageBox.StandardButton.Cancel)
-#         custom_button = msg_box.addButton(custom_label, QMessageBox.ButtonRole.ActionRole)
-#         msg_box.setDefaultButton(cancel_button)
-#         msg_box.exec()
-
-#         if msg_box.clickedButton() == yes_button:
-#             return "Yes"
-#         elif msg_box.clickedButton() == cancel_button:
-#             return "Cancel"
-#         elif msg_box.clickedButton() == custom_button:
-#             return custom_label
-#         else:
-#             return "Cancle"

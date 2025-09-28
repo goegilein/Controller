@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>383</width>
+    <height>59</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget{
+background-color: rgb(230,230,230);
+}
+
+QGroupBox{
+color:  rgb(80, 0, 19);  /* Text color */
+font-weight: bold;  /* Bold text */
+}
+
+QLabel{
+color:  rgb(80, 0, 19);;  /* Text color */
+}
+
+QPushButton {
+	background-color: rgb(122,0,28);  /* Background color */
+	border: 1px solid rgb(0, 0, 0);
+    color: rgb(255, 255, 255);  /* Text color */
+    border-radius: 5px;  /* Rounded edges */
+	padding: 2px;
+}
+
+QPushButton:hover {
+    background-color: rgb(142, 0, 38);  /* Background color when hovered */
+	color: rgb(245, 245, 245);
+    border-color:rgb(40, 40, 40);  /* Border color when hovered */
+}
+
+QPushButton:pressed {
+   color:  rgb(80, 0, 19);  /* Background color when pressed */
+	border-color: rgb(0, 0, 0);
+}
+QPushButton:clicked {
+   background-color: rgb(80,0,19);  /* Background color when pressed */
+	border-color:  rgb(0,0, 0);
+}
+
+QPushButton:checked {
+    background-color: rgb(255,255,255);
+	color:  rgb(80, 0, 19);
+	border: 2px solid rgb(122, 0, 28);
+	font-weight: bold;  /* Bold text */
+}
+
+QPushButton:disabled {
+    background-color: rgb(180,180, 180);
+	border: 1px solid rgb(0, 0,0);
+}
+
+QDoubleSpinBox:enabled{
+background-color: rgb(255,255,255);
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid  rgb(122, 0, 28);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+QDoubleSpinBox:disabled{
+color: rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(255,255,255);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
+QSpinBox:enabled{
+background-color: rgb(255,255,255);
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid  rgb(122, 0, 28);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+
+}
+QSpinBox:disabled{
+color: rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(255,255,255);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
+QPlainTextEdit{
+background-color: rgb(255,255,255);
+border-radius: 5px;  /* Rounded edges */
+}
+
+QLineEdit:endabled{
+background-color: rgb(255,255,255);
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(0,0,0);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
+QLineEdit:disabled{
+background-color: rgb(230,230,230);
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(0,0,0);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
+QComboBox{
+background-color: rgb(255,255,255);
+color:  rgb(80, 0, 19);  /* Text color */
+border: 1px solid rgb(0,0,0);  /* Border color */
+border-radius: 5px;  /* Rounded edges */
+padding : 2px;
+}
+
+QTabBar::tab {
+    color:  rgb(80, 0, 19); 
+    border: 1px solid rgb(122,0,28);
+    padding: 5px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+	min-width:80px;
+}
+
+QTabBar::tab:selected {
+    color:  rgb(80, 0, 19); 
+    background-color: rgb(255, 255, 255); ;
+    font-weight: bold;
+	border: 2px solid rgb(122, 0, 28);
+}
+
+QTabBar::tab:hover {
+    color:  rgb(122, 0, 28); /* Slightly lighter orange */
+	background-color: rgb(245, 245, 245); ;
+}
+</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="5" rowspan="2">
+    <widget class="QPushButton" name="move_to_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>resources/move_to.png</normaloff>resources/move_to.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>25</width>
+       <height>25</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="6" rowspan="2">
+    <widget class="QPushButton" name="remove_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>resources/trash.png</normaloff>
+       <normalon>resources/trash.png</normalon>resources/trash.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>25</width>
+       <height>25</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Abs.Z (mm)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4" rowspan="2">
+    <widget class="QPushButton" name="set_current_pos_button">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>resources/crosshair_new.png</normaloff>resources/crosshair_new.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>25</width>
+       <height>25</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Abs. X (mm)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QDoubleSpinBox" name="abs_y_spinbox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="buttonSymbols">
+      <enum>QAbstractSpinBox::NoButtons</enum>
+     </property>
+     <property name="minimum">
+      <double>-1000.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>1000.000000000000000</double>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="3">
+    <widget class="QDoubleSpinBox" name="abs_z_spinbox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="buttonSymbols">
+      <enum>QAbstractSpinBox::NoButtons</enum>
+     </property>
+     <property name="minimum">
+      <double>-1000.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>1000.000000000000000</double>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Abs. Y (mm)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QDoubleSpinBox" name="abs_x_spinbox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="buttonSymbols">
+      <enum>QAbstractSpinBox::NoButtons</enum>
+     </property>
+     <property name="minimum">
+      <double>-1000.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>1000.000000000000000</double>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" rowspan="2">
+    <widget class="QLabel" name="point_name_label">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

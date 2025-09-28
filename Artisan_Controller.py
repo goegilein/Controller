@@ -14,11 +14,6 @@ class ArtisanController():
         Initialize the Snapmaker controller.
         parameters are loaded from the settings manager.
         """
-        #load settings from the SettingsManager
-        self.s = settings
-        self.load_settings()
-        settings.settingChanged.connect(self.load_settings) #reload settings if they change
-        settings.settingsReplaced.connect(self.load_settings) #reload settings if they are replaced
 
         # Initialize parameters
         self.comand_lock = threading.Lock()
@@ -38,9 +33,15 @@ class ArtisanController():
         self._last_log = ''
         self._process_state = "Idle"  # Possible states: "Idle", "Running", "Paused",
 
-        self.position_changed_callback = None
+        self.position_changed_callbacks = []
         self.log_callback = None
         self.process_state_callback = None
+
+        #load settings from the SettingsManager
+        self.s = settings
+        self.load_settings()
+        settings.settingChanged.connect(self.load_settings) #reload settings if they change
+        settings.settingsReplaced.connect(self.load_settings) #reload settings if they are replaced
 
     #set a watchers for the current position and last log and process state together with their callbacks
     @property
@@ -51,11 +52,12 @@ class ArtisanController():
     def current_position(self, value):
         self._current_position = value
         self.abs_position = [value[0] + self.origin_offset[0], value[1] + self.origin_offset[1], value[2] + self.origin_offset[2]]
-        if self.position_changed_callback:
-            self.position_changed_callback(value)
+        if self.position_changed_callbacks:
+            for callback in self.position_changed_callbacks:
+                callback(value)
 
-    def set_position_changed_callback(self, callback):
-        self.position_changed_callback = callback 
+    def add_position_changed_callback(self, callback):
+        self.position_changed_callbacks.append(callback)
 
     @property
     def last_log(self):
@@ -102,6 +104,8 @@ class ArtisanController():
         self.speed=self.s.get("artisan.motion.default_speed", 30) # Default speed for axis movement
         self.step_width=self.s.get("artisan.motion.default_step_width", 10) # Default step width for axis movement
         self.max_z_speed=self.s.get("artisan.motoin.max_z_speed", 30) # Maximum speed for Z-axis, to prevent crashing into the bed
+        if self.connected:
+            self.get_toolhead_info()
 
     def connect(self):
         if self.connection_type == "usb" and self.port:
@@ -120,21 +124,15 @@ class ArtisanController():
         
         self.connected=True
         if not self.is_homed:
-            # dialog = QtWidgets.QMessageBox()
-            # dialog.setWindowTitle("Homing Required")
-            # dialog.setText("Artisan must be homed before use.\nPlease ensure the workspace is clear and press OK to continue.")
-            # dialog.setIcon(QtWidgets.QMessageBox.Icon.Warning)
-            # dialog.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-            # dialog.setDefaultButton(QtWidgets.QMessageBox.StandardButton.Ok)
-            # dialog.exec()
             msg = QMessageBox()
             ret = msg.question(None, "Homing Required",
                                  "Upon Starting it is recommended to home all axes first, to avoid unexpected behavior. \nRun homing routine now?",
                                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if ret == QMessageBox.StandardButton.No:
-                return
-            self.home_axis()
-            self.is_homed = True
+                pass
+            else:
+                self.home_axis()
+                self.is_homed = True
         
         #Identify the maschine tool
         toolhead_info = self.get_toolhead_info()
@@ -158,6 +156,19 @@ class ArtisanController():
         tracking_thread.daemon = True
         tracking_thread.start()
 
+        #Debugging: Constantly read response
+        #once connected, constantly track the axis position
+        # def read_response():
+        #     while self.connected:
+        #         #response = self.get_response()
+        #         if self.last_response is not None:
+        #             response = self.last_response
+        #         print(response)
+        #         time.sleep(0.1)
+        # response_thread = threading.Thread(target=read_response)
+        # response_thread.daemon = True
+        # response_thread.start()
+
     def disconnect(self):
         if not self.is_connection_active():
             self.last_log = "No Connection to disconnect was found."
@@ -176,7 +187,7 @@ class ArtisanController():
             raise ValueError("Could not disconnect. Either no connection was established in the first place or something went wrong.")
         
 
-    def send_command(self, command, wait_ok=True):
+    def send_command(self, command, wait_text="ok", timeout=5):
         """
         Send a G-code command to Snapmaker.
         :param command: G-code command as a string.
@@ -193,11 +204,12 @@ class ArtisanController():
                 else:  # TCP/IP
                     self.connection.sendall((command + '\n').encode())
 
-                if wait_ok:
-                    lines = self._read_until(text="ok")
+                if wait_text:
+                    lines = self._read_until(wait_text,timeout)
                     self.last_response = lines if lines else None
                 else:
-                    self.last_response = self.get_response()
+                    pass
+                    #self.last_response = self.get_response()
                     
         except Exception as e:
             self.last_log = f"Failed to send command: {e}"
@@ -218,7 +230,7 @@ class ArtisanController():
             self.last_log = f"Failed to get response: {e}"
             return None
     
-    def _read_until(self, text="ok", timeout=5):
+    def _read_until(self, text="ok", timeout=20):
             lines = []
             got_text = False
             start_time = time.time()
@@ -230,7 +242,7 @@ class ArtisanController():
 
                 if line:
                     lines.append(line)
-                if line == text:
+                if text in line: #line == text:
                     got_text = True
                     break
             if not got_text:
@@ -338,7 +350,7 @@ class ArtisanController():
         # Switch back to absolute positioning
         self.send_command("G90")
     
-    def move_axis_absolute(self, x, y, z, speed=None, job_save=False):
+    def move_axis_absolute(self, x, y, z, speed=None, z_save=True, job_save=False):
         """
         Move the axis in absolute machine coordinates.
         :param x: X-coordinate to move to.
@@ -362,11 +374,23 @@ class ArtisanController():
             speed=self.max_z_speed
 
         # Adjust coordinates based on origin offset
-        x-=self.origin_offset[0]
-        y-=self.origin_offset[1]
-        z-=self.origin_offset[2]
+        x_move = x-self.origin_offset[0]
+        y_move = y-self.origin_offset[1]
+        z_move = z-self.origin_offset[2]
+
         # Move the axis
-        self.send_command(f"G0 X{x} Y{y} Z{z} F{speed*60}")
+        if z_save:
+            pos_now = self.get_absolute_position()
+            if pos_now[2]>z:
+                self.send_command(f"G0 X{x_move} Y{y_move} F{speed*60}")
+                self.send_command(f"G0 Z{z_move} F{speed*60}")
+            elif pos_now[2]<z:
+                self.send_command(f"G0 Z{z_move} F{speed*60}")
+                self.send_command(f"G0 X{x_move} Y{y_move} F{speed*60}")
+            else:
+                self.send_command(f"G0 X{x_move} Y{y_move} F{speed*60}")
+        else:
+            self.send_command(f"G0 X{x_move} Y{y_move} Z{z_move} F{speed*60}")
     
     def move_to_work_position(self, speed=None, job_save=False):
         """
@@ -405,7 +429,7 @@ class ArtisanController():
         Get the current position of all axis.
         :return: Current position of all axis.
         """
-        self.send_command("M114") # get new position     
+        self.send_command("M114", wait_text="X:") # get new position     
         try:
             position = []
             for line in self.last_response:
@@ -521,8 +545,8 @@ class ArtisanController():
         :param text: Text to wait for (e.g., "ok").
         """
         self.send_command("M400")  # Wait for all movements to finish
-        self.send_command(f"118 {text}") # get new position
-        self._read_until(text=text,timeout=timeout)
+        self.send_command(f"M118 {text}", wait_text=text, timeout=timeout) # get new position
+        #self._read_until(text=text,timeout=timeout)
 
 
     def is_connection_active(self):
@@ -548,32 +572,40 @@ class ArtisanController():
         :return: Machine information as a string.
         """
         if not self.connected:
-            self.last_log = "Error: Not connected to Artisan!"
+            self.last_log = "Error: Cannot read toolhead Information. Not connected to Artisan!"
             return None
         
-        self.send_command("M1006")
+        self.send_command("M1006", "ok")
+        self.send_command("M1006", "ok") # do it twice as it can have some hickup, reading the last 'ok' from continously getting axis positions
         toolhead_info = self.last_response
-        if toolhead_info:
-            tool_head = toolhead_info[0].split(":")[1].strip()
+        try:
+            if toolhead_info:
+                tool_head = toolhead_info[0].split(":")[1].strip()
 
-            if tool_head == "LASER" and len(toolhead_info) == 39:
-                #this ius a 2W 1064 pulsed laser
-                self.last_log = "2W 1064 pulsed laser detected. Setting offsets for this laser."
-                self._tool_head = "laser1064"
-                self._laser_offset = self.s.get("artisan.laser1064.laser_offset",[21.2, -11.3, 0])
-            elif tool_head == "LASER" and len(toolhead_info) == 34:
-                # this is a 40W 455 cw laser
-                self.last_log = "40W 455 cw laser detected. Setting offsets for this laser."
-                self._tool_head = "laser455"
-                self._laser_offset = None # this has to be measured first!
+                if tool_head == "LASER" and len(toolhead_info) == 39:
+                    #this ius a 2W 1064 pulsed laser
+                    self.last_log = "2W 1064 pulsed laser detected. Setting offsets for this laser."
+                    self._tool_head = "laser1064"
+                    self._laser_offset = self.s.get("artisan.laser1064.laser_offset",[21.2, -11.3, 0])
+                elif tool_head == "LASER" and len(toolhead_info) == 34:
+                    # this is a 40W 455 cw laser
+                    self.last_log = "40W 455 cw laser detected. Setting offsets for this laser."
+                    self._tool_head = "laser455"
+                    self._laser_offset = self.s.get("artisan.laser455.laser_offset",[0, 0, 0]) # this has to be measured first!
+                else:
+                    self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
+                    self._tool_head = None
+                    self._laser_offset = None
+                    self.disconnect()
+                    return None
             else:
-                self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
-                self._tool_head = None
-                self._laser_offset = None
+                self.last_log = "Error: Could not retrieve machine information. Closing connection for safety! You can try to reconnect."
                 self.disconnect()
                 return None
-        else:
-            self.last_log = "Error: Could not retrieve machine information. Closing connection for safety! You can try to reconnect."
+        except:
+            self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
+            self._tool_head = None
+            self._laser_offset = None
             self.disconnect()
             return None
         return toolhead_info
