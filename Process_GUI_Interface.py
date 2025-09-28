@@ -1,6 +1,6 @@
 from PyQt6 import uic
 from PyQt6.QtWidgets import QListWidgetItem, QFileDialog
-from BaseClasses import BaseClass, TextLogger
+from BaseClasses import BaseClass, TextLogger, SignalEmitter
 from PyQt6.QtGui import QIcon
 
 class ProcessInterface(BaseClass):
@@ -68,11 +68,25 @@ class ProcessInterface(BaseClass):
         widget.load_file_button.clicked.connect(lambda _, s=step, w=widget: self.set_step_nc_file(s,w))
         widget.step_name_edit.setText(f"Process Step {len(self.process_handler.process_step_list)}")
         widget.set_current_pos_button.clicked.connect(lambda _, s=step, w=widget, b=True: self.set_step_wp(s,w,b))
+        widget.go_to_wp_button.clicked.connect(lambda _, s=step: self.go_to_step_wp(s))
 
-        # widget.wp_x_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
-        # widget.wp_y_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
-        # widget.wp_z_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
-        # widget.filename_edit.editingFinished.connect(lambda _, s=step, w=widget, b=False: self.set_step_nc_file(s,w,b))
+        #position tracking
+        position_emitter = SignalEmitter()
+
+        def update_axis_pos(position = None):
+            abs_pos = self.process_handler.controller.abs_position
+
+            widget.rel_x_spinbox.setValue(abs_pos[0]-step.work_position[0])
+            widget.rel_y_spinbox.setValue(abs_pos[1]-step.work_position[1])
+            widget.rel_z_spinbox.setValue(abs_pos[2]-step.work_position[2])
+        
+        def threadsave_update_axies(position):
+            position_emitter.list_signal.emit(position)
+            
+
+        
+        position_emitter.list_signal.connect(update_axis_pos)
+        self.process_handler.controller.add_position_changed_callback(threadsave_update_axies)  # Set the position changed callback to track position
 
         #refresh combobox for bounding box run
         self.bounding_box_step_combobox.clear()
@@ -143,7 +157,9 @@ class ProcessInterface(BaseClass):
                                 ]
             self.process_handler.set_step_wp_to(process_step, new_work_position)
 
-    
+    def go_to_step_wp(self, process_step):
+        self.process_handler.go_to_step_wp(process_step)
+
     def set_step_nc_file(self, process_step, widget, browse_file=True):
         """
         Set the NC file for a process step based on UI input.
@@ -220,7 +236,7 @@ class ProcessInterface(BaseClass):
             return
         elif step_to_run == 0:
             for idx,steps in enumerate(self.process_handler.process_step_list):
-                self.process_handler.run_bounding_box(idx)
+                self.process_handler.run_bounding_box(idx, in_laser_coord)
         else:
             self.process_handler.run_bounding_box(step_to_run-1, in_laser_coord)
         

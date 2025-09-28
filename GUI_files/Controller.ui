@@ -49,11 +49,11 @@ QPushButton:hover {
 
 QPushButton:pressed {
    color:  rgb(80, 0, 19);  /* Background color when pressed */
-	borde-color: rgb(0, 0, 0);
+	border-color: rgb(0, 0, 0);
 }
 QPushButton:clicked {
    background-color: rgb(80,0,19);  /* Background color when pressed */
-	borde-colorr:  rgb(0,0, 0);
+	border-color:  rgb(0,0, 0);
 }
 
 QPushButton:checked {
@@ -155,7 +155,7 @@ QTabBar::tab:hover {
    <property name="styleSheet">
     <string notr="true"/>
    </property>
-   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,0">
+   <layout class="QGridLayout" name="gridLayout" rowstretch="1,0" columnstretch="2,0,1" columnminimumwidth="0,0,0">
     <item row="0" column="2">
      <widget class="QTabWidget" name="process_tabWidget">
       <property name="currentIndex">
@@ -304,10 +304,6 @@ QTabBar::tab:selected {
     font-weight: bold;
 	border: 2px solid rgb(122, 0, 28);
 }
-
-QTabWidget::pane {
-        border: 1px solid #444;
-    }
     
     QTabWidget QTabBar {
         alignment: left;

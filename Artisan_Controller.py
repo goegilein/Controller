@@ -14,11 +14,6 @@ class ArtisanController():
         Initialize the Snapmaker controller.
         parameters are loaded from the settings manager.
         """
-        #load settings from the SettingsManager
-        self.s = settings
-        self.load_settings()
-        settings.settingChanged.connect(self.load_settings) #reload settings if they change
-        settings.settingsReplaced.connect(self.load_settings) #reload settings if they are replaced
 
         # Initialize parameters
         self.comand_lock = threading.Lock()
@@ -38,9 +33,15 @@ class ArtisanController():
         self._last_log = ''
         self._process_state = "Idle"  # Possible states: "Idle", "Running", "Paused",
 
-        self.position_changed_callback = None
+        self.position_changed_callbacks = []
         self.log_callback = None
         self.process_state_callback = None
+
+        #load settings from the SettingsManager
+        self.s = settings
+        self.load_settings()
+        settings.settingChanged.connect(self.load_settings) #reload settings if they change
+        settings.settingsReplaced.connect(self.load_settings) #reload settings if they are replaced
 
     #set a watchers for the current position and last log and process state together with their callbacks
     @property
@@ -51,11 +52,12 @@ class ArtisanController():
     def current_position(self, value):
         self._current_position = value
         self.abs_position = [value[0] + self.origin_offset[0], value[1] + self.origin_offset[1], value[2] + self.origin_offset[2]]
-        if self.position_changed_callback:
-            self.position_changed_callback(value)
+        if self.position_changed_callbacks:
+            for callback in self.position_changed_callbacks:
+                callback(value)
 
-    def set_position_changed_callback(self, callback):
-        self.position_changed_callback = callback 
+    def add_position_changed_callback(self, callback):
+        self.position_changed_callbacks.append(callback)
 
     @property
     def last_log(self):
@@ -102,6 +104,8 @@ class ArtisanController():
         self.speed=self.s.get("artisan.motion.default_speed", 30) # Default speed for axis movement
         self.step_width=self.s.get("artisan.motion.default_step_width", 10) # Default step width for axis movement
         self.max_z_speed=self.s.get("artisan.motoin.max_z_speed", 30) # Maximum speed for Z-axis, to prevent crashing into the bed
+        if self.connected:
+            self.get_toolhead_info()
 
     def connect(self):
         if self.connection_type == "usb" and self.port:
@@ -568,32 +572,40 @@ class ArtisanController():
         :return: Machine information as a string.
         """
         if not self.connected:
-            self.last_log = "Error: Not connected to Artisan!"
+            self.last_log = "Error: Cannot read toolhead Information. Not connected to Artisan!"
             return None
         
-        self.send_command("M1006")
+        self.send_command("M1006", "ok")
+        self.send_command("M1006", "ok") # do it twice as it can have some hickup, reading the last 'ok' from continously getting axis positions
         toolhead_info = self.last_response
-        if toolhead_info:
-            tool_head = toolhead_info[0].split(":")[1].strip()
+        try:
+            if toolhead_info:
+                tool_head = toolhead_info[0].split(":")[1].strip()
 
-            if tool_head == "LASER" and len(toolhead_info) == 39:
-                #this ius a 2W 1064 pulsed laser
-                self.last_log = "2W 1064 pulsed laser detected. Setting offsets for this laser."
-                self._tool_head = "laser1064"
-                self._laser_offset = self.s.get("artisan.laser1064.laser_offset",[21.2, -11.3, 0])
-            elif tool_head == "LASER" and len(toolhead_info) == 34:
-                # this is a 40W 455 cw laser
-                self.last_log = "40W 455 cw laser detected. Setting offsets for this laser."
-                self._tool_head = "laser455"
-                self._laser_offset = self.s.get("artisan.laser455.laser_offset",[0, 0, 0]) # this has to be measured first!
+                if tool_head == "LASER" and len(toolhead_info) == 39:
+                    #this ius a 2W 1064 pulsed laser
+                    self.last_log = "2W 1064 pulsed laser detected. Setting offsets for this laser."
+                    self._tool_head = "laser1064"
+                    self._laser_offset = self.s.get("artisan.laser1064.laser_offset",[21.2, -11.3, 0])
+                elif tool_head == "LASER" and len(toolhead_info) == 34:
+                    # this is a 40W 455 cw laser
+                    self.last_log = "40W 455 cw laser detected. Setting offsets for this laser."
+                    self._tool_head = "laser455"
+                    self._laser_offset = self.s.get("artisan.laser455.laser_offset",[0, 0, 0]) # this has to be measured first!
+                else:
+                    self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
+                    self._tool_head = None
+                    self._laser_offset = None
+                    self.disconnect()
+                    return None
             else:
-                self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
-                self._tool_head = None
-                self._laser_offset = None
+                self.last_log = "Error: Could not retrieve machine information. Closing connection for safety! You can try to reconnect."
                 self.disconnect()
                 return None
-        else:
-            self.last_log = "Error: Could not retrieve machine information. Closing connection for safety! You can try to reconnect."
+        except:
+            self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
+            self._tool_head = None
+            self._laser_offset = None
             self.disconnect()
             return None
         return toolhead_info

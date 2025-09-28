@@ -145,6 +145,18 @@ class ProcessHandler(BaseClass):
         else:
             process_step.work_position = new_work_position
             return new_work_position
+    
+    def go_to_step_wp(self, process_step):
+        """
+        move to a step's workposition in aboslute coordinates
+        :param process_step: Process step to move to.
+        """
+        if self.process_state != "Idle":
+            self.last_log = "Error: Cannot move while a process is still active."
+            return
+        step_wp = process_step.work_position
+        self.controller.move_axis_absolute(step_wp[0], step_wp[1], step_wp[2])
+
 
     def set_step_nc_file(self, process_step, file_path):
         """
@@ -314,26 +326,28 @@ class ProcessHandler(BaseClass):
         wp = process_step.work_position
 
         #make sure to move to work position first
-        self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30)
+        self.controller.move_axis_absolute(wp[0], wp[1], wp[2])
 
         #set workposition so we can work with absolute coordinates inside the workposition coordinate system
         self.controller.set_work_position()
 
         #run the upper X/Y bounding Box
-        self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][1], speed=30)
-        self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][0], bounding_box[2][1], speed=30)
-        self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][0], bounding_box[2][1], speed=30)
-        self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][1], bounding_box[2][1], speed=30)
+        self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][1])
+        self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][0], bounding_box[2][1])
+        self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][0], bounding_box[2][1])
+        self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][1], bounding_box[2][1])
+        self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][1])
 
         #if it is not flat, also run the lower X/Y bounding Box
         if bounding_box[2][0] != bounding_box[2][1]:
-            self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][0], speed=30)
-            self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][0], bounding_box[2][0], speed=30)
-            self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][0], bounding_box[2][0], speed=30)
-            self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][1], bounding_box[2][0], speed=30)
+            self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][0])
+            self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][0], bounding_box[2][0])
+            self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][0], bounding_box[2][0])
+            self.controller.move_axis_to("absolute", bounding_box[0][1], bounding_box[1][1], bounding_box[2][0])
+            self.controller.move_axis_to("absolute", bounding_box[0][0], bounding_box[1][1], bounding_box[2][0])
 
         #return to the work position
-        self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30)
+        self.controller.move_axis_absolute(wp[0], wp[1], wp[2])
 
 
         

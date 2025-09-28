@@ -37,7 +37,7 @@
     },
     "laser455": {
       "laser_offset": [
-        0,
+        -21,
         0,
         0
       ],
@@ -105,8 +105,8 @@
     "flip_horizontal": true,
     "crosshair_overlay": {
       "active": true,
-      "horizontal_position": 0.45,
-      "vertical_position": 0.531,
+      "horizontal_position": 0.475,
+      "vertical_position": 0.5495,
       "color": [
         0,
         255,

@@ -63,7 +63,7 @@ class ArtisanInterface(BaseClass):
         #position tracking
         self.position_emitter = SignalEmitter()
         self.position_emitter.list_signal.connect(self.update_axis_pos)
-        self.artisan_controller.set_position_changed_callback(self.threadsafe_update_axis_pos)  # Set the position changed callback to track position
+        self.artisan_controller.add_position_changed_callback(self.threadsafe_update_axis_pos)  # Set the position changed callback to track position
         self.set_wp_button.clicked.connect(self.artisan_controller.set_work_position)
 
         #Laser Crosshair

@@ -44,39 +44,43 @@ class InteractiveImageControl(QtCore.QObject):
             print('Camera Type not supported!')
 
     def eventFilter(self, obj, event):
-        # Only handle mouse presses on this view's viewport
-        if obj is not self.camera_view.viewport():
+        try:
+            # Only handle mouse presses on this view's viewport
+            if obj is not self.camera_view.viewport():
+                return False
+
+            # Start dragging on right-button press
+            if event.type() == QtCore.QEvent.Type.MouseButtonPress:
+                if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                    scene_pt = self.camera_view.mapToScene(event.pos())
+                    self._dragging_left_mouse = True
+                    self._add_cross(scene_pt)
+                    return True
+                if event.button() == QtCore.Qt.MouseButton.RightButton and self._cross_items:
+                    self._move_to_cross()
+                    return True  # eat the event
+
+            # Update cross position while dragging with right button pressed
+            if event.type() == QtCore.QEvent.Type.MouseMove and self._dragging_left_mouse:
+                #if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                if (event.buttons() & QtCore.Qt.MouseButton.LeftButton):
+                    scene_pt = self.camera_view.mapToScene(event.pos())
+                    self._update_cross(scene_pt)
+                    return True
+
+            # Finish dragging on right-button release
+            if event.type() == QtCore.QEvent.Type.MouseButtonRelease and self._dragging_left_mouse:
+                if event.button() == QtCore.Qt.MouseButton.LeftButton:
+                    scene_pt = self.camera_view.mapToScene(event.pos())
+                    self._add_cross(scene_pt)
+                    self._dragging_left_mouse = False
+                    return True
+
+            return False  # let Qt handle other events
+            #return super().eventFilter(obj, event)
+        except RuntimeError:
+            # Widget was deleted
             return False
-
-        # Start dragging on right-button press
-        if event.type() == QtCore.QEvent.Type.MouseButtonPress:
-            if event.button() == QtCore.Qt.MouseButton.LeftButton:
-                scene_pt = self.camera_view.mapToScene(event.pos())
-                self._dragging_left_mouse = True
-                self._add_cross(scene_pt)
-                return True
-            if event.button() == QtCore.Qt.MouseButton.RightButton and self._cross_items:
-                self._move_to_cross()
-                return True  # eat the event
-
-        # Update cross position while dragging with right button pressed
-        if event.type() == QtCore.QEvent.Type.MouseMove and self._dragging_left_mouse:
-            #if event.button() == QtCore.Qt.MouseButton.LeftButton:
-            if (event.buttons() & QtCore.Qt.MouseButton.LeftButton):
-                scene_pt = self.camera_view.mapToScene(event.pos())
-                self._update_cross(scene_pt)
-                return True
-
-        # Finish dragging on right-button release
-        if event.type() == QtCore.QEvent.Type.MouseButtonRelease and self._dragging_left_mouse:
-            if event.button() == QtCore.Qt.MouseButton.LeftButton:
-                scene_pt = self.camera_view.mapToScene(event.pos())
-                self._add_cross(scene_pt)
-                self._dragging_left_mouse = False
-                return True
-
-        return False  # let Qt handle other events
-        #return super().eventFilter(obj, event)
         
     def _add_cross(self, scene_pt: QtCore.QPoint):
         """Draw a small cross centered at scene_pt, parented to the pixmap so it stays glued to the image."""
