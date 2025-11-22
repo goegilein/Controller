@@ -25,8 +25,7 @@ class RotMotorInterface(BaseClass):
         if connected:
             self.build_gui()
         else:
-            pass
-            #self.delete_gui()
+            self.delete_gui()
         
 
     def build_gui(self):
@@ -78,7 +77,7 @@ class RotMotorInterface(BaseClass):
             tab_widget.removeTab(tab)
 
     def connect_widget_callbacks(self, widget, motor):
-        blocking = False
+        blocking = True
         id= motor.ID
 
         #set start values
@@ -86,7 +85,7 @@ class RotMotorInterface(BaseClass):
         widget.acc_spinbox.setValue(motor.acc)
         widget.target_pos_spinbox.setValue(motor.target_position)
         
-        widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor_to_target(id,b))
+        widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor_to_target(i,b))
         widget.target_pos_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_target_position_deg(i, w.target_pos_spinbox.value()))
         widget.speed_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_speed(i, w.speed_spinbox.value()))
         widget.acc_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_acc(i, w.acc_spinbox.value()))
