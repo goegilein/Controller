@@ -77,7 +77,7 @@ class RotMotorInterface(BaseClass):
             tab_widget.removeTab(tab)
 
     def connect_widget_callbacks(self, widget, motor):
-        blocking = True
+        blocking = False
         id= motor.ID
 
         #set start values
