@@ -162,7 +162,7 @@ class RotMotorCotroller:
             return "Done"
         raise RuntimeError("Selected series module not available")
 
-    def move_motor_to_target(self, sid: int, blocking: bool=False):
+    def move_motor_to_target(self, sid: int, blocking: bool=False, high_resolution: bool=False):
         if sid == None:
             return
         elif sid == -1: # all motors
@@ -171,11 +171,25 @@ class RotMotorCotroller:
             ids = [sid]
         
         for id in ids:
-            pos = self.get_motor_by_id(id).target_position
-            speed = self.get_motor_by_id(id).speed
-            acc = self.get_motor_by_id(id).acc
+            motor = self.get_motor_by_id(id)
+            pos = motor.target_position
+            target_pos_deg = motor.target_position_deg
+            speed = motor.speed
+            acc = motor.acc
 
             self.write_pos(id, pos, speed, acc, blocking)
+            if high_resolution and blocking:
+                #fine tune position
+                for i in range(5): #try up to 5 times
+                    time.sleep(0.2)
+                    current_pos_deg = self.read_pos_deg(sid)
+                    delta = target_pos_deg - current_pos_deg
+                    if abs(delta) > 0.1: #if more than 0.1 deg off, try doing a fine adjustment
+                        sign = 1 if delta > 0 else -1
+                        target_pos = motor.convert_degrees_to_position(target_pos_deg + sign*0.3)
+                        self.write_pos(sid, target_pos, speed=100, acc=10, blocking=True)
+                    else:
+                        break
     
     def move_motor_by_deg(self, sid: int = None, delta_deg: float = 0.1, blocking: bool=False):
         if sid is None:
@@ -195,7 +209,7 @@ class RotMotorCotroller:
             return True
         return False
     
-    def move_motor_to_position_deg(self, sid: int, position_deg: float = 0.0, blocking: bool=False):
+    def move_motor_to_position_deg(self, sid: int, position_deg: float = 0.0, blocking: bool=False, high_resolution: bool=False):
         if sid is None:
             return
         elif sid == -1: # all motors
@@ -209,8 +223,18 @@ class RotMotorCotroller:
             speed = motor.speed
             acc = motor.acc
             self.write_pos(sid, target_pos, speed, acc, blocking)
-            return True
-        return False
+            if high_resolution and blocking:
+                #fine tune position
+                for i in range(5): #try up to 5 times
+                    time.sleep(0.2)
+                    current_pos_deg = self.read_pos_deg(sid)
+                    delta = position_deg - current_pos_deg
+                    if abs(delta) > 0.1: #if more than 0.1 deg off, try doing a fine adjustment
+                        sign = 1 if delta > 0 else -1
+                        target_pos = motor.convert_degrees_to_position(position_deg+ sign*0.3)
+                        self.write_pos(sid, target_pos, speed=100, acc=10, blocking=True)
+                    else:
+                        break
     
     def move_motor_rel_to_wp_deg(self, sid: int, delta_deg: float = 0.0, blocking: bool=False):
         if sid is None:

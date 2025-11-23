@@ -220,7 +220,7 @@ class ProcessHandler(BaseClass):
                     self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, z_save=True, job_save=True)
                     time.sleep(np.sqrt((wp[0]-pos_now[0])**2 + (wp[1]-pos_now[1])**2 + (wp[2]-pos_now[2])**2)/30*0.5)
                     if rot_motor_id is not None:
-                        self.rot_motor_controller.move_motor_to_position_deg(rot_motor_id, wp[4], blocking=True)
+                        self.rot_motor_controller.move_motor_to_position_deg(rot_motor_id, wp[3], blocking=True, high_resolution=True)
                     if self.execution_canceled.is_set():
                         break
                     self.controller.move_axis_to("relative", self.controller.laser_offset[0], self.controller.laser_offset[1], self.controller.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
@@ -358,7 +358,7 @@ class ProcessHandler(BaseClass):
                     self.controller.move_axis_absolute(x, y, z, job_save=True)
                     self.controller.set_work_position(job_save=True)
                     if rot_motor_id is not None:
-                        self.rot_motor_controller.move_motor_to_position_deg(rot_motor_id, r, blocking=True)
+                        self.rot_motor_controller.move_motor_to_position_deg(rot_motor_id, r, blocking=True, high_resolution=True)
                     time.sleep(0.5)  # Wait for movement to ensure stability
                 elif command.startswith("J1"):
                     parts = command.split()
