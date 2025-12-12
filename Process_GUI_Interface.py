@@ -1,7 +1,8 @@
 from PyQt6 import uic
 from PyQt6.QtWidgets import QListWidgetItem, QFileDialog
 from BaseClasses import BaseClass, TextLogger, SignalEmitter
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon#
+import re
 
 class ProcessInterface(BaseClass):
     def __init__(self, gui, process_handler):
@@ -45,6 +46,9 @@ class ProcessInterface(BaseClass):
         time_remaining_logger = TextLogger(log_object="Process", log_widget=self.time_remaining_edit, add_stamp=False)
         self.process_handler.set_remaining_time_callback(time_remaining_logger.log)
 
+        #update available rot motors in combobox when changed
+        self.process_handler.rot_motor_controller.set_connected_callback(lambda connected: self.set_available_rot_motors())
+
 
     def add_process_step(self):
         """
@@ -63,6 +67,11 @@ class ProcessInterface(BaseClass):
         widget.wp_x_spinbox.setValue(step.work_position[0])
         widget.wp_y_spinbox.setValue(step.work_position[1])
         widget.wp_z_spinbox.setValue(step.work_position[2])
+
+        widget.wp_x_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
+        widget.wp_y_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
+        widget.wp_z_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
+        widget.wp_r_spinbox.valueChanged.connect(lambda _, s=step, w=widget: self.set_step_wp(s,w))
         
         widget.remove_button.clicked.connect(lambda _, s=step, w=widget: self.remove_process_step(s,w))
         widget.load_file_button.clicked.connect(lambda _, s=step, w=widget: self.set_step_nc_file(s,w))
@@ -70,7 +79,12 @@ class ProcessInterface(BaseClass):
         widget.set_current_pos_button.clicked.connect(lambda _, s=step, w=widget, b=True: self.set_step_wp(s,w,b))
         widget.go_to_wp_button.clicked.connect(lambda _, s=step: self.go_to_step_wp(s))
 
-        #position tracking
+        #rotation motor
+        self.set_available_rot_motors([widget])
+        widget.rot_mot_combobox.currentTextChanged.connect(lambda _, s=step, w=widget: self.set_rot_motor_id(s,w))
+
+
+        #position tracking Axis
         position_emitter = SignalEmitter()
 
         def update_axis_pos(position = None):
@@ -83,8 +97,6 @@ class ProcessInterface(BaseClass):
         def threadsave_update_axies(position):
             position_emitter.list_signal.emit(position)
             
-
-        
         position_emitter.list_signal.connect(update_axis_pos)
         self.process_handler.controller.add_position_changed_callback(threadsave_update_axies)  # Set the position changed callback to track position
 
@@ -143,17 +155,21 @@ class ProcessInterface(BaseClass):
                 widget.wp_x_spinbox.blockSignals(True)
                 widget.wp_y_spinbox.blockSignals(True)
                 widget.wp_z_spinbox.blockSignals(True)
+                widget.wp_r_spinbox.blockSignals(True)
                 widget.wp_x_spinbox.setValue(new_work_position[0])
                 widget.wp_y_spinbox.setValue(new_work_position[1])
                 widget.wp_z_spinbox.setValue(new_work_position[2])
+                widget.wp_r_spinbox.setValue(new_work_position[3])
                 widget.wp_x_spinbox.blockSignals(False)
                 widget.wp_y_spinbox.blockSignals(False)
                 widget.wp_z_spinbox.blockSignals(False)
+                widget.wp_r_spinbox.blockSignals(False)
 
         else:
             new_work_position = [widget.wp_x_spinbox.value(),
                                  widget.wp_y_spinbox.value(),
                                  widget.wp_z_spinbox.value(),
+                                 widget.wp_r_spinbox.value()
                                 ]
             self.process_handler.set_step_wp_to(process_step, new_work_position)
 
@@ -173,7 +189,7 @@ class ProcessInterface(BaseClass):
             parent=widget,
             caption="Select a file for this step",
             directory="",
-            filter="NC Files (*.nc)"
+            filter="NC Files (*.nc *.jcode);;All Files (*)"
         )
             if file_path is None:
                 return
@@ -187,6 +203,62 @@ class ProcessInterface(BaseClass):
         
         if file_path is not None:
             self.process_handler.recalc_process_params()
+    
+    def set_rot_motor_id(self, process_step, widget):
+        motor_string = widget.rot_mot_combobox.currentText()
+        m = re.match(r'^\s*RotMot\s+(-?\d+)\s*$', motor_string)
+        if not m:
+            motor_id = None
+        else:
+            try:
+                motor_id = int(m.group(1))
+            except ValueError:
+                motor_id = None
+        process_step.rot_motor_id = motor_id
+
+        if motor_id is not None:
+            widget.wp_r_spinbox.setEnabled(True)
+            #set current rot motor pos as work pos
+            current_pos_deg = self.process_handler.rot_motor_controller.read_pos_deg(motor_id)
+            widget.wp_r_spinbox.setValue(current_pos_deg)
+            
+            #position tracking RotMotor
+            position_emitter = SignalEmitter()
+
+            def update_pos_threadsave(position):
+                position_emitter.float_signal.emit(position)
+
+            def update_current_position(position):
+                widget.rel_r_spinbox.setValue(position - process_step.work_position[3])
+
+            position_emitter.float_signal.connect(update_current_position)
+            motor = self.process_handler.rot_motor_controller.get_motor_by_id(motor_id)
+            motor.set_position_changed_callback(update_pos_threadsave)
+        else:
+            widget.wp_r_spinbox.setEnabled(False)
+            widget.wp_r_spinbox.setValue(0)
+            process_step.work_position[3]=0  #reset rot pos in wp
+
+    
+    def set_available_rot_motors(self, widgets_list=None):
+        """
+        Update the available rotational motors in the combobox of each process step.
+        :param motor_list: List of available rotational motor objects.
+        """
+        
+        if widgets_list is None: #update all widgets
+            widgets_list = []
+            for i in range(self.process_steps_listWidget.count()):
+                widgets_list.append(self.process_steps_listWidget.itemWidget(self.process_steps_listWidget.item(i)))
+
+        motor_list = self.process_handler.rot_motor_controller.motors
+
+        for widget in widgets_list:
+            widget.rot_mot_combobox.clear()
+            widget.rot_mot_combobox.addItem("None")
+            for motor in motor_list:
+                widget.rot_mot_combobox.addItem(f"RotMot {motor.ID}")
+            widget.rot_mot_combobox.setCurrentIndex(0)  # set to None by default
 
     def toggle_process(self):
         state =self.process_handler.process_state

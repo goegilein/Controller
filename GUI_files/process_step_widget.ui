@@ -149,6 +149,35 @@ QTabBar::tab:hover {
       <string/>
      </property>
      <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0,1">
+      <item row="0" column="3" rowspan="3">
+       <widget class="QPushButton" name="remove_button">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>30</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>resources/trash.png</normaloff>resources/trash.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>25</width>
+          <height>25</height>
+         </size>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0">
         <item>
@@ -210,13 +239,6 @@ QTabBar::tab:hover {
         </item>
        </layout>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>NC-File</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label_8">
         <property name="text">
@@ -224,15 +246,147 @@ QTabBar::tab:hover {
         </property>
        </widget>
       </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>NC-File</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="1">
        <widget class="QLineEdit" name="step_name_edit"/>
       </item>
-      <item row="2" column="0" colspan="2">
-       <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,1,0,1" columnstretch="1,1,1,0">
+      <item row="2" column="0" colspan="3">
+       <layout class="QGridLayout" name="gridLayout_4" rowstretch="0,1,0,1" columnstretch="1,1,1,1,0">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>WP (mm): X</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_4">
+          <property name="text">
+           <string>WP (mm): Z</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Rel (mm). X:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QDoubleSpinBox" name="rel_x_spinbox">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::NoButtons</enum>
+          </property>
+          <property name="minimum">
+           <double>-1000.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>1000.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Re (mm)l: Y</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>Rel (mm): Z</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4" rowspan="2">
+         <widget class="QPushButton" name="set_current_pos_button">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>resources/crosshair_new.png</normaloff>resources/crosshair_new.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="4" rowspan="2">
+         <widget class="QPushButton" name="go_to_wp_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>resources/move_to.png</normaloff>resources/move_to.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2">
+         <widget class="QDoubleSpinBox" name="rel_z_spinbox">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::NoButtons</enum>
+          </property>
+          <property name="minimum">
+           <double>-1000.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>1000.000000000000000</double>
+          </property>
+         </widget>
+        </item>
         <item row="0" column="1">
          <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>Work Pos: Y</string>
+           <string>WP (mm): Y</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -256,17 +410,13 @@ QTabBar::tab:hover {
           </property>
          </widget>
         </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Work Pos: Z</string>
+        <item row="1" column="2">
+         <widget class="QDoubleSpinBox" name="wp_z_spinbox">
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::NoButtons</enum>
           </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Work Pos: X</string>
+          <property name="maximum">
+           <double>500.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -286,27 +436,23 @@ QTabBar::tab:hover {
           </property>
          </widget>
         </item>
-        <item row="1" column="2">
-         <widget class="QDoubleSpinBox" name="wp_z_spinbox">
-          <property name="buttonSymbols">
-           <enum>QAbstractSpinBox::NoButtons</enum>
-          </property>
-          <property name="maximum">
-           <double>500.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_5">
+        <item row="0" column="3">
+         <widget class="QLabel" name="label_9">
           <property name="text">
-           <string>Rel. X:</string>
+           <string>WP (°): R</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
-         <widget class="QDoubleSpinBox" name="rel_x_spinbox">
+        <item row="1" column="3">
+         <widget class="QDoubleSpinBox" name="wp_r_spinbox">
           <property name="enabled">
            <bool>false</bool>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
           <property name="buttonSymbols">
            <enum>QAbstractSpinBox::NoButtons</enum>
@@ -319,24 +465,23 @@ QTabBar::tab:hover {
           </property>
          </widget>
         </item>
-        <item row="2" column="2">
-         <widget class="QLabel" name="label_7">
+        <item row="2" column="3">
+         <widget class="QLabel" name="label_10">
           <property name="text">
-           <string>Rel: Z</string>
+           <string>Re (°)l: R</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Rel: Y</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2">
-         <widget class="QDoubleSpinBox" name="rel_z_spinbox">
+        <item row="3" column="3">
+         <widget class="QDoubleSpinBox" name="rel_r_spinbox">
           <property name="enabled">
            <bool>false</bool>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
           <property name="buttonSymbols">
            <enum>QAbstractSpinBox::NoButtons</enum>
@@ -346,77 +491,21 @@ QTabBar::tab:hover {
           </property>
           <property name="maximum">
            <double>1000.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="3" rowspan="2">
-         <widget class="QPushButton" name="set_current_pos_button">
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset>
-            <normaloff>resources/crosshair_new.png</normaloff>resources/crosshair_new.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>25</width>
-            <height>25</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="3" rowspan="2">
-         <widget class="QPushButton" name="go_to_wp_button">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset>
-            <normaloff>resources/move_to.png</normaloff>resources/move_to.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>25</width>
-            <height>25</height>
-           </size>
           </property>
          </widget>
         </item>
        </layout>
       </item>
-      <item row="0" column="2" rowspan="3">
-       <widget class="QPushButton" name="remove_button">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>30</width>
-          <height>16777215</height>
-         </size>
-        </property>
+      <item row="1" column="2">
+       <widget class="QComboBox" name="rot_mot_combobox"/>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_11">
         <property name="text">
-         <string/>
+         <string>Rot-Mot:</string>
         </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>resources/trash.png</normaloff>resources/trash.png</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>25</width>
-          <height>25</height>
-         </size>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>

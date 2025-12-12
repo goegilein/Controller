@@ -51,7 +51,7 @@ controllers={"artisan_controller":artisan_controller,
 
 # arduino_controller = ArduinoController.ArduinoController(gui, artisan_controller=artisan_controller)
 # arduino_controller.connect(port="COM5", baudrate=9600)
-process_handler = Process_Handler.ProcessHandler(gui, artisan_controller)
+process_handler = Process_Handler.ProcessHandler(gui, artisan_controller, rot_motor_controller)
 
 #setup interfaces
 main_interface=Main_GUI_Interface.MainInterface(gui, controllers, settings)
