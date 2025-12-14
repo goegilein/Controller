@@ -16,18 +16,16 @@ import RotMotor_GUI_Interface
 import Interactive_Image_Control
 import Maschine_Helper
 import Gcode_Plotter
+from PathManager import get_gui_file_path, get_settings_path
 
-#first define paths
-BASE_DIR = Path(__file__).resolve().parent
-GUI_DIR = BASE_DIR / "GUI_files"
-MAIN_GUI_PATH = GUI_DIR / "Controller.ui"
-SETTINGS_DIR = BASE_DIR / "settings"
-DEFAULT_SETTINGS_PATH = SETTINGS_DIR / "Default_Settings.json"
-SCHEMA_PATH = SETTINGS_DIR / "schema.json"   
+#Define paths using PathManager
+MAIN_GUI_PATH = get_gui_file_path("Controller.ui")
+DEFAULT_SETTINGS_PATH = get_settings_path("Default_Settings.json")
+SCHEMA_PATH = get_settings_path("schema.json")   
 
 #setup QApplication and load GUI
 app = QtWidgets.QApplication(sys.argv)
-gui = uic.loadUi(MAIN_GUI_PATH)
+gui = uic.loadUi(str(MAIN_GUI_PATH))
 gui.show()
 
 

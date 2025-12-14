@@ -1,6 +1,7 @@
 import numpy as np
 from PyQt6 import uic
 from PyQt6.QtWidgets import QListWidgetItem
+from PathManager import get_gui_file_path
 
 class MaschineHelpers():
     def __init__(self, gui, controller):
@@ -21,7 +22,7 @@ class CircleFitter():
         self.point_list = []
         self.circle_center = Point(None, None, None) # Point
 
-        self.widget_path = "GUI_files/fit_point_item.ui"
+        self.widget_path = str(get_gui_file_path("fit_point_item.ui"))
 
         #get the main controls for fitter
         self.circle_fit_listWidget = gui.circle_fit_listWidget
@@ -215,7 +216,7 @@ class RectangleFitter():
         gui.go_to_vert_center_button.clicked.connect(lambda _, i="vert": self.move_to_center(i))
         gui.go_to_main_center_button.clicked.connect(lambda _, i="main": self.move_to_center(i))
 
-        self.widget_path = "GUI_files/fit_point_item.ui"
+        self.widget_path = str(get_gui_file_path("fit_point_item.ui"))
 
         self.setup_gui()
     

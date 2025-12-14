@@ -2,13 +2,14 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from BaseClasses import BaseClass, SignalEmitter, TextLogger
 import RotMotor_Cotroller
 from PyQt6 import uic
+from PathManager import get_gui_file_path
 
 class RotMotorInterface(BaseClass):
     def __init__(self, gui, rot_motor_controller: RotMotor_Cotroller.RotMotorCotroller):
         super().__init__()
         self.gui = gui
         self.rot_mot_controller = rot_motor_controller
-        self.widget_path = "GUI_files/rot_motor_widget.ui"
+        self.widget_path = str(get_gui_file_path("rot_motor_widget.ui"))
         self.update_connection_status(self.rot_mot_controller.connected)
 
         #Log tracking

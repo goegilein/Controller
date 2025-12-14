@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Build artifacts
+build/
+dist/
+*.exe
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.sublime-workspace
+
+# OS
+Thumbs.db

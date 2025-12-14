@@ -2,6 +2,7 @@ from PyQt6 import uic
 from PyQt6.QtWidgets import QListWidgetItem, QFileDialog
 from BaseClasses import BaseClass, TextLogger, SignalEmitter
 from PyQt6.QtGui import QIcon#
+from PathManager import get_gui_file_path
 import re
 
 class ProcessInterface(BaseClass):
@@ -9,7 +10,7 @@ class ProcessInterface(BaseClass):
         super().__init__()
         self.gui = gui
         self.process_handler = process_handler
-        self.widget_path = "GUI_files/process_step_widget.ui"
+        self.widget_path = str(get_gui_file_path("process_step_widget.ui"))
 
         # Add gui callbacks
         self.add_process_step_button = gui.add_process_step_button
