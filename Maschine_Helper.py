@@ -292,7 +292,7 @@ class RectangleFitter():
             self.gui.go_to_vert_center_button.setEnabled(True)
         
         if self.horz_center.X is not None and self.vert_center.X is not None:
-            self.main_center = self.calc_mid(self.horz_center, self.vert_center)
+            self.main_center = Point(self.horz_center.X, self.vert_center.Y, (self.horz_center.Z + self.vert_center.Z)/2)
             self.gui.main_center_x_spinbox.setValue(self.main_center.X)
             self.gui.main_center_y_spinbox.setValue(self.main_center.Y)
             self.gui.main_center_z_spinbox.setValue(self.main_center.Z)
