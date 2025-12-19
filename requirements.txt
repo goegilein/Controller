@@ -1,0 +1,10 @@
+PyQt6
+opencv-python
+numpy
+pyserial
+pyqtgraph
+PyOpenGL
+wmi
+jsonschema
+pyinstaller
+pillow

@@ -515,7 +515,7 @@ class NCCodeInterpreter():
         wp = [0,0,0,0]  #default work position
         if file_path.lower().endswith('.nc'):
             file_type = "gcode"
-            gcode_file_list = [file_path,wp]
+            gcode_file_list.append([file_path,wp])
         elif file_path.lower().endswith('.jcode'):
             file_type = "jcode"
             with open(file_path, 'r') as file:

@@ -2,6 +2,7 @@ import numpy as np
 from typing import Tuple, Optional, Dict
 from PyQt6 import QtWidgets, QtCore, QtGui, uic
 from pathlib import Path
+from PathManager import get_gui_file_path
 
 class InteractiveImageControl(QtCore.QObject):
     def __init__(self, gui, settings, camera_GUI, artisan_controller):
@@ -381,10 +382,9 @@ class CoordinateSystemTransformer():
 class TransformerCalibrator(QtWidgets.QWidget):
     def __init__(self, interactive_image_controller:InteractiveImageControl, coord_transformer: CoordinateSystemTransformer):     
         super().__init__()
-        base_path = Path(__file__).resolve().parent
-        widget_path = base_path / "GUI_files" / "image_control_calibrator.ui"
-        self.point_ui_path = base_path / "GUI_files" / "image_control_calibrator_item.ui"
-        self.widget_ui=uic.loadUi(widget_path, self)
+        widget_path = get_gui_file_path("image_control_calibrator.ui")
+        self.point_ui_path = get_gui_file_path("image_control_calibrator_item.ui")
+        self.widget_ui=uic.loadUi(str(widget_path), self)
         
         self.coord_transformer = coord_transformer
         self.interactive_image_controller = interactive_image_controller
