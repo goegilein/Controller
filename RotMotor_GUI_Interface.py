@@ -66,7 +66,7 @@ class RotMotorInterface(BaseClass):
         #set start values
         widget.speed_spinbox.setValue(motor.speed_limit)
         widget.acc_spinbox.setValue(motor.acc)
-        widget.target_pos_spinbox.setValue(motor.get_current_angle())
+        widget.target_pos_spinbox.setValue(motor.get_target_angle())
         
         # widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor_to_target(i,b))
         widget.move_button.clicked.connect(lambda _, i = id, w=widget,  b=False: self.rot_mot_controller.move_to_angle(sid=i, angle=w.target_pos_spinbox.value(), wait_for_position=b))

@@ -503,6 +503,7 @@ class RotMotor:
         self.target_ticks = raw_position
         self.speed_limit = speed
         self.acc = acc
+        self.gear_ratio = 1.0  # Gear ratio (1.0 = direct drive)
         
         # --- PID parameters (tuning required) ---
         self.Kp = 1.5   # Proportional: "Motor force"
@@ -548,7 +549,7 @@ class RotMotor:
         Sets new target angle.
         Resets PID values to avoid jumps.
         """
-        new_target = int((angle / 360.0) * 4096.0)
+        new_target = int((angle / 360.0) * 4096.0 * self.gear_ratio)
         
         if new_target != self.target_ticks:
             self.target_ticks = new_target
@@ -565,11 +566,11 @@ class RotMotor:
     
     def get_target_angle(self):
         """Returns the target angle in degrees."""
-        return round((self.target_ticks / 4096.0) * 360.0, 2)
+        return round((self.target_ticks / 4096.0) * 360.0 / self.gear_ratio, 2)
     
     def get_current_angle(self):
         """Returns the current angle in degrees."""
-        return round((self.total_ticks / 4096.0) * 360.0, 2)
+        return round((self.total_ticks / 4096.0) * 360.0 / self.gear_ratio, 2)
     
     def set_speed(self, speed):
         self.speed_limit = speed
