@@ -237,10 +237,10 @@ QTabBar::tab:hover {
          <enum>QAbstractSpinBox::NoButtons</enum>
         </property>
         <property name="minimum">
-         <double>-1000.000000000000000</double>
+         <double>-10000.000000000000000</double>
         </property>
         <property name="maximum">
-         <double>1000.000000000000000</double>
+         <double>10000.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -265,8 +265,11 @@ QTabBar::tab:hover {
         <property name="buttonSymbols">
          <enum>QAbstractSpinBox::NoButtons</enum>
         </property>
+        <property name="minimum">
+         <double>-5000.000000000000000</double>
+        </property>
         <property name="maximum">
-         <double>10000.000000000000000</double>
+         <double>5000.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -278,8 +281,11 @@ QTabBar::tab:hover {
         <property name="buttonSymbols">
          <enum>QAbstractSpinBox::NoButtons</enum>
         </property>
+        <property name="minimum">
+         <double>-5000.000000000000000</double>
+        </property>
         <property name="maximum">
-         <double>720.000000000000000</double>
+         <double>5000.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -294,8 +300,11 @@ QTabBar::tab:hover {
         <property name="buttonSymbols">
          <enum>QAbstractSpinBox::NoButtons</enum>
         </property>
+        <property name="minimum">
+         <double>-5000.000000000000000</double>
+        </property>
         <property name="maximum">
-         <double>1000.000000000000000</double>
+         <double>5000.000000000000000</double>
         </property>
        </widget>
       </item>

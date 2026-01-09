@@ -171,7 +171,8 @@ class ProcessHandler(BaseClass):
             return
         step_wp = process_step.work_position
         self.controller.move_axis_absolute(step_wp[0], step_wp[1], step_wp[2])
-        self.rot_motor_controller.move_motor_to_position_deg(process_step.rot_motor_id, step_wp[3])
+        self.rot_motor_controller.move_to_angle(process_step.rot_motor_id, step_wp[3])
+
 
 
     def set_step_nc_file(self, process_step, file_path):
@@ -213,14 +214,14 @@ class ProcessHandler(BaseClass):
                     wp= process_step.work_position
                     nc_file=process_step.nc_file
                     time_lists=process_step.time_lists
-                    rot_motor_id=process_step.rot_motor_id
+                    rot_motor_id=process_step.motor_id
 
                     #Move to Work Position, then switch to laser tool.
                     pos_now=self.controller.get_absolute_position()
                     self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, z_save=True, job_save=True)
                     time.sleep(np.sqrt((wp[0]-pos_now[0])**2 + (wp[1]-pos_now[1])**2 + (wp[2]-pos_now[2])**2)/30*0.5)
                     if rot_motor_id is not None:
-                        self.rot_motor_controller.move_motor_to_position_deg(rot_motor_id, wp[3], blocking=True, high_resolution=True)
+                        self.rot_motor_controller.move_to_angle(rot_motor_id, wp[3], wait_for_position=True)
                     if self.execution_canceled.is_set():
                         break
                     self.controller.move_axis_to("relative", self.controller.laser_offset[0], self.controller.laser_offset[1], self.controller.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
@@ -358,7 +359,7 @@ class ProcessHandler(BaseClass):
                     self.controller.move_axis_absolute(x, y, z, job_save=True)
                     self.controller.set_work_position(job_save=True)
                     if rot_motor_id is not None:
-                        self.rot_motor_controller.move_motor_to_position_deg(rot_motor_id, r, blocking=True, high_resolution=True)
+                        self.rot_motor_controller.move_to_angle(rot_motor_id, r, wait_for_position=True)
                     time.sleep(0.5)  # Wait for movement to ensure stability
                 elif command.startswith("J1"):
                     parts = command.split()

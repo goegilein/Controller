@@ -216,11 +216,14 @@ class ProcessInterface(BaseClass):
             except ValueError:
                 motor_id = None
         process_step.rot_motor_id = motor_id
+        
 
         if motor_id is not None:
+            motor = self.process_handler.rot_motor_controller.get_motor_by_id(motor_id)
+
             widget.wp_r_spinbox.setEnabled(True)
             #set current rot motor pos as work pos
-            current_pos_deg = self.process_handler.rot_motor_controller.read_pos_deg(motor_id)
+            current_pos_deg = motor.get_current_angle()
             widget.wp_r_spinbox.setValue(current_pos_deg)
             
             #position tracking RotMotor
@@ -233,8 +236,8 @@ class ProcessInterface(BaseClass):
                 widget.rel_r_spinbox.setValue(position - process_step.work_position[3])
 
             position_emitter.float_signal.connect(update_current_position)
-            motor = self.process_handler.rot_motor_controller.get_motor_by_id(motor_id)
             motor.set_position_changed_callback(update_pos_threadsave)
+            
         else:
             widget.wp_r_spinbox.setEnabled(False)
             widget.wp_r_spinbox.setValue(0)

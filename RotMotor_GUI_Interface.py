@@ -54,23 +54,6 @@ class RotMotorInterface(BaseClass):
             tab.setLayout(layout)
 
             tab_widget.addTab(tab, f"RotMot {motor.ID}")
-        
-        # #create a tab for all motors
-        # # 1) Create an empty tab container
-        # tab = QWidget()
-
-        # # 2) Layout for the tab
-        # layout = QVBoxLayout(tab)
-        # layout.setContentsMargins(8, 8, 8, 8)
-        # layout.setSpacing(8)
-
-        # widget = uic.loadUi(self.widget_path)
-        # #self.connect_widget_callbacks(widget, None)
-
-        # layout.addWidget(widget)
-        # tab.setLayout(layout)
-
-        # tab_widget.addTab(tab, f"All RotMots ")
     
     def delete_gui(self):
         tab_widget = self.gui.rot_mot_tabWidget
@@ -78,24 +61,24 @@ class RotMotorInterface(BaseClass):
             tab_widget.removeTab(tab)
 
     def connect_widget_callbacks(self, widget, motor):
-        blocking = False
         id= motor.ID
 
         #set start values
-        widget.speed_spinbox.setValue(motor.speed)
+        widget.speed_spinbox.setValue(motor.speed_limit)
         widget.acc_spinbox.setValue(motor.acc)
-        widget.target_pos_spinbox.setValue(motor.target_position)
+        widget.target_pos_spinbox.setValue(motor.get_current_angle())
         
-        widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor_to_target(i,b))
-        widget.target_pos_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_target_position_deg(i, w.target_pos_spinbox.value()))
-        widget.speed_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_speed(i, w.speed_spinbox.value()))
-        widget.acc_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_acc(i, w.acc_spinbox.value()))
-        widget.move_to_home_button.clicked.connect(lambda _, i=id: self.rot_mot_controller.move_motor_to_wp(i))
+        # widget.move_button.clicked.connect(lambda _, i=id, b=blocking: self.rot_mot_controller.move_motor_to_target(i,b))
+        widget.move_button.clicked.connect(lambda _, i = id, w=widget,  b=False: self.rot_mot_controller.move_to_angle(sid=i, angle=w.target_pos_spinbox.value(), wait_for_position=b))
+        # widget.target_pos_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_target_position_deg(i, w.target_pos_spinbox.value()))
+        # widget.target_pos_spinbox.valueChanged.connect(lambda _, w=widget: motor.set_target_angle(w.target_pos_spinbox.value()))
+        widget.speed_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_speed(sid=i, speed=w.speed_spinbox.value()))
+        widget.acc_spinbox.valueChanged.connect(lambda _, i=id, w=widget: self.rot_mot_controller.set_acc(sid=i, acc=w.acc_spinbox.value()))
+        widget.move_to_home_button.clicked.connect(lambda _, i=id, w=widget, b=False: self.rot_mot_controller.move_to_angle(sid=i, angle=w.home_pos_spinbox.value(), wait_for_position=b))
         
         #set work position
         def set_work_pos():
-            self.rot_mot_controller.set_work_position(id)
-            home_pos = self.rot_mot_controller.get_work_position_deg(id)
+            home_pos = motor.get_current_angle()
             widget.home_pos_spinbox.blockSignals(True)
             widget.home_pos_spinbox.setValue(home_pos)
             widget.home_pos_spinbox.blockSignals(False)
@@ -107,8 +90,11 @@ class RotMotorInterface(BaseClass):
             # current_pos = self.rot_mot_controller.read_pos_deg(id)
             # target_pos = current_pos + widget.step_size_spinbox.value()*dir
             delta = widget.step_size_spinbox.value()*dir
+            widget.target_pos_spinbox.blockSignals(True)
+            widget.target_pos_spinbox.setValue(widget.target_pos_spinbox.value() + delta)
+            widget.target_pos_spinbox.blockSignals(False)
             # self.rot_mot_controller.set_target_position_deg(id, target_pos)
-            self.rot_mot_controller.move_motor_by_deg(id, delta, blocking=True)
+            self.rot_mot_controller.move_to_angle(sid=id, angle=widget.target_pos_spinbox.value(), wait_for_position=False)
         
         widget.pos_step_button.clicked.connect(lambda _, d=1: move_by_steps(d))
         widget.neg_step_button.clicked.connect(lambda _, d=-1: move_by_steps(d))
