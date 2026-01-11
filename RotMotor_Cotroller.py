@@ -503,12 +503,12 @@ class RotMotor:
         self.target_ticks = raw_position
         self.speed_limit = speed
         self.acc = acc
-        self.gear_ratio = 1.0  # Gear ratio (1.0 = direct drive)
+        self.gear_ratio = 3  # Gear ratio (1.0 = direct drive)
         
         # --- PID parameters (tuning required) ---
-        self.Kp = 1.5   # Proportional: "Motor force"
-        self.Ki = 0.05  # Integral: "Work against load"
-        self.Kd = 0.8   # Derivative: "Brake / damping"
+        self.Kp = 1.5   # Proportional: "Motor force: 1.5 default"
+        self.Ki = 0.5  # Integral: "Work against load: 0.05 default"
+        self.Kd = 1   # Derivative: "Brake / damping: 0.8 default"
         
         # --- PID state ---
         self.integral_error = 0.0
@@ -540,7 +540,7 @@ class RotMotor:
         
         if self.position_changed_callback:
             # Convert to degrees for GUI
-            deg = round((self.total_ticks / 4096.0) * 360.0, 2)
+            deg = round((self.total_ticks / 4096.0) * 360.0 / self.gear_ratio, 2)
             for callback in self.position_changed_callback:
                 callback(deg)
 
@@ -601,7 +601,7 @@ class RotMotor:
             self.integral_error = 0 # Clear integral
             self.last_error = 0
             self.position_stable_counter +=1
-            if self.position_stable_counter >= self.position_stable_threshold:
+            if self.position_stable_counter >= self.position_stable_threshold and self.position_reached== False:
                 self.position_reached = True
             return 0
         else:
