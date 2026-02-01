@@ -137,27 +137,30 @@ class ProcessHandler(BaseClass):
         Set a step's workposition to the current absolute position as received from controller.
         :param process_step: Process step to edit.
         """
-
-        if self.process_state != "Idle":
-            self.last_log = "Error: Cannot change step work position while a process is still active."
-            return None
-        
-        new_work_position_axis = self.controller.get_absolute_position()
-        if new_work_position_axis is None:
-            self.last_log = "Error: Could not get the axis Position. Using Default value"
-            return None
-        else:
-            process_step.work_position[0:3] = new_work_position_axis[0:3]
-        
-        if process_step.rot_motor_id is not None:
-            rot_pos = self.rot_motor_controller.read_pos_deg(process_step.rot_motor_id)
-            if rot_pos is None:
-                self.last_log = "Error: Could not get the rot motor Position. Using Default value"
+        try:
+            if self.process_state != "Idle":
+                self.last_log = "Error: Cannot change step work position while a process is still active."
+                return None
+            
+            new_work_position_axis = self.controller.get_absolute_position()
+            if new_work_position_axis is None:
+                self.last_log = "Error: Could not get the axis Position. Using Default value"
                 return None
             else:
-                process_step.work_position[3] = rot_pos
-        else:
-            process_step.work_position[3] = 0  # reset rot pos if no motor assigned
+                process_step.work_position[0:3] = new_work_position_axis[0:3]
+            
+            if process_step.rot_motor_id is not None:
+                rot_pos = self.rot_motor_controller.get_current_angle(process_step.rot_motor_id)[0] #alwas returns a list. for single motor, take first element
+                if rot_pos is None:
+                    self.last_log = "Error: Could not get the rot motor Position. Using Default value"
+                    return None
+                else:
+                    process_step.work_position[3] = rot_pos
+            else:
+                process_step.work_position[3] = 0  # reset rot pos if no motor assigned
+        except Exception as e:
+            self.last_log = f"Error: Could not set work position to current position: {e}"
+            return None
 
         return process_step.work_position
     
@@ -214,7 +217,7 @@ class ProcessHandler(BaseClass):
                     wp= process_step.work_position
                     nc_file=process_step.nc_file
                     time_lists=process_step.time_lists
-                    rot_motor_id=process_step.motor_id
+                    rot_motor_id=process_step.rot_motor_id
 
                     #Move to Work Position, then switch to laser tool.
                     pos_now=self.controller.get_absolute_position()

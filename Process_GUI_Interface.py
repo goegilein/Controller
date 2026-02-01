@@ -219,7 +219,7 @@ class ProcessInterface(BaseClass):
         
 
         if motor_id is not None:
-            motor = self.process_handler.rot_motor_controller.get_motor_by_id(motor_id)
+            motor = self.process_handler.rot_motor_controller.get_motor_by_id(motor_id)[0]
 
             widget.wp_r_spinbox.setEnabled(True)
             #set current rot motor pos as work pos
