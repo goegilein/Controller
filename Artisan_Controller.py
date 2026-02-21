@@ -598,10 +598,12 @@ class ArtisanController():
                     self._laser_offset = None
                     self.disconnect()
                     return None
+
             else:
                 self.last_log = "Error: Could not retrieve machine information. Closing connection for safety! You can try to reconnect."
-                self.disconnect()
-                return None
+                #self.disconnect()
+                #return None
+                return "TEST"
         except:
             self.last_log = f"Unknown tool head detected: {tool_head}. This is not supported. Closing connection for safety!"
             self._tool_head = None

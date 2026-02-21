@@ -2,6 +2,8 @@ from PyQt6 import QtWidgets, QtCore
 from Settings_Manager import SettingsManager
 from libraries.scservo_sdk import * 
 import threading
+import numpy as np
+import time
 
 
 class RotMotorCotroller:
@@ -17,8 +19,11 @@ class RotMotorCotroller:
         settings.settingsReplaced.connect(self.load_settings)
         self.motors = [] # type: list[RotMotor]
         self._connected = False
+        self.driver = None
 
         self._last_log = ''
+        self.lock = threading.Lock()
+
 
 
         #callback
@@ -59,31 +64,44 @@ class RotMotorCotroller:
                 self.portHandler = PortHandler(self.port)
                 if self.portHandler.openPort():
                     self.last_log = f"Rot Motor Board connected on {self.port}"
+                
+                #set the driver
+                if self.series == "SC" and scscl:
+                    self.driver = scscl(self.portHandler)
+                if self.series in ("ST", "STS") and sms_sts:
+                    self.driver = sms_sts(self.portHandler)
 
                 motor_ids = []
                 self.motors = []
-                for ids in range(1, 255):
-                    if self.ping(ids):
-                        pos = self.read_pos(ids)
-                        motor = RotMotor(ID=ids, position=pos)
+                for id in range(1, 10):
+                    if self.ping(id):
+                        pos = self.read_pos(id)
+                        motor = RotMotor(ID=id, raw_position=pos)
                         self.motors.append(motor)
-                        motor_ids.append(ids)
+                        motor_ids.append(id)
+
+                        #now set the motor to WHEEL MODE
+                        self.driver.unLockEprom(id)
+                        self.driver.WheelMode(id)
+                        self.driver.LockEprom(id)
+                        self.driver.EnableTorque(id, 1)
                 self.connected = True
 
+                self.start_control_loop()
                 #once connected, constantly track the motor position in a background thread
-                def track_motor_pos():
-                    try:
-                        while self.connected:
-                            time.sleep(0.1)
-                            for motor in self.motors:
-                                pos = self.read_pos(motor.ID)
-                                motor.position = pos
-                    except Exception as e:
-                        self.last_log = f"Error in tracking Rotary motor position: {e}."
+                # def track_motor_pos():
+                #     try:
+                #         while self.connected:
+                #             time.sleep(0.1)
+                #             for motor in self.motors:
+                #                 pos = self.read_pos(motor.ID)
+                #                 motor.position = pos
+                #     except Exception as e:
+                #         self.last_log = f"Error in tracking Rotary motor position: {e}."
 
-                tracking_thread = threading.Thread(target=track_motor_pos)
-                tracking_thread.daemon = True
-                tracking_thread.start()
+                # tracking_thread = threading.Thread(target=track_motor_pos)
+                # tracking_thread.daemon = True
+                # tracking_thread.start()
 
                 self.last_log = f"Detected motors with IDs: {motor_ids}."
             except Exception as e:
@@ -113,20 +131,100 @@ class RotMotorCotroller:
         self.port = self.s.get("rotary_motors.port", "COM7")
         self.series = self.s.get("rotary_motors.series", "STS")
     
+    def start_control_loop(self):
+        """Starts thread for position tracking and control"""
+        def control_thread_func():
+            while self.connected:
+                with self.lock: # Thread safety if GUI also writes
+                    for motor in self.motors:
+                        try:
+                            # 1. Read position (actual value)
+                            # Optimization: ReadPos returns position
+                            current_raw = self.read_pos(motor.ID)
+                            
+                            # if res == COMM_SUCCESS:
+                            # 2. Update motor status (calculates turns & total ticks)
+                            motor.update_from_raw(current_raw)
+                            
+                            # 3. Calculate PID speed
+                            speed_cmd = motor.calculate_control_speed()
+                                
+                            self.driver.WriteSpec(motor.ID, speed_cmd, motor.acc)
+                                
+                        except Exception as e:
+                            print(f"Error control loop ID {motor.ID}: {e}")
+
+                # Loop-Frequency: 20ms = 50Hz (Important for PID!)
+                time.sleep(0.02) 
+
+        t = threading.Thread(target=control_thread_func)
+        t.daemon = True
+        t.start()
+
+    #--- Core Motor Control Methods ----
+
+    def move_to_angle(self, sid, angle, wait_for_position = False):
+        """Sets new target (also > 360 degrees)"""
+        # If sid is -1, move all motors
+        motors = self.get_motor_by_id(sid)
+
+        with self.lock:
+            for m in motors:
+                m.set_target_angle(angle)
+                # Background thread now handles movement automatically
+        if wait_for_position:
+            time.sleep(0.1) #give some time for the command to be sent
+            for m in motors:
+                while not m.position_reached:
+                    time.sleep(0.1)
     
+    def set_acc(self, sid, acc: int):
+        """Sets acceleration for a specific motor"""
+        # If sid is -1, move all motors
+        motors = self.get_motor_by_id(sid)
+
+        with self.lock:
+            for m in motors:
+                m.acc = acc
+    
+    def set_speed(self, sid, speed: int):
+        """Sets speed for a specific motor"""
+        # If sid is -1, move all motors
+        motors = self.get_motor_by_id(sid)
+
+        with self.lock:
+            for m in motors:
+                m.speed_limit = speed
+    
+    def stop_motor(self, sid):
+        """Stops a specific motor immediately"""
+        # If sid is -1, move all motors
+        motors = self.get_motor_by_id(sid)
+
+        with self.lock:
+            for m in motors:
+                self.driver.WriteSpec(m.ID, 0, m.acc)
+                m.position_reached = True
+    
+    def get_current_angle(self, sid):
+        """Gets current angle in degrees (also > 360 degrees)"""
+        motors = self.get_motor_by_id(sid)
+
+        if motors:
+            pos = [m.get_current_angle() for m in motors]
+            return pos
+        return None
+    
+
 
     # ---- Core helpers for Motor Controls
     def ping(self, sid: int) -> bool:
         if sid is None:
             return False
         
-        if self.series == "SC" and scscl:
-            scs_model_number, scs_comm_result, scs_error = scscl(self.portHandler).ping(sid)
-            return scs_comm_result == COMM_SUCCESS
-        if self.series in ("ST", "STS") and sms_sts:
-            scs_model_number, scs_comm_result, scs_error = sms_sts(self.portHandler).ping(sid)
-            return scs_comm_result == COMM_SUCCESS
-        raise RuntimeError("Selected series module not available")
+        scs_model_number, scs_comm_result, scs_error = self.driver.ping(sid)
+        return scs_comm_result == COMM_SUCCESS
+
 
     def torque(self, sid: int, on: bool = True):
         if sid is None:
@@ -137,334 +235,429 @@ class RotMotorCotroller:
             ids = [sid]
         
         for id in ids:
-            if self.series == "SC" and scscl:
-                scscl(self.portHandler).EnableTorque(id, 1 if on else 0)
+                self.driver.EnableTorque(id, 1 if on else 0)
                 return
-            if self.series in ("ST", "STS") and sms_sts:
-                sms_sts(self.portHandler).EnableTorque(id, 1 if on else 0)
-                return
-            raise RuntimeError("Selected series module not available")
     
-    def write_pos(self, sid: int, pos: int, speed: int = 1000, acc: int = 50, blocking: bool=False):
-        if sid==None:
-            return
+    # def write_pos(self, sid: int, pos: int, speed: int = 1000, acc: int = 50, blocking: bool=False):
+    #     if sid==None:
+    #         return
         
-        if self.series == "SC" and scscl:
-            scscl(self.portHandler).WritePos(sid, pos, speed, acc)
-            while self.read_moving(sid) and blocking:
-                time.sleep(0.1)
-            return "Done"
-        if self.series in ("ST", "STS") and sms_sts:
-            # Many ST/STS SDKs name it WritePosEx
-            sms_sts(self.portHandler).WritePosEx(sid, pos, speed, acc)
-            while self.read_moving(sid) and blocking:
-                time.sleep(0.1)
-            return "Done"
-        raise RuntimeError("Selected series module not available")
+    #     if self.series == "SC" and scscl:
+    #         self.driver.WritePos(sid, pos, speed, acc)
+    #         while self.read_moving(sid) and blocking:
+    #             time.sleep(0.1)
+    #         return "Done"
+    #     if self.series in ("ST", "STS") and sms_sts:
+    #         # Many ST/STS SDKs name it WritePosEx
+    #         self.driver.WritePosEx(sid, pos, speed, acc)
+    #         while self.read_moving(sid) and blocking:
+    #             time.sleep(0.1)
+    #         return "Done"
+    #     raise RuntimeError("Selected series module not available")
 
-    def move_motor_to_target(self, sid: int, blocking: bool=False, high_resolution: bool=False):
-        if sid == None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+    # def move_motor_to_target(self, sid: int, blocking: bool=False, high_resolution: bool=False):
+    #     if sid == None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
         
-        for id in ids:
-            motor = self.get_motor_by_id(id)
-            pos = motor.target_position
-            target_pos_deg = motor.target_position_deg
-            speed = motor.speed
-            acc = motor.acc
+    #     for id in ids:
+    #         motor = self.get_motor_by_id(id)
+    #         pos = motor.target_position
+    #         target_pos_deg = motor.target_position_deg
+    #         speed = motor.speed
+    #         acc = motor.acc
 
-            self.write_pos(id, pos, speed, acc, blocking)
-            if high_resolution and blocking:
-                #fine tune position
-                for i in range(5): #try up to 5 times
-                    time.sleep(0.2)
-                    current_pos_deg = self.read_pos_deg(sid)
-                    delta = target_pos_deg - current_pos_deg
-                    if abs(delta) > 0.1: #if more than 0.1 deg off, try doing a fine adjustment
-                        sign = 1 if delta > 0 else -1
-                        target_pos = motor.convert_degrees_to_position(target_pos_deg + sign*0.3)
-                        self.write_pos(sid, target_pos, speed=100, acc=10, blocking=True)
-                    else:
-                        break
+    #         self.write_pos(id, pos, speed, acc, blocking)
+    #         if high_resolution and blocking:
+    #             #fine tune position
+    #             for i in range(5): #try up to 5 times
+    #                 time.sleep(0.2)
+    #                 current_pos_deg = self.read_pos_deg(id)
+    #                 delta = target_pos_deg - current_pos_deg
+    #                 if abs(delta) > 0.1: #if more than 0.1 deg off, try doing a fine adjustment
+    #                     sign = 1 if delta > 0 else -1
+    #                     target_pos = motor.convert_degrees_to_position(target_pos_deg + sign*0.3)
+    #                     self.write_pos(id, target_pos, speed=100, acc=10, blocking=True)
+    #                 else:
+    #                     break
     
-    def move_motor_by_deg(self, sid: int = None, delta_deg: float = 0.1, blocking: bool=False):
-        if sid is None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+    # def move_motor_by_deg(self, sid: int = None, delta_deg: float = 0.1, blocking: bool=False):
+    #     if sid is None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
         
-        for id in ids:
-            motor = self.get_motor_by_id(id)
-            current_pos_deg = self.read_pos_deg(sid)
-            target_pos = motor.convert_degrees_to_position(current_pos_deg + delta_deg)
-            speed = motor.speed
-            acc = motor.acc
-            self.write_pos(sid, target_pos, speed, acc, blocking)
-            return True
-        return False
+    #     for id in ids:
+    #         motor = self.get_motor_by_id(id)
+    #         current_pos_deg = self.read_pos_deg(id)
+    #         target_pos = motor.convert_degrees_to_position(current_pos_deg + delta_deg)
+    #         speed = motor.speed
+    #         acc = motor.acc
+    #         self.write_pos(id, target_pos, speed, acc, blocking)
+    #         return True
+    #     return False
     
-    def move_motor_to_position_deg(self, sid: int, position_deg: float = 0.0, blocking: bool=False, high_resolution: bool=False):
-        if sid is None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+    # def move_motor_to_position_deg(self, sid: int, position_deg: float = 0.0, blocking: bool=False, high_resolution: bool=False):
+    #     if sid is None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
         
-        for id in ids:
-            motor = self.get_motor_by_id(id)
-            target_pos = motor.convert_degrees_to_position(position_deg)
-            speed = motor.speed
-            acc = motor.acc
-            self.write_pos(sid, target_pos, speed, acc, blocking)
-            if high_resolution and blocking:
-                #fine tune position
-                for i in range(5): #try up to 5 times
-                    time.sleep(0.2)
-                    current_pos_deg = self.read_pos_deg(sid)
-                    delta = position_deg - current_pos_deg
-                    if abs(delta) > 0.1: #if more than 0.1 deg off, try doing a fine adjustment
-                        sign = 1 if delta > 0 else -1
-                        target_pos = motor.convert_degrees_to_position(position_deg+ sign*0.3)
-                        self.write_pos(sid, target_pos, speed=100, acc=10, blocking=True)
-                    else:
-                        break
+    #     for id in ids:
+    #         motor = self.get_motor_by_id(id)
+    #         target_pos = motor.convert_degrees_to_position(position_deg)
+    #         speed = motor.speed
+    #         acc = motor.acc
+    #         self.write_pos(id, target_pos, speed, acc, blocking)
+    #         if high_resolution and blocking:
+    #             #fine tune position
+    #             for i in range(5): #try up to 5 times
+    #                 time.sleep(0.2)
+    #                 current_pos_deg = self.read_pos_deg(id)
+    #                 delta = position_deg - current_pos_deg
+    #                 if abs(delta) > 0.1: #if more than 0.1 deg off, try doing a fine adjustment
+    #                     sign = 1 if delta > 0 else -1
+    #                     target_pos = motor.convert_degrees_to_position(position_deg+ sign*0.3)
+    #                     self.write_pos(id, target_pos, speed=100, acc=10, blocking=True)
+    #                 else:
+    #                     break
     
-    def move_motor_rel_to_wp_deg(self, sid: int, delta_deg: float = 0.0, blocking: bool=False):
-        if sid is None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+    # def move_motor_rel_to_wp_deg(self, sid: int, delta_deg: float = 0.0, blocking: bool=False):
+    #     if sid is None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
         
-        for id in ids:
-            motor = self.get_motor_by_id(id)
-            work_pos_deg = self.get_work_position_deg(id)
-            target_pos = motor.convert_degrees_to_position(work_pos_deg + delta_deg)
-            speed = motor.speed
-            acc = motor.acc
-            self.write_pos(id, target_pos, speed, acc, blocking)
+    #     for id in ids:
+    #         motor = self.get_motor_by_id(id)
+    #         work_pos_deg = self.get_work_position_deg(id)
+    #         target_pos = motor.convert_degrees_to_position(work_pos_deg + delta_deg)
+    #         speed = motor.speed
+    #         acc = motor.acc
+    #         self.write_pos(id, target_pos, speed, acc, blocking)
 
-    def move_motor_to_wp(self, sid: int):
-        if sid is None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+    # def move_motor_to_wp(self, sid: int):
+    #     if sid is None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
         
-        for id in ids:
-            home_pos = self.get_motor_by_id(id).work_position
-            speed = self.get_motor_by_id(id).speed
-            acc = self.get_motor_by_id(id).acc
-            self.write_pos(id, home_pos, speed, acc, blocking=True)
+    #     for id in ids:
+    #         home_pos = self.get_motor_by_id(id).work_position
+    #         speed = self.get_motor_by_id(id).speed
+    #         acc = self.get_motor_by_id(id).acc
+    #         self.write_pos(id, home_pos, speed, acc, blocking=True)
 
     def read_pos(self, sid: int) -> int:
         if sid is None:
             return
         
-        if self.series == "SC" and scscl:
-            return scscl(self.portHandler).ReadPos(sid)[0]
-        if self.series in ("ST", "STS") and sms_sts:
-            return sms_sts(self.portHandler).ReadPos(sid)[0]
-        raise RuntimeError("Selected series module not available")
-    
-    def read_pos_deg(self, sid: int) -> float:
-        if sid is None:
-            return
-        
-        motor = self.get_motor_by_id(sid)
-        if motor:
-            pos = self.read_pos(sid)
-            return round((pos / 4095) * 360, 2)
-        return None
-    
-    def read_moving(self, sid: int) -> bool:
-        if sid is None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+        return self.driver.ReadPos(sid)[0]
 
-        for id in ids:
-            if self.series == "SC" and scscl:
-                moving, _, _ = scscl(self.portHandler).ReadMoving(id)
-                if moving == 1:
-                    return True
-                else: 
-                    time.sleep(0.1)
-                    moving, _, _ = scscl(self.portHandler).ReadMoving(id)
-                    if moving == 1:
-                        return True
-            if self.series in ("ST", "STS") and sms_sts:
-                moving, _, _ = sms_sts(self.portHandler).ReadMoving(id)
-                if moving == 1:
-                    return True
-                else: 
-                    time.sleep(0.1)
-                    moving, _, _ = scscl(self.portHandler).ReadMoving(id)
-                    if moving == 1:
-                        return True
-            else:
-                return
-                raise RuntimeError("Selected series module not available")
-        
-        return False
     
-    def set_speed(self, sid: int, speed: int = 1000):
-        if sid is None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+    # def read_pos_deg(self, sid: int) -> float:
+    #     if sid is None:
+    #         return
         
-        for id in ids:
-            self.get_motor_by_id(id).speed = speed
+    #     motor = self.get_motor_by_id(sid)
+    #     if motor:
+    #         pos = self.read_pos(sid)
+    #         return round((pos / 4095) * 360, 2)
+    #     return None
     
-    def get_speed(self, sid: int) -> int:
-        if sid is None:
-            return
-        return self.get_motor_by_id(sid).speed
+    # def read_moving(self, sid: int) -> bool:
+    #     if sid is None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
 
-    def set_acc(self, sid: int, acc: int):
-        if sid is None:
-            return
-        elif sid == -1: # all motors
-            ids = self.get_motor_ids()
-        else: 
-            ids = [sid]
+    #     for id in ids:
+            
+    #         moving, _, _ = self.driver.ReadMoving(id)
+    #         if moving == 1:
+    #             return True
+    #         else: 
+    #             time.sleep(0.5)
+    #             moving, _, _ = self.driver.ReadMoving(id)
+    #             if moving == 1:
+    #                 return True
         
-        for id in ids:
-            self.get_motor_by_id(id).acc = acc
+    #     return False
     
-    def get_acc(self, sid: int) -> int:
-        if sid is None:
-            return
-        return self.get_motor_by_id(sid).acc
-    
-    def set_target_position_deg(self, sid: int, position_deg: float):
-        if sid is None:
-            return
-        motor = self.get_motor_by_id(sid)
-        if motor:
-            motor.target_position_deg = position_deg
-            return True
-        return False
-    
-    def get_target_position_deg(self, sid: int) -> float:
-        if sid is None:
-            return
-        motor = self.get_motor_by_id(sid)
-        if motor:
-            return motor.target_position_deg
-        return None
-    
-    def set_work_position(self, sid: int):
-        if sid is None:
-            return
+    # def set_speed(self, sid: int, speed: int = 1000):
+    #     if sid is None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
         
-        motor = self.get_motor_by_id(sid)
-        if motor:
-            pos = self.read_pos(sid)
-            motor.work_position = pos
-            return True
-        return False
+    #     for id in ids:
+    #         self.get_motor_by_id(id).speed = speed
     
-    def get_work_position(self, sid: int) -> int:
-        if sid is None:
-            return
-        motor = self.get_motor_by_id(sid)
-        if motor:
-            return motor.work_position
-        return None
+    # def get_speed(self, sid: int) -> int:
+    #     if sid is None:
+    #         return
+    #     return self.get_motor_by_id(sid).speed
+
+    # def set_acc(self, sid: int, acc: int):
+    #     if sid is None:
+    #         return
+    #     elif sid == -1: # all motors
+    #         ids = self.get_motor_ids()
+    #     else: 
+    #         ids = [sid]
+        
+    #     for id in ids:
+    #         self.get_motor_by_id(id).acc = acc
     
-    def get_work_position_deg(self, sid: int) -> float:
-        if sid is None:
-            return
-        motor = self.get_motor_by_id(sid)
-        if motor:
-            return motor.convert_position_to_degrees(motor.work_position)
-        return None
+    # def get_acc(self, sid: int) -> int:
+    #     if sid is None:
+    #         return
+    #     return self.get_motor_by_id(sid).acc
+    
+    # def set_target_position_deg(self, sid: int, position_deg: float):
+    #     if sid is None:
+    #         return
+    #     motor = self.get_motor_by_id(sid)
+    #     if motor:
+    #         motor.target_position_deg = position_deg
+    #         return True
+    #     return False
+    
+    # def get_target_position_deg(self, sid: int) -> float:
+    #     if sid is None:
+    #         return
+    #     motor = self.get_motor_by_id(sid)
+    #     if motor:
+    #         return motor.target_position_deg
+    #     return None
+    
+    # def set_work_position(self, sid: int):
+    #     if sid is None:
+    #         return
+        
+    #     motor = self.get_motor_by_id(sid)
+    #     if motor:
+    #         pos = self.read_pos(sid)
+    #         motor.work_position = pos
+    #         return True
+    #     return False
+    
+    # def get_work_position(self, sid: int) -> int:
+    #     if sid is None:
+    #         return
+    #     motor = self.get_motor_by_id(sid)
+    #     if motor:
+    #         return motor.work_position
+    #     return None
+    
+    # def get_work_position_deg(self, sid: int) -> float:
+    #     if sid is None:
+    #         return
+    #     motor = self.get_motor_by_id(sid)
+    #     if motor:
+    #         return motor.convert_position_to_degrees(motor.work_position)
+    #     return None
     
     def is_connection_active(self) -> bool:
         return self.connected and self.portHandler is not None
 
-    def get_motor_by_id(self, ID: int):
-        if ID is None:
+    def get_motor_by_id(self, sid: int):
+        # -1 means all motors
+        if sid is None:
             return None
-        for motor in self.motors:
-            if motor.ID == ID:
-                return motor
-        return None
+        else:
+            motors = self.motors if sid == -1 else [m for m in self.motors if m.ID == sid]
+            return motors
     
     def get_motor_ids(self):
         if not self.motors:
             return []
         return [motor.ID for motor in self.motors]
     
-class RotMotor():
-    def __init__(self, ID, position=0, speed=100, acc=5):
-        self.ID = ID
-        self._position = position
-        self._position_deg = self.convert_position_to_degrees(position)
-        self._target_position_deg = 0
-        self._target_position = self.convert_degrees_to_position(self._target_position_deg)
-        self.work_position = position
-        self.speed = speed
-        self.acc = acc
 
+class RotMotor:
+    def __init__(self, ID, raw_position=0, speed=1000, acc=50):
+        self.ID = ID
+        
+        # --- Multi-turn tracking ---
+        self.last_raw_pos = raw_position
+        self.turn_count = 0
+        self.total_ticks = raw_position
+        
+        # --- Target values ---
+        self.target_ticks = raw_position
+        self.speed_limit = speed
+        self.acc = acc
+        self.gear_ratio = 3  # Gear ratio (1.0 = direct drive)
+        
+        # --- PID parameters (tuning required) ---
+        self.Kp = 1.5   # Proportional: "Motor force: 1.5 default"
+        self.Ki = 0.5  # Integral: "Work against load: 0.05 default"
+        self.Kd = 1   # Derivative: "Brake / damping: 0.8 default"
+        
+        # --- PID state ---
+        self.integral_error = 0.0
+        self.last_error = 0.0
+        self.last_update_time = time.time()
+
+        #track position state
+        self.position_reached = True
+        self.position_reached_time = time.time()
+        self.position_reached_timeout = 100 #seconds
+        self.position_stable_counter = 0
+        self.position_stable_threshold = 5 #number of cycles position must be stable to consider reached
+        
+        # Callbacks
         self.position_changed_callback = []
 
-    @property
-    def position_deg(self):
-        return self._position_deg
-    
-    @property
-    def position(self):
-        return self._position
-    
-    @position.setter
-    def position(self, value):
-        self._position = value
-        self._position_deg = self.convert_position_to_degrees(value)
+    def update_from_raw(self, new_raw_pos):
+        """Calculates overflows and absolute position."""
+        diff = new_raw_pos - self.last_raw_pos
+        
+        # Wrap-around detection (4096 ticks per revolution)
+        if diff < -2048:
+            self.turn_count += 1
+        elif diff > 2048:
+            self.turn_count -= 1
+            
+        self.last_raw_pos = new_raw_pos
+        self.total_ticks = (self.turn_count * 4096) + new_raw_pos
+        
         if self.position_changed_callback:
+            # Convert to degrees for GUI
+            deg = round((self.total_ticks / 4096.0) * 360.0 / self.gear_ratio, 2)
             for callback in self.position_changed_callback:
-                callback(self._position_deg)
+                callback(deg)
 
-    @property
-    def target_position(self):
-        return self._target_position
+    def set_target_angle(self, angle):
+        """
+        Sets new target angle.
+        Resets PID values to avoid jumps.
+        """
+        new_target = int((angle / 360.0) * 4096.0 * self.gear_ratio)
+        
+        if new_target != self.target_ticks:
+            self.target_ticks = new_target
+            
+            # Reset integral (prevents windup from previous movement)
+            self.integral_error = 0.0
+            
+            # Reset last error (prevents "derivative kick")
+            # We pretend the error just occurred,
+            # so the D-term doesn't immediately counter-steer hard.
+            self.last_error = new_target - self.total_ticks
+            
+            self.last_update_time = time.time()
     
-    @property
-    def target_position_deg(self):
-        return self._target_position_deg
+    def get_target_angle(self):
+        """Returns the target angle in degrees."""
+        return round((self.target_ticks / 4096.0) * 360.0 / self.gear_ratio, 2)
     
-    @target_position_deg.setter
-    def target_position_deg(self, value):
-        self._target_position_deg = value%360
-        self._target_position = self.convert_degrees_to_position(value%360)
+    def get_current_angle(self):
+        """Returns the current angle in degrees."""
+        return round((self.total_ticks / 4096.0) * 360.0 / self.gear_ratio, 2)
     
-    def convert_position_to_degrees(self, position):
-        # Assuming a linear conversion for demonstration purposes
-        return round((position / 4095) * 360, 2)
+    def set_speed(self, speed):
+        self.speed_limit = speed
     
-    def convert_degrees_to_position(self, degrees):
-        # Assuming a linear conversion for demonstration purposes
-        return int((degrees / 360) * 4095)
+    def set_acc(self, acc):
+        self.acc = acc
+
+    def calculate_control_speed(self):
+        """
+        Full PID controller.
+        Returns: Speed (-1000 to 1000)
+        """
+        now = time.time()
+        dt = now - self.last_update_time
+        
+        # Protection against division by zero or huge pauses
+        if dt <= 0.0001: dt = 0.001
+        if dt > 0.5: dt = 0.1 # Cap on lag
+        
+        self.last_update_time = now
+
+        # 1. Calculate error
+        error = self.target_ticks - self.total_ticks
+        
+        # Deadband (tolerance): If close enough, stop.
+        # 10 ticks ~ 0.8 degrees
+        if abs(error) < 3: 
+            self.integral_error = 0 # Clear integral
+            self.last_error = 0
+            self.position_stable_counter +=1
+            if self.position_stable_counter >= self.position_stable_threshold and self.position_reached== False:
+                self.position_reached = True
+            return 0
+        else:
+            self.position_stable_counter = 0
+            self.position_reached = False
+
+        # 2. Proportional (P)
+        p_term = self.Kp * error
+
+        # 3. Integral (I) with anti-windup
+        self.integral_error += error * dt
+        
+        # Limit I-term (e.g., to +/- 400 speed units)
+        # Prevents I-term from becoming too powerful.
+        max_i = 400 
+        i_contrib = self.Ki * self.integral_error
+        
+        if i_contrib > max_i:
+            self.integral_error = max_i / self.Ki
+            i_contrib = max_i
+        elif i_contrib < -max_i:
+            self.integral_error = -max_i / self.Ki
+            i_contrib = -max_i
+        
+        i_term = i_contrib
+
+        # 4. Derivative (D)
+        # Change of error over time
+        # (error - last_error) / dt
+        delta_error = error - self.last_error
+        d_term = self.Kd * (delta_error / dt)
+        
+        self.last_error = error
+
+        # 5. Sum (output)
+        output_speed = p_term + i_term + d_term
+        
+        # 6. Limit to hardware & user settings
+        limit = min(self.speed_limit, 1000) # Hardware max is 1000
+        
+        if output_speed > limit: output_speed = limit
+        if output_speed < -limit: output_speed = -limit
+        
+        # Cast to int for protocol
+        output_speed = int(output_speed)
+
+        # 7. Minimum power (stiction)
+        # Prevents values in range -20 to 20 where motor only hums
+        min_pwr = 30
+        if 0 < output_speed < min_pwr: output_speed = min_pwr
+        if -min_pwr < output_speed < 0: output_speed = -min_pwr
+            
+        return output_speed
     
     def set_position_changed_callback(self, callback):
         self.position_changed_callback.append(callback)
-    
-
 
         
 

@@ -2,7 +2,7 @@
   "schema_version": "1.2.0",
   "artisan": {
     "default_connection_type": "usb",
-    "port": "COM6",
+    "port": "COM7",
     "baudrate": 115200,
     "ip": "192.168.178.44",
     "tcp_port": "None",
@@ -61,7 +61,7 @@
     }
   },
   "rotary_motors": {
-    "port": "COM7",
+    "port": "COM5",
     "series": "STS"
   },
   "overview_camera": {
