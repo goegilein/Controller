@@ -174,9 +174,8 @@ class ProcessHandler(BaseClass):
             return
         step_wp = process_step.work_position
         self.controller.move_axis_absolute(step_wp[0], step_wp[1], step_wp[2])
-        self.rot_motor_controller.move_to_angle(process_step.rot_motor_id, step_wp[3])
-
-
+        if process_step.rot_motor_id is not None:
+            self.rot_motor_controller.move_to_angle(process_step.rot_motor_id, step_wp[3])
 
     def set_step_nc_file(self, process_step, file_path):
         """
@@ -235,7 +234,7 @@ class ProcessHandler(BaseClass):
 
                     #Execute the NC File
                     if process_step.file_type == "gcode":
-                        self.execute_code_file(nc_file, time_lists[0], fire_forget=fire_forget)
+                        self.execute_gcode_file(nc_file, time_lists[0], fire_forget=fire_forget)
                     elif process_step.file_type == "jcode":
                         step_laser_wp = self.controller.get_absolute_position()
                         step_laser_wp.append(wp[3])  # Append rot motor position
@@ -307,7 +306,7 @@ class ProcessHandler(BaseClass):
 
         return True
     
-    def execute_code_file(self, file_path, time_list, fire_forget=False):
+    def execute_gcode_file(self, file_path, time_list, fire_forget=False):
         """
         Execute a single gcode file immediately.
         :param file_path: Path to the NC file.
@@ -367,7 +366,7 @@ class ProcessHandler(BaseClass):
                 elif command.startswith("J1"):
                     parts = command.split()
                     nc_file = parts[1]
-                    self.execute_code_file(nc_file, time_lists[g_code_files_counter], fire_forget=fire_forget)
+                    self.execute_gcode_file(nc_file, time_lists[g_code_files_counter], fire_forget=fire_forget)
                     g_code_files_counter += 1
             
             self.last_log = f"Execution of J-code file {file_path} completed successfully."
@@ -481,7 +480,7 @@ class ProcessStep:
 
         try:
 
-            self.time_lists, self.bounding_box, self.file_type = ncCode_interpreter.interpret_nc_file(file_path)
+            self.time_lists, self.bounding_box, self.file_type, self.command_list = ncCode_interpreter.interpret_nc_file(file_path)
             self.process_time = sum(map(sum, self.time_lists))
             self.nc_file = file_path
             return f"Successfully read singe Data file: {file_path} of type {self.file_type} with process time {self.process_time:.2f}s"
@@ -516,10 +515,14 @@ class NCCodeInterpreter():
         """
         #first get a list of pointers to gcode files
         gcode_file_list = []# this is a list of [file_path, wp]
+        full_command_list = []
         wp = [0,0,0,0]  #default work position
         if file_path.lower().endswith('.nc'):
             file_type = "gcode"
             gcode_file_list.append([file_path,wp])
+            with open(file_path, 'r') as file:
+                gcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+                full_command_list.extend(gcode_commands)
         elif file_path.lower().endswith('.jcode'):
             file_type = "jcode"
             with open(file_path, 'r') as file:
@@ -551,6 +554,7 @@ class NCCodeInterpreter():
             try:
                 with open(file_path, 'r') as file:
                     gcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+                full_command_list.extend(gcode_commands)
                 time_list, bounding_box = self.interpret_gcode(gcode_commands, wp=wp[0:3])
                 time_lists.append(time_list)
                 #update bounding box
@@ -566,7 +570,7 @@ class NCCodeInterpreter():
             except Exception as e:
                 print(f"Failed to read G-code file {gcode_file}: {e}")
         
-        return time_lists, combined_bounding_box, file_type
+        return time_lists, combined_bounding_box, file_type, full_command_list
 
     def interpret_gcode(self, command_list, wp= [0,0,0]):
         """

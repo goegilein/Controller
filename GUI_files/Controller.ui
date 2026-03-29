@@ -853,7 +853,7 @@ QTabBar::tab:selected {
     <item row="0" column="0">
      <widget class="QTabWidget" name="Cameras_tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="Cam1_tab">
        <attribute name="title">
@@ -968,6 +968,16 @@ QTabBar::tab:selected {
             <widget class="QPushButton" name="laser_camera_save_image_button">
              <property name="text">
               <string>Save Image</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QPushButton" name="laser_camera_track_crosshair_button">
+             <property name="text">
+              <string>track Crosshair</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
