@@ -37,6 +37,13 @@ class ArtisanInterface(BaseClass):
         #step size control
         self.axis_step_size_box = gui.axis_step_size_box
         self.axis_step_size_box.valueChanged.connect(lambda value: self.artisan_controller.set_step_width(value))
+        step_size_suggestion_combobox = gui.step_size_suggestion_combobox
+        step_size_suggestion_combobox.addItems(["0.1","0.5","1.0","5.0","10.0","50.0","100.0"])
+        step_size_suggestion_combobox.currentTextChanged.connect(lambda text: self.axis_step_size_box.setValue(float(text)))
+        axis_speed_suggestion_combobox = gui.axis_speed_suggestion_combobox
+        axis_speed_suggestion_combobox.addItems(["1","5","10","20","50","100"])
+        axis_speed_suggestion_combobox.currentTextChanged.connect(lambda text: self.axis_speed_box.setValue(float(text)))
+
         self.artisan_controller.set_step_width(self.axis_step_size_box.value())
 
         #Absdolute Axis 

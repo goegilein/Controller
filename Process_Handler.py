@@ -69,7 +69,7 @@ class ProcessHandler(BaseClass):
     def set_remaining_time_callback(self, callback):
         self.remaining_time_callbacks.append(callback)
        
-    def add_process_step(self):
+    def add_process_step(self, name = None):
         """
         Add a new process step to the job handler list.
         """
@@ -77,7 +77,7 @@ class ProcessHandler(BaseClass):
             self.last_log = "Error: Cannot add process step while a process is still active."
             return
         
-        work_position = [100,100,100,0] #default
+        work_position = [1,400,400,0] #default
         
         work_position_axis = self.controller.get_absolute_position()
 
@@ -86,7 +86,7 @@ class ProcessHandler(BaseClass):
         else:
             work_position[0:3] = work_position_axis[0:3]
 
-        step = ProcessStep(work_position)
+        step = ProcessStep(work_position, name=name)
         self.process_step_list.append(step)
 
         return step
@@ -190,7 +190,7 @@ class ProcessHandler(BaseClass):
         
         self.last_log = process_step.set_nc_file(file_path)
 
-    def start_process(self, fire_forget=False):
+    def start_process(self):
         """
         Execute all process steps in the job handler.
         1. Move to work position of this step
@@ -212,39 +212,20 @@ class ProcessHandler(BaseClass):
                 start_position = self.controller.get_absolute_position()
                 for step_idx, process_step in enumerate(self.process_step_list):
 
-                    #get wp, commands, and time for each command
-                    wp= process_step.work_position
-                    nc_file=process_step.nc_file
-                    time_lists=process_step.time_lists
-                    rot_motor_id=process_step.rot_motor_id
 
                     #Move to Work Position, then switch to laser tool.
-                    pos_now=self.controller.get_absolute_position()
-                    self.controller.move_axis_absolute(wp[0], wp[1], wp[2], speed=30, z_save=True, job_save=True)
-                    time.sleep(np.sqrt((wp[0]-pos_now[0])**2 + (wp[1]-pos_now[1])**2 + (wp[2]-pos_now[2])**2)/30*0.5)
-                    if rot_motor_id is not None:
-                        self.rot_motor_controller.move_to_angle(rot_motor_id, wp[3], wait_for_position=True)
+                    self.controller.move_axis_absolute(process_step.work_position[0], process_step.work_position[1], process_step.work_position[2], speed=30, z_save=True, job_save=True)
+                    if process_step.rot_motor_id is not None:
+                        self.rot_motor_controller.move_to_angle(process_step.rot_motor_id, process_step.work_position[3], wait_for_position=True)
                     if self.execution_canceled.is_set():
                         break
                     self.controller.move_axis_to("relative", self.controller.laser_offset[0], self.controller.laser_offset[1], self.controller.laser_offset[2], speed=30, job_save=True)  # Move to laser offset position
-                    time.sleep(np.sqrt(self.controller.laser_offset[0]**2 + self.controller.laser_offset[1]**2 + self.controller.laser_offset[2]**2)/30*0.5)
                     if self.execution_canceled.is_set():
                         break
                     self.controller.set_work_position(job_save=True)  # Set the current position as the new work position with the laser offset applied
 
-                    #Execute the NC File
-                    if process_step.file_type == "gcode":
-                        self.execute_gcode_file(nc_file, time_lists[0], fire_forget=fire_forget)
-                    elif process_step.file_type == "jcode":
-                        step_laser_wp = self.controller.get_absolute_position()
-                        step_laser_wp.append(wp[3])  # Append rot motor position
-                        self.execute_jcode_file(nc_file, rot_motor_id, step_laser_wp, time_lists, fire_forget=fire_forget)
-
-                    #finished NC File of this step. apply logging and wait for all movements to finish
-                    self.last_log = f"Commands of process_step {step_idx+1} sent. Waiting for finish. Pausing and Stopping in this step no longer possible"
-                    if not fire_forget:
-                        time.sleep(0.5)
-                        self.last_log = f"Execution of process_step {step_idx+1} completed successfully."
+                    #Execute the step
+                    self.execute_process_step(process_step, step_idx)
                     
                     if self.execution_canceled.is_set():
                         break
@@ -306,15 +287,45 @@ class ProcessHandler(BaseClass):
 
         return True
     
-    def execute_gcode_file(self, file_path, time_list, fire_forget=False):
+    def execute_process_step(self, process_step: ProcessStep, step_idx: int):
+        try:
+            self.last_log = f"Executing Process Step: {process_step.name} with estimated process time: {process_step.process_time:.2f}s"
+
+            for command in process_step.jcode_command_list:
+                if command.startswith("J0"):
+                    parts = command.split()
+                    for part in parts:
+                        if part.startswith("X"):
+                            x = float(part[1:])+process_step.work_position[0]+self.controller.laser_offset[0]
+                        elif part.startswith("Y"):
+                            y = float(part[1:])+process_step.work_position[1]+self.controller.laser_offset[1]
+                        elif part.startswith("Z"):
+                            z = float(part[1:])+process_step.work_position[2]+self.controller.laser_offset[2]
+                        elif part.startswith("R"):
+                            r = float(part[1:])+process_step.work_position[3]
+
+                    self.controller.move_axis_absolute(x, y, z, job_save=True)
+                    self.controller.set_work_position(job_save=True)
+                    if process_step.rot_motor_id is not None:
+                        self.rot_motor_controller.move_to_angle(process_step.rot_motor_id, r, wait_for_position=True)
+                    time.sleep(0.5)  # Wait for movement to ensure stability
+                elif command.startswith("J1"):
+                    parts = command.split()
+                    gcode_idx = int(parts[1])
+                    self.execute_gcode(process_step.command_lists[gcode_idx], process_step.time_lists[gcode_idx], gcode_id=f"{step_idx+1}_{gcode_idx+1}")
+            
+            self.last_log = f"Execution of Process Step: {process_step.name} completed successfully."
+        except Exception as e:
+            self.last_log = f"Failed to execute J-code file: {e}"
+            
+
+    def execute_gcode(self, gcode_commands, time_list, gcode_id="0"):
         """
         Execute a single gcode file immediately.
-        :param file_path: Path to the NC file.
+        :param gcode_commands: List of gcode commands to execute.
+        :param time_list: List of times for each command.
+        :param gcode_id: ID of the gcode file for logging purposes.
         """
-        with open(file_path, 'r') as file:
-            gcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
-        filename = os.path.basename(file_path)
-        filename = filename.split('.')[0]
 
         for idx, command in enumerate(gcode_commands):
 
@@ -325,53 +336,56 @@ class ProcessHandler(BaseClass):
                 break
 
             self.controller.send_command(command)
-            if not fire_forget:
-                self.remaining_time=round((self.remaining_time-time_list[idx]) * (self.remaining_time > 0)) #
-                time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
+
+            self.remaining_time=round((self.remaining_time-time_list[idx]) * (self.remaining_time > 0)) #
+            #time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
         else:
-            if not fire_forget:
-                self.controller.add_sync_position(text=f"step_{filename}_done", timeout=999)  # Ensure all movements are finished before proceeding
+            self.controller.add_sync_position(text=f"step_{gcode_id}_done", timeout=60)  # Ensure all movements are finished before proceeding
+            time.sleep(0.5)  # Wait a bit to ensure the sync position is reached
+            if self.controller.last_log == f"Error: step_{gcode_id}_done not received from Artisan!":
+                self.cancel_process()
 
  
-    def execute_jcode_file(self, file_path, rot_motor_id, step_laser_wp, time_lists, fire_forget=False):
-        """
-        Execute a J-code file which may reference multiple gcode files.
-        :param file_path: Path to the J-code file.
-        """        
-        try:
-            with open(file_path, 'r') as file:
-                jcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+    # def execute_jcode_file(self, file_path, rot_motor_id, step_laser_wp, command_lists, time_lists, step_id="0"):
+    #     """
+    #     Execute a J-code file which may reference multiple gcode files.
+    #     :param file_path: Path to the J-code file.
+    #     :param step_id: ID of the step for logging purposes.
+    #     """        
+    #     try:
+    #         with open(file_path, 'r') as file:
+    #             jcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
             
-            self.last_log = f"Executing J-code file: {file_path}"
+    #         self.last_log = f"Executing J-code file: {file_path}"
 
-            g_code_files_counter = 0
-            for command in jcode_commands:
-                if command.startswith("J0"):
-                    parts = command.split()
-                    for part in parts:
-                        if part.startswith("X"):
-                            x = float(part[1:])+step_laser_wp[0]
-                        elif part.startswith("Y"):
-                            y = float(part[1:])+step_laser_wp[1]
-                        elif part.startswith("Z"):
-                            z = float(part[1:])+step_laser_wp[2]
-                        elif part.startswith("R"):
-                            r = float(part[1:])+step_laser_wp[3]
+    #         g_code_files_counter = 0
+    #         for command in jcode_commands:
+    #             if command.startswith("J0"):
+    #                 parts = command.split()
+    #                 for part in parts:
+    #                     if part.startswith("X"):
+    #                         x = float(part[1:])+step_laser_wp[0]
+    #                     elif part.startswith("Y"):
+    #                         y = float(part[1:])+step_laser_wp[1]
+    #                     elif part.startswith("Z"):
+    #                         z = float(part[1:])+step_laser_wp[2]
+    #                     elif part.startswith("R"):
+    #                         r = float(part[1:])+step_laser_wp[3]
 
-                    self.controller.move_axis_absolute(x, y, z, job_save=True)
-                    self.controller.set_work_position(job_save=True)
-                    if rot_motor_id is not None:
-                        self.rot_motor_controller.move_to_angle(rot_motor_id, r, wait_for_position=True)
-                    time.sleep(0.5)  # Wait for movement to ensure stability
-                elif command.startswith("J1"):
-                    parts = command.split()
-                    nc_file = parts[1]
-                    self.execute_gcode_file(nc_file, time_lists[g_code_files_counter], fire_forget=fire_forget)
-                    g_code_files_counter += 1
+    #                 self.controller.move_axis_absolute(x, y, z, job_save=True)
+    #                 self.controller.set_work_position(job_save=True)
+    #                 if rot_motor_id is not None:
+    #                     self.rot_motor_controller.move_to_angle(rot_motor_id, r, wait_for_position=True)
+    #                 time.sleep(0.5)  # Wait for movement to ensure stability
+    #             elif command.startswith("J1"):
+    #                 parts = command.split()
+    #                 nc_file = parts[1]
+    #                 self.execute_gcode(command_lists[g_code_files_counter], time_lists[g_code_files_counter], step_id=step_id+f"_g-code-file{g_code_files_counter+1}")
+    #                 g_code_files_counter += 1
             
-            self.last_log = f"Execution of J-code file {file_path} completed successfully."
-        except Exception as e:
-            self.last_log = f"Failed to execute J-code file: {e}"
+    #         self.last_log = f"Execution of J-code file {file_path} completed successfully."
+    #     except Exception as e:
+    #         self.last_log = f"Failed to execute J-code file: {e}"
             
     def pause_process(self):
         """
@@ -455,18 +469,20 @@ class ProcessHandler(BaseClass):
 
         #return to the work position
         self.controller.move_axis_absolute(wp[0], wp[1], wp[2])
-
+    
 
         
 class ProcessStep:
-    def __init__(self, work_position):
+    def __init__(self, work_position, name=None):
         self.work_position = work_position  # Work position coordinates
+        self.name = name
         self.nc_file = None
         self.file_type = ""
         self.file_name = None
-        self.command_list = []  # List to hold G-code commands for this step
+        self.jcode_command_list = []  # List to hold J-code commands for this step
         self.process_time = 0  # in seconds
-        self.time_lists = []  # in seconds for each command
+        self.time_lists = []  # in seconds for each command^
+        self.command_lists = []  # list of lists of commands if multiple gcode files are referenced
         self.bounding_box = [[0,0],[0,0],[0,0],[0,0]]  #x min max, y min max, z min max
         self.rot_motor_id = None  # ID of the rotational motor if used
 
@@ -480,7 +496,7 @@ class ProcessStep:
 
         try:
 
-            self.time_lists, self.bounding_box, self.file_type, self.command_list = ncCode_interpreter.interpret_nc_file(file_path)
+            self.command_lists, self.time_lists, self.bounding_box, self.file_type, self.jcode_command_list = ncCode_interpreter.interpret_nc_file(file_path)
             self.process_time = sum(map(sum, self.time_lists))
             self.nc_file = file_path
             return f"Successfully read singe Data file: {file_path} of type {self.file_type} with process time {self.process_time:.2f}s"
@@ -488,7 +504,7 @@ class ProcessStep:
         except Exception as e:
             self.nc_file = None
             self.file_name = None
-            self.command_list = []
+            self.jcode_command_list = []
             self.process_time = 0
             self.time_lists = []
             self.bounding_box = [[0,0],[0,0],[0,0],[0,0]]
@@ -508,21 +524,22 @@ import numpy as np
 class NCCodeInterpreter():
     def interpret_nc_file(self, file_path):
         """
-        Interpret an NC file and return command list, time list, and bounding box.
+        Interpret an NC file (.nc or .jcode). Always parses into a compacted jcode style, where all gcode files are stored as command lists and time lists with an associated J1 command pointing to this list.
         Supported file types: G-code (.nc) and J-code (.jcode).
         :param file_path: Path to the NC file.
-        :return: command_list, time_list, bounding_box
+        :return:jcode_command_list, command_lists, time_lists, bounding_box
         """
         #first get a list of pointers to gcode files
         gcode_file_list = []# this is a list of [file_path, wp]
-        full_command_list = []
+        jcode_command_list = []
         wp = [0,0,0,0]  #default work position
+        gcode_counter = 0
         if file_path.lower().endswith('.nc'):
             file_type = "gcode"
             gcode_file_list.append([file_path,wp])
-            with open(file_path, 'r') as file:
-                gcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
-                full_command_list.extend(gcode_commands)
+            # with open(file_path, 'r') as file:
+            #     gcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+            jcode_command_list.append(f"J1 {gcode_counter}")
         elif file_path.lower().endswith('.jcode'):
             file_type = "jcode"
             with open(file_path, 'r') as file:
@@ -540,13 +557,18 @@ class NCCodeInterpreter():
                         elif part.startswith("R"):
                             wp[3] = float(part[1:])
                     
+                    jcode_command_list.append(command)
+                    
                 elif command.startswith("J1"):
                     parts = command.split()
                     gcode_file_list.append([parts[1],wp])  # The G-code file name is the second part
+                    jcode_command_list.append(f"J1 {gcode_counter}")
+                    gcode_counter += 1
 
 
         #now read all gcode files and extract time_lists and bounding box
         time_lists = []
+        command_lists = []
         combined_bounding_box = [[0,0],[0,0],[0,0],[0,0]]
         for gcode_file in gcode_file_list:
             file_path = gcode_file[0]
@@ -554,8 +576,9 @@ class NCCodeInterpreter():
             try:
                 with open(file_path, 'r') as file:
                     gcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
-                full_command_list.extend(gcode_commands)
-                time_list, bounding_box = self.interpret_gcode(gcode_commands, wp=wp[0:3])
+                # command_list, time_list, bounding_box = self.interpret_gcode(gcode_commands, wp=wp[0:3])
+                command_list, time_list, bounding_box = self.interpret_gcode_with_segmentation(gcode_commands, wp=wp[0:3])
+                command_lists.append(command_list)
                 time_lists.append(time_list)
                 #update bounding box
                 combined_bounding_box[0][0] = min(combined_bounding_box[0][0], bounding_box[0][0])
@@ -570,7 +593,7 @@ class NCCodeInterpreter():
             except Exception as e:
                 print(f"Failed to read G-code file {gcode_file}: {e}")
         
-        return time_lists, combined_bounding_box, file_type, full_command_list
+        return command_lists, time_lists, combined_bounding_box, file_type, jcode_command_list
 
     def interpret_gcode(self, command_list, wp= [0,0,0]):
         """
@@ -608,4 +631,124 @@ class NCCodeInterpreter():
                 y=y_new
                 z=z_new
   
-        return time_list, bounding_box
+        return command_list, time_list, bounding_box
+    
+    def interpret_gcode_with_segmentation(self, command_list, wp=[0, 0, 0]):
+        """
+        Parses G-code, segments long commands, and calculates execution times.
+        Preserves all original command parameters (E, F, P, S, etc.).
+        Returns:
+            new_command_list: The segmented G-code strings.
+            time_list: The expected execution time for each command.
+            bounding_box: [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
+        """
+        new_command_list = []
+        time_list = []
+        
+        bounding_box = [[float('inf'), float('-inf')], 
+                        [float('inf'), float('-inf')], 
+                        [float('inf'), float('-inf')]] 
+        
+        f = 6000.0
+        x, y, z, e = wp[0], wp[1], wp[2], 0.0
+        
+        for command in command_list:
+            # Match G0/G1 commands safely (avoids matching G10, G11, etc.)
+            if command.startswith("G0 ") or command.startswith("G1 ") or command in ["G0", "G1"]:
+                parts = command.split()
+                cmd_type = parts[0]
+                
+                x_new, y_new, z_new, e_new = x, y, z, e
+                
+                # Track which axes are actually moving in this specific line
+                active_axes = {'X': False, 'Y': False, 'Z': False, 'E': False}
+                static_params = [] # Holds F, P, S, etc.
+                
+                for part in parts[1:]:
+                    if not part: continue
+                    letter = part[0].upper()
+                    
+                    if letter == "X":
+                        x_new = float(part[1:]) + wp[0]
+                        active_axes['X'] = True
+                    elif letter == "Y":
+                        y_new = float(part[1:]) + wp[1]
+                        active_axes['Y'] = True
+                    elif letter == "Z":
+                        z_new = float(part[1:]) + wp[2]
+                        active_axes['Z'] = True
+                    elif letter == "E":
+                        e_new = float(part[1:])
+                        active_axes['E'] = True
+                    elif letter == "F":
+                        f = float(part[1:])
+                        static_params.append(part) # Add to static params
+                    else:
+                        # Catch-all for P, S, or any other proprietary Marlin letters
+                        static_params.append(part)
+                
+                # Calculate distance. If X/Y/Z don't move, check if E moves (e.g., Retraction)
+                xyz_dist = np.sqrt((x - x_new)**2 + (y - y_new)**2 + (z - z_new)**2)
+                distance = xyz_dist if xyz_dist > 0 else abs(e_new - e)
+                
+                command_time = (distance / f) * 60 if f > 0 else 0.01
+                
+                # Update bounding box only if the axis actually moved
+                if active_axes['X']:
+                    bounding_box[0][0] = min(bounding_box[0][0], x_new)
+                    bounding_box[0][1] = max(bounding_box[0][1], x_new)
+                if active_axes['Y']:
+                    bounding_box[1][0] = min(bounding_box[1][0], y_new)
+                    bounding_box[1][1] = max(bounding_box[1][1], y_new)
+                if active_axes['Z']:
+                    bounding_box[2][0] = min(bounding_box[2][0], z_new)
+                    bounding_box[2][1] = max(bounding_box[2][1], z_new)
+                
+                # --- SEGMENTATION LOGIC ---
+                if command_time > 1.0:
+                    num_segments = int(np.ceil(command_time))
+                    segment_time = command_time / num_segments
+                    
+                    for step in range(1, num_segments + 1):
+                        progress = step / num_segments
+                        segment_parts = [cmd_type]
+                        
+                        # Interpolate and append ONLY the axes present in the original command
+                        if active_axes['X']:
+                            step_x = x + (x_new - x) * progress
+                            segment_parts.append(f"X{step_x - wp[0]:.3f}")
+                        if active_axes['Y']:
+                            step_y = y + (y_new - y) * progress
+                            segment_parts.append(f"Y{step_y - wp[1]:.3f}")
+                        if active_axes['Z']:
+                            step_z = z + (z_new - z) * progress
+                            segment_parts.append(f"Z{step_z - wp[2]:.3f}")
+                        if active_axes['E']:
+                            step_e = e + (e_new - e) * progress
+                            # E (Extruder) usually requires higher precision than X/Y/Z
+                            segment_parts.append(f"E{step_e:.5f}")
+                        
+                        # Append all non-interpolated parameters (F, P, S, etc.)
+                        segment_parts.extend(static_params)
+                        
+                        new_command_list.append(" ".join(segment_parts))
+                        time_list.append(segment_time)
+                else:
+                    # Command is short, keep the original string untouched
+                    new_command_list.append(command)
+                    time_list.append(max(command_time, 0.01))
+                
+                # Update current position state
+                x, y, z, e = x_new, y_new, z_new, e_new
+                
+            else:
+                # Non-motion commands
+                new_command_list.append(command)
+                time_list.append(0.01)
+
+        # Clean up bounding box if file was empty or had no motion
+        for i in range(3):
+            if bounding_box[i][0] == float('inf'):
+                bounding_box[i] = [0, 0]
+
+        return new_command_list, time_list, bounding_box

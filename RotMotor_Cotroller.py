@@ -136,6 +136,7 @@ class RotMotorCotroller:
         def control_thread_func():
             while self.connected:
                 with self.lock: # Thread safety if GUI also writes
+                    self.read_pos(0) #dummy read to keep connection alive (prevents timeouts)
                     for motor in self.motors:
                         try:
                             # 1. Read position (actual value)
