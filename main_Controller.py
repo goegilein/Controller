@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from pathlib import Path
 from PyQt6 import QtWidgets, uic, QtCore
 import Artisan_Controller
@@ -23,9 +24,22 @@ MAIN_GUI_PATH = get_gui_file_path("Controller.ui")
 DEFAULT_SETTINGS_PATH = get_settings_path("Default_Settings.json")
 SCHEMA_PATH = get_settings_path("schema.json")   
 
+#Load version - handle both frozen and non-frozen environments
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable from PyInstaller
+    BASE_DIR = Path(sys._MEIPASS)
+else:
+    # Running as normal Python script
+    BASE_DIR = Path(__file__).resolve().parent
+
+with open(BASE_DIR / "version.json") as f:
+    version_data = json.load(f)
+    version = f"{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
+
 #setup QApplication and load GUI
 app = QtWidgets.QApplication(sys.argv)
 gui = uic.loadUi(str(MAIN_GUI_PATH))
+gui.setWindowTitle(f"Artisan Controller {version}")
 gui.show()
 
 
