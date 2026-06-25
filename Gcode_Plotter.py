@@ -27,6 +27,16 @@ class GCodePlotter():
 
     def plot_data(self):
         self.view.clear()
+        #add a coordinate system for better orientation
+        x_axis = GLLinePlotItem(pos=np.array([[0,0,0],[10,0,0]]), color=(1,0,0,1), width=3, mode='line_strip')  # X-axis in red
+        x_axis.setGLOptions("opaque")
+        self.view.addItem(x_axis)
+        y_axis = GLLinePlotItem(pos=np.array([[0,0,0],[0,10,0]]), color=(0,1,0,1), width=3, mode='line_strip')  # Y-axis in green
+        y_axis.setGLOptions("opaque")
+        self.view.addItem(y_axis)
+        z_axis = GLLinePlotItem(pos=np.array([[0,0,0],[0,0,10]]), color=(0,0,1,1), width=3, mode='line_strip')  # Z-axis in blue
+        z_axis.setGLOptions("opaque")
+        self.view.addItem(z_axis)
         for line_item in self.plot_line_items:
             line_item.setGLOptions("opaque")
             self.view.addItem(line_item)
@@ -41,8 +51,9 @@ class GCodePlotter():
         self.plot_line_items = []
         show_moves = self.show_moves_checkBox.isChecked()
         for step in self.process_handler.process_step_list:
-                command_list=step.command_list
-                self.add_data_to_plot_items(command_list, show_moves)
+                command_lists=step.command_lists
+                for command_list in command_lists:
+                    self.add_data_to_plot_items(command_list, show_moves)
         self.plot_data()
 
     def extract_gcode_positions_and_colors(self, command_list, show_moves = True):

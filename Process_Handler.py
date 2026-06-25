@@ -273,7 +273,14 @@ class ProcessHandler(BaseClass):
             #check if jcode steps have rot motor assigned if needed
             if process_step.file_type == "jcode" and process_step.rot_motor_id is None:
                 with open(process_step.nc_file, 'r') as file:
-                    jcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+                    jcode_commands = []
+                    for line in file:
+                        line = line.strip()
+                        # Remove inline comments (everything after ;)
+                        if ';' in line:
+                            line = line.split(';')[0].strip()
+                        if line and not line.startswith(';'):
+                            jcode_commands.append(line)
                 r = 0
                 for command in jcode_commands:
                     if command.startswith("J0"):
@@ -543,7 +550,14 @@ class NCCodeInterpreter():
         elif file_path.lower().endswith('.jcode'):
             file_type = "jcode"
             with open(file_path, 'r') as file:
-                jcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+                jcode_commands = []
+                for line in file:
+                    line = line.strip()
+                    # Remove inline comments (everything after ;)
+                    if ';' in line:
+                        line = line.split(';')[0].strip()
+                    if line and not line.startswith(';'):
+                        jcode_commands.append(line)
             for command in jcode_commands:
                 if command.startswith("J0"):
                     parts = command.split()
@@ -575,7 +589,14 @@ class NCCodeInterpreter():
             wp = gcode_file[1]
             try:
                 with open(file_path, 'r') as file:
-                    gcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
+                    gcode_commands = []
+                    for line in file:
+                        line = line.strip()
+                        # Remove inline comments (everything after ;)
+                        if ';' in line:
+                            line = line.split(';')[0].strip()
+                        if line and not line.startswith(';'):
+                            gcode_commands.append(line)
                 # command_list, time_list, bounding_box = self.interpret_gcode(gcode_commands, wp=wp[0:3])
                 command_list, time_list, bounding_box = self.interpret_gcode_with_segmentation(gcode_commands, wp=wp[0:3])
                 command_lists.append(command_list)

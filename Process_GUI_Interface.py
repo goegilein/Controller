@@ -29,6 +29,7 @@ class ProcessInterface(BaseClass):
         self.run_bounding_box_button =gui.run_bounding_box_button
         self.run_bounding_box_button.clicked.connect(self.run_bounding_box)
         self.bounding_box_step_combobox = gui.bounding_box_step_combobox
+        self.bounding_box_step_combobox.currentIndexChanged.connect(lambda index: self.update_bounding_box_ui(reset_list=False))  #update tooltip when changing selected step in combobox
     
 
         #Log tracking
@@ -105,10 +106,7 @@ class ProcessInterface(BaseClass):
         self.process_handler.controller.add_position_changed_callback(threadsave_update_axies)  # Set the position changed callback to track position
 
         #refresh combobox for bounding box run
-        self.bounding_box_step_combobox.clear()
-        self.bounding_box_step_combobox.addItem('All')
-        for idx,steps in enumerate(self.process_handler.process_step_list):
-            self.bounding_box_step_combobox.addItem(f'step {idx+1}')
+        self.update_bounding_box_ui()
 
     def remove_process_step(self, process_step, widget):
         """
@@ -129,10 +127,7 @@ class ProcessInterface(BaseClass):
                     break
         
         #refresh combobox for bounding box run
-        self.bounding_box_step_combobox.clear()
-        self.bounding_box_step_combobox.addItem('All')
-        for idx,steps in enumerate(self.process_handler.process_step_list):
-            self.bounding_box_step_combobox.addItem(f'step {idx+1}')
+        self.update_bounding_box_ui()
 
     def on_rows_moved(self, parent, start, end, dest, row):
         """
@@ -145,6 +140,7 @@ class ProcessInterface(BaseClass):
     
     def set_step_name(self, process_step, widget):
         process_step.name = widget.step_name_edit.text()
+        self.update_bounding_box_ui()
 
     
     def set_step_wp(self, process_step, widget, set_to_current=False):
@@ -210,6 +206,8 @@ class ProcessInterface(BaseClass):
         
         if file_path is not None:
             self.process_handler.recalc_process_params()
+
+        self.update_bounding_box_ui(reset_list=False)  #update bounding box list without resetting the selected item
     
     def set_rot_motor_id(self, process_step, widget):
         motor_string = widget.rot_mot_combobox.currentText()
@@ -321,4 +319,30 @@ class ProcessInterface(BaseClass):
                 self.process_handler.run_bounding_box(idx, in_laser_coord)
         else:
             self.process_handler.run_bounding_box(step_to_run-1, in_laser_coord)
+    
+    def update_bounding_box_ui(self, reset_list=True):
+        if reset_list:
+            self.bounding_box_step_combobox.clear()
+            self.bounding_box_step_combobox.addItem('All')
+            for idx,step in enumerate(self.process_handler.process_step_list):
+                self.bounding_box_step_combobox.addItem(f'{step.name}')
+        
+        total_bb = [[float('inf'), float('-inf')], [float('inf'), float('-inf')], [float('inf'), float('-inf')]]
+        for idx,step in enumerate(self.process_handler.process_step_list):
+            total_bb[0][0] = min(total_bb[0][0], step.bounding_box[0][0])
+            total_bb[0][1] = max(total_bb[0][1], step.bounding_box[0][1])
+            total_bb[1][0] = min(total_bb[1][0], step.bounding_box[1][0])
+            total_bb[1][1] = max(total_bb[1][1], step.bounding_box[1][1])
+            total_bb[2][0] = min(total_bb[2][0], step.bounding_box[2][0])
+            total_bb[2][1] = max(total_bb[2][1], step.bounding_box[2][1])
+            if step.name == self.bounding_box_step_combobox.currentText():
+                self.run_bounding_box_button.setToolTip(f"Run bounding box for {step.name} with Dimensions: \n X: {step.bounding_box[0][0]:.2f} to {step.bounding_box[0][1]:.2f}mm\nY: {step.bounding_box[1][0]:.2f} to {step.bounding_box[1][1]:.2f}mm\nZ: {step.bounding_box[2][0]:.2f} to {step.bounding_box[2][1]:.2f}mm")
+                break
+
+        if self.bounding_box_step_combobox.currentText() == 'All':
+            self.run_bounding_box_button.setToolTip(f"Run bounding box for All Steps with Dimensions: \n X: {total_bb[0][0]:.2f} to {total_bb[0][1]:.2f}mm\nY: {total_bb[1][0]:.2f} to {total_bb[1][1]:.2f}mm\nZ: {total_bb[2][0]:.2f} to {total_bb[2][1]:.2f}mm")
+
+
+
+
         
