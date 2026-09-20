@@ -65,7 +65,7 @@ class VersionManager:
 class ExecutableBuilder:
     """Build executable using PyInstaller."""
     
-    def __init__(self, main_file="main_Controller.py", output_name="Controller"):
+    def __init__(self, main_file="main_Controller.py", output_name=f"Artisan Controller"):
         self.main_file = main_file
         self.output_name = output_name
         self.dist_dir = Path("dist")
@@ -119,6 +119,7 @@ class ExecutableBuilder:
             "--add-data", "settings;settings",    # Include settings
             "--add-data", "libraries;libraries",  # Include libraries
             "--add-data", "Drivers;Drivers",      # Include drivers
+            "--add-data", "version.json;.",       # Include version file
             "--collect-all", "PyQt6",             # Include PyQt6
             self.main_file
         ]

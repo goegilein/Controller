@@ -146,7 +146,47 @@ QTabBar::tab:hover {
     color:  rgb(122, 0, 28); /* Slightly lighter orange */
 	background-color: rgb(245, 245, 245); ;
 }
-</string>
+
+
+
+/*=======CUSTOM UI STYLES=====*/
+QComboBox[StyleClass=&quot;DropdownSuggestion&quot;] {
+    padding: 0px;
+    margin: 0px;
+    min-width: 30px;
+    max-width: 30px;
+}
+
+QComboBox[StyleClass=&quot;DropdownSuggestion&quot;]::drop-down {
+    width: 30px;
+}
+
+QComboBox[StyleClass=&quot;DropdownSuggestion&quot;] QAbstractItemView {
+    min-width: 75px;
+    font-size: 14px;
+    padding: 5px;
+}
+
+QComboBox[StyleClass=&quot;DropdownSuggestion&quot;] QAbstractItemView::item {
+    padding: 0px;
+    height: 25px;
+    font-size: 14px;
+	background-color: rgb(245, 245, 245);
+	color: rgb(80, 0, 19);
+	
+}
+
+QComboBox[StyleClass=&quot;DropdownSuggestion&quot;] QAbstractItemView::item:hover {
+   background-color: rgb(255, 255, 255);
+ 	color: rgb(80, 0, 19);
+	border: 0px;
+}
+
+QComboBox[StyleClass=&quot;DropdownSuggestion&quot;] QAbstractItemView::item:selected {
+    background-color: rgb(255, 255, 255);
+    color: rgb(122, 0, 28);
+	border: 1px solid rgb(122, 0, 28);
+}</string>
   </property>
   <property name="animated">
    <bool>true</bool>
@@ -853,7 +893,7 @@ QTabBar::tab:selected {
     <item row="0" column="0">
      <widget class="QTabWidget" name="Cameras_tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="Cam1_tab">
        <attribute name="title">
@@ -1827,16 +1867,6 @@ is OFF</string>
            <property name="verticalSpacing">
             <number>6</number>
            </property>
-           <item row="0" column="1">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>Step Size (mm)</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
            <item row="3" column="1">
             <widget class="QDoubleSpinBox" name="axis_speed_box">
              <property name="minimumSize">
@@ -1890,16 +1920,6 @@ is OFF</string>
              </property>
              <property name="value">
               <double>10.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>Axis Speed (mm/s)</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
@@ -2038,6 +2058,55 @@ QPushButton:checked {
                </widget>
               </item>
              </layout>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QComboBox" name="step_size_suggestion_combobox">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>32</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+             </property>
+             <property name="StyleClass" stdset="0">
+              <string>DropdownSuggestion</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1" colspan="2">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Step Size (mm)</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QComboBox" name="axis_speed_suggestion_combobox">
+             <property name="StyleClass" stdset="0">
+              <string>DropdownSuggestion</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1" colspan="2">
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Axis Speed (mm/s)</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
             </widget>
            </item>
           </layout>

@@ -187,7 +187,7 @@ class ArtisanController():
             raise ValueError("Could not disconnect. Either no connection was established in the first place or something went wrong.")
         
 
-    def send_command(self, command, wait_text="ok", timeout=5):
+    def send_command(self, command, wait_text="ok", timeout=60):
         """
         Send a G-code command to Snapmaker.
         :param command: G-code command as a string.
