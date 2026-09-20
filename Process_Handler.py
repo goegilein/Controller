@@ -2,6 +2,7 @@ import threading
 import time
 from BaseClasses import BaseClass
 import os
+import numpy as np
 
 class ProcessHandler(BaseClass):
     def __init__(self, gui, artisan_controller, rot_motor_controller):
@@ -57,13 +58,15 @@ class ProcessHandler(BaseClass):
 
     @remaining_time.setter
     def remaining_time(self, value):
+        value = max(0.0, float(value))
         self._remaining_time = value
         if self.remaining_time_callbacks:
+            total_seconds = int(round(value))
+            h = total_seconds // 3600
+            m = (total_seconds % 3600) // 60
+            s = total_seconds % 60
+            remaining_time_string = f"ETA. - {h}:{m}:{s}"
             for callback in self.remaining_time_callbacks:
-                h=int(value//3600)
-                m=int((value%3600)//60)
-                s=int(value%60)
-                remaining_time_string = f"ETA. - {h}:{m}:{s}"
                 callback(remaining_time_string)
 
     def set_remaining_time_callback(self, callback):
@@ -232,16 +235,19 @@ class ProcessHandler(BaseClass):
 
                 #Restore the old position after execution
                 self.controller.move_axis_absolute(start_position[0], start_position[1], start_position[2], speed=30, z_save=True, job_save=True)
+                self.controller.set_work_position(job_save=True)  # Reset the work position to the original after execution
                 self.process_state = "Idle"  # Reset state after completion
-                self.remaining_time = sum([step.process_time for step in self.process_step_list]) # reset remaining time
+                self.remaining_time = 0  # process is finished, no time left
             except Exception as e:
                 self.last_log = f"Error during execution: {e}"
                 self.process_state = "Idle"  # Reset state on error
+                self.remaining_time = 0
             finally:
                 self.execution_thread = None
 
         # Start execution in a separate thread
         if self.process_state == "Idle":
+            self.recalc_process_params()
             self.last_log= "Start Processing..."
             self.process_state = "Running"  # Set process state to Running
             self.execution_canceled.clear()
@@ -344,56 +350,14 @@ class ProcessHandler(BaseClass):
 
             self.controller.send_command(command)
 
-            self.remaining_time=round((self.remaining_time-time_list[idx]) * (self.remaining_time > 0)) #
-            #time.sleep(time_list[idx]*0.5)  # Add a delay between commands. Factor 0.5 probably accounts for wait for ok or smth like that
+            if time_list and idx < len(time_list):
+                self.remaining_time = max(0.0, self.remaining_time - float(time_list[idx])*2)
         else:
             self.controller.add_sync_position(text=f"step_{gcode_id}_done", timeout=60)  # Ensure all movements are finished before proceeding
             time.sleep(0.5)  # Wait a bit to ensure the sync position is reached
             if self.controller.last_log == f"Error: step_{gcode_id}_done not received from Artisan!":
                 self.cancel_process()
 
- 
-    # def execute_jcode_file(self, file_path, rot_motor_id, step_laser_wp, command_lists, time_lists, step_id="0"):
-    #     """
-    #     Execute a J-code file which may reference multiple gcode files.
-    #     :param file_path: Path to the J-code file.
-    #     :param step_id: ID of the step for logging purposes.
-    #     """        
-    #     try:
-    #         with open(file_path, 'r') as file:
-    #             jcode_commands = [line.strip() for line in file if line.strip() and not line.startswith(';')]
-            
-    #         self.last_log = f"Executing J-code file: {file_path}"
-
-    #         g_code_files_counter = 0
-    #         for command in jcode_commands:
-    #             if command.startswith("J0"):
-    #                 parts = command.split()
-    #                 for part in parts:
-    #                     if part.startswith("X"):
-    #                         x = float(part[1:])+step_laser_wp[0]
-    #                     elif part.startswith("Y"):
-    #                         y = float(part[1:])+step_laser_wp[1]
-    #                     elif part.startswith("Z"):
-    #                         z = float(part[1:])+step_laser_wp[2]
-    #                     elif part.startswith("R"):
-    #                         r = float(part[1:])+step_laser_wp[3]
-
-    #                 self.controller.move_axis_absolute(x, y, z, job_save=True)
-    #                 self.controller.set_work_position(job_save=True)
-    #                 if rot_motor_id is not None:
-    #                     self.rot_motor_controller.move_to_angle(rot_motor_id, r, wait_for_position=True)
-    #                 time.sleep(0.5)  # Wait for movement to ensure stability
-    #             elif command.startswith("J1"):
-    #                 parts = command.split()
-    #                 nc_file = parts[1]
-    #                 self.execute_gcode(command_lists[g_code_files_counter], time_lists[g_code_files_counter], step_id=step_id+f"_g-code-file{g_code_files_counter+1}")
-    #                 g_code_files_counter += 1
-            
-    #         self.last_log = f"Execution of J-code file {file_path} completed successfully."
-    #     except Exception as e:
-    #         self.last_log = f"Failed to execute J-code file: {e}"
-            
     def pause_process(self):
         """
         Pause the execution of the NC file.
@@ -527,7 +491,7 @@ class ProcessStep:
         self.work_position = work_position
 
 
-import numpy as np
+
 class NCCodeInterpreter():
     def interpret_nc_file(self, file_path):
         """
