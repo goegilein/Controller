@@ -8,11 +8,14 @@ class MaschineHelpers():
         self.gui = gui
         self.controller = controller
     
-    def setup_helpers(self, circlefitter=True, rectanglefitter=True):
+    def setup_helpers(self, circlefitter=True, rectanglefitter=True, storedpoints=True):
         if circlefitter:
             self.circle_fitter = CircleFitter(self.gui, self.controller)
         if rectanglefitter:
             self.rectangle_fitter = RectangleFitter(self.gui, self.controller)
+        if storedpoints:
+            self.stored_points = StoredPoints(self.gui, self.controller)
+
 
 
 class CircleFitter():
@@ -313,6 +316,151 @@ class RectangleFitter():
     def calc_mid(self, point1, point2):
         return Point((point1.X+point2.X)/2, (point1.Y+point2.Y)/2, (point1.Z+point2.Z)/2)
 
+
+class StoredPoints():
+    def __init__(self, gui=None, controller=None, list_widget=None, add_button=None):
+        self.gui = gui
+        self.controller = controller
+        self.point_list = []
+
+        self.widget_path = str(get_gui_file_path("fit_point_item.ui"))
+
+        # Main controls for stored points
+        self.list_widget = list_widget
+        if self.list_widget is None and gui is not None:
+            self.list_widget = getattr(gui, "stored_position_listWidget", None) or getattr(gui, "stored_points_listWidget", None)
+
+        self.stored_position_listWidget = self.list_widget
+
+        self.add_point_button = add_button
+        if self.add_point_button is None and gui is not None:
+            self.add_point_button = getattr(gui, "add_stored_position_button", None) or getattr(gui, "add_stored_point_button", None)
+
+        self.add_stored_position_button = self.add_point_button
+
+        if self.add_point_button is not None:
+            self.add_point_button.clicked.connect(lambda: self.add_point())
+
+    @property
+    def points(self):
+        """Access the list of stored points."""
+        return self.point_list
+
+    def get_points(self):
+        """Return the list of stored Point objects."""
+        return self.point_list
+
+    def add_current_position(self):
+        """Add the current controller position as a stored point."""
+        if self.controller is None:
+            return None
+        pos = self.controller.get_absolute_position()
+        if pos is None:
+            return None
+        return self.add_point(pos[0], pos[1], pos[2])
+
+    def add_point(self, x=None, y=None, z=None, name=None):
+        """
+        Add a point to the stored list.
+        Can be called with coordinates (x, y, z), a Point object, a list/tuple of coords,
+        or with no arguments to capture the current controller position.
+        
+        :param x: X coordinate, Point object, coordinate tuple/list, or None to capture current position.
+        :param y: Y coordinate or None.
+        :param z: Z coordinate or None.
+        :param name: Optional text identifier for the point item label.
+        :return: The created Point object, or None if capturing current position failed.
+        """
+        # If triggered by Qt clicked signal (passes boolean) or no args given, use current position
+        if isinstance(x, bool) or (x is None and y is None and z is None):
+            return self.add_current_position()
+
+        # Handle passing a Point instance directly
+        if isinstance(x, Point):
+            point = Point(x.X, x.Y, x.Z)
+        # Handle passing a list/tuple of coordinates [x, y, z]
+        elif isinstance(x, (list, tuple)) and len(x) >= 3:
+            point = Point(x[0], x[1], x[2])
+        else:
+            point = Point(x, y, z)
+
+        self.point_list.append(point)
+
+        # Put widget into the list if a list widget is available
+        if self.list_widget is not None:
+            widget = uic.loadUi(self.widget_path)
+            widget.point = point
+            item = QListWidgetItem()
+            item.setSizeHint(widget.sizeHint())
+            self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, widget)
+
+            if point.X is not None:
+                widget.abs_x_spinbox.setValue(float(point.X))
+            if point.Y is not None:
+                widget.abs_y_spinbox.setValue(float(point.Y))
+            if point.Z is not None:
+                widget.abs_z_spinbox.setValue(float(point.Z))
+
+            if name is not None:
+                widget.point_name_label.setText(str(name))
+
+            widget.remove_button.clicked.connect(lambda _, p=point, w=widget: self.remove_point(p, w))
+            widget.move_to_button.clicked.connect(lambda _, p=point: self.move_to_point(p))
+            widget.set_current_pos_button.clicked.connect(lambda _, p=point, w=widget: self.set_current_point_pos(p, w))
+
+        return point
+
+    def remove_point(self, point, widget=None):
+        """Remove a point from the stored points list and update the UI list."""
+        if point in self.point_list:
+            self.point_list.remove(point)
+
+        if self.list_widget is not None:
+            for i in range(self.list_widget.count()):
+                item = self.list_widget.item(i)
+                item_widget = self.list_widget.itemWidget(item)
+                if item_widget is widget or (widget is None and getattr(item_widget, "point", None) == point):
+                    self.list_widget.takeItem(i)
+                    if item_widget is not None:
+                        item_widget.deleteLater()
+                    break
+
+    def set_current_point_pos(self, point, widget):
+        """Update the stored point with the current controller position."""
+        if self.controller is None:
+            return
+        new_pos = self.controller.get_absolute_position()
+        if new_pos is None:
+            return
+
+        point.set_pos(new_pos[0], new_pos[1], new_pos[2])
+
+        widget.abs_x_spinbox.setValue(float(point.X))
+        widget.abs_y_spinbox.setValue(float(point.Y))
+        widget.abs_z_spinbox.setValue(float(point.Z))
+
+    def move_to_point(self, point):
+        """Move the machine controller to the point position."""
+        if self.controller is not None and point.X is not None and point.Y is not None and point.Z is not None:
+            self.controller.move_axis_absolute(point.X, point.Y, point.Z, speed=30)
+
+    def clear_points(self):
+        """Clear all stored points and reset the UI list."""
+        self.point_list.clear()
+        if self.list_widget is not None:
+            self.list_widget.clear()
+
+    def convert_point_list_to_array(self):
+        """Convert stored points to a NumPy array of shape (N, 3)."""
+        pts = [[p.X, p.Y, p.Z] for p in self.point_list if p.X is not None and p.Y is not None and p.Z is not None]
+        return np.array(pts, dtype=float) if pts else np.empty((0, 3), dtype=float)
+
+
+# Alias for alternative naming
+StorePoints = StoredPoints
+
+
 class Point():
     def __init__(self, x, y ,z):
         self.X = x
@@ -323,3 +471,7 @@ class Point():
         self.X = x
         self.Y = y
         self.Z = z
+
+    def __repr__(self):
+        return f"Point(X={self.X}, Y={self.Y}, Z={self.Z})"
+
