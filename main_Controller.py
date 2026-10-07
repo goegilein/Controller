@@ -17,22 +17,15 @@ import RotMotor_GUI_Interface
 import Interactive_Image_Control
 import Maschine_Helper
 import Gcode_Plotter
-from PathManager import get_gui_file_path, get_settings_path
+from PathManager import get_gui_file_path, get_settings_path, get_base_dir
 
 #Define paths using PathManager
 MAIN_GUI_PATH = get_gui_file_path("Controller.ui")
 DEFAULT_SETTINGS_PATH = get_settings_path("Default_Settings.json")
 SCHEMA_PATH = get_settings_path("schema.json")   
 
-#Load version - handle both frozen and non-frozen environments
-if getattr(sys, 'frozen', False):
-    # Running as compiled executable from PyInstaller
-    BASE_DIR = Path(sys._MEIPASS)
-else:
-    # Running as normal Python script
-    BASE_DIR = Path(__file__).resolve().parent
-
-with open(BASE_DIR / "version.json") as f:
+#Load version
+with open(get_base_dir() / "version.json") as f:
     version_data = json.load(f)
     version = f"{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
 

@@ -457,10 +457,6 @@ class StoredPoints():
         return np.array(pts, dtype=float) if pts else np.empty((0, 3), dtype=float)
 
 
-# Alias for alternative naming
-StorePoints = StoredPoints
-
-
 class Point():
     def __init__(self, x, y ,z):
         self.X = x

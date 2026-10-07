@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 import wmi
 import sys, serial, serial.tools.list_ports as list_ports
+from PathManager import get_gui_file_path
 
 
 class MainInterface(BaseClass):
@@ -62,9 +63,7 @@ class MainInterface(BaseClass):
         dlg.setWindowTitle("Settings")
         lay = QVBoxLayout(dlg)
         lay.setContentsMargins(0,0,0,0)
-        BASE_DIR = Path(__file__).resolve().parent
-        GUI_DIR = BASE_DIR / "GUI_files"
-        SETTINGS_GUI_PATH = GUI_DIR / "Settings_widget.ui"
+        SETTINGS_GUI_PATH = get_gui_file_path("Settings_widget.ui")
         lay.addWidget(SettingsEditorWidget(self.sm, SETTINGS_GUI_PATH, parent=dlg))
         dlg.resize(700, 800)
         dlg.exec()
@@ -80,8 +79,7 @@ class MainInterface(BaseClass):
 class ConnectionStatusWindow(QtWidgets.QWidget):
     def __init__(self, controllers):       
         super().__init__()
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        ui_path = os.path.join(base_path, "GUI_files/connection_status_window.ui")
+        ui_path = str(get_gui_file_path("connection_status_window.ui"))
         gui=uic.loadUi(ui_path, self)
 
         #controllers
