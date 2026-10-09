@@ -380,7 +380,7 @@ class CustomSampleHolders():
                 sb.setRange(-10000.0, 10000.0)
                 sb.setDecimals(3)
                 sb.setSpecialValueText("")
-                sb.setValue(sb.minimum())
+                sb.setValue(0.0)
 
         if self.ch_go_to_button is not None:
             self.ch_go_to_button.setEnabled(False)
@@ -470,9 +470,9 @@ class CustomSampleHolders():
             widget.abs_x_spinbox.setSpecialValueText("")
             widget.abs_y_spinbox.setSpecialValueText("")
             widget.abs_z_spinbox.setSpecialValueText("")
-            widget.abs_x_spinbox.setValue(widget.abs_x_spinbox.minimum())
-            widget.abs_y_spinbox.setValue(widget.abs_y_spinbox.minimum())
-            widget.abs_z_spinbox.setValue(widget.abs_z_spinbox.minimum())
+            widget.abs_x_spinbox.setValue(0.0)
+            widget.abs_y_spinbox.setValue(0.0)
+            widget.abs_z_spinbox.setValue(0.0)
 
             widget.set_current_pos_button.clicked.connect(lambda _, k=pt_key, w=widget: self.set_point_from_current_pos(k, w))
             widget.move_to_button.clicked.connect(lambda _, k=pt_key: self.move_to_measured_point(k))
