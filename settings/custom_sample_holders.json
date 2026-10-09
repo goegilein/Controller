@@ -1,0 +1,27 @@
+{
+    "Rotary Stage": {
+        "Point1": {
+            "Name": "Top Left",
+            "X": -10,
+            "Y": 50,
+            "Z": 20
+        },
+        "Point2": {
+            "Name": "Top Right",
+            "X": 10,
+            "Y": 50,
+            "Z": 20
+        },
+        "Point3": {
+            "Name": "Bottom Right",
+            "X": 0,
+            "Y": -50,
+            "Z": 20
+        },
+        "Additional_Offset_Labels": {
+            "X": "X (mm)",
+            "Y": "Half cylinder length (mm)",
+            "Z": "Radius (mm)"
+        }
+    }
+}
