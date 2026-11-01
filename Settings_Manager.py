@@ -12,18 +12,19 @@ class SettingsManager(QObject):
 
     _instance: Optional["SettingsManager"] = None
 
-    def __init__(self, default_settings_path: pathlib.Path, schema_path=pathlib.Path, use_validation=False):
+    def __init__(self, default_settings_path: pathlib.Path | str, schema_path: Optional[pathlib.Path | str] = None, use_validation: bool = False):
         super().__init__()
         if hasattr(self, "_initialized"): return
         self._initialized = True
         self._lock = threading.RLock()
-        self._default_settings_path = default_settings_path
-        self._schema_validator = Draft202012Validator(self._load_json(schema_path), format_checker=FormatChecker()) if use_validation else None
-        self._defaults = self._load_json(default_settings_path)
+        self._default_settings_path = pathlib.Path(default_settings_path)
+        schema_data = self._load_json(pathlib.Path(schema_path)) if schema_path and use_validation else {}
+        self._schema_validator = Draft202012Validator(schema_data, format_checker=FormatChecker()) if (use_validation and schema_data) else None
+        self._defaults = self._load_json(self._default_settings_path)
         self._active_settings: Dict[str, Any] = {}          # current user layer
         self._session: Dict[str, Any] = {}       # ephemeral overrides
         self._last_active_file: Optional[pathlib.Path] = None
-        self.load_user_file(default_settings_path)
+        self.load_user_file(self._default_settings_path)
 
     # ---------- Public API ----------
     def get(self, path: str, fallback: Any=None) -> Any:
@@ -135,7 +136,10 @@ class SettingsManager(QObject):
         cur[parts[-1]] = value
 
     @staticmethod
-    def _load_json(p: pathlib.Path) -> Dict[str, Any]:
+    def _load_json(p: pathlib.Path | str | None) -> Dict[str, Any]:
+        if not p:
+            return {}
+        p = pathlib.Path(p)
         if not p.exists():
             return {}
         try:
@@ -156,7 +160,8 @@ class SettingsManager(QObject):
             ) from e
 
     @staticmethod
-    def _atomic_write_json(p: pathlib.Path, data: Dict[str, Any]):
+    def _atomic_write_json(p: pathlib.Path | str, data: Dict[str, Any]):
+        p = pathlib.Path(p)
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         # tmp = pathlib.Path(tempfile.mkstemp(dir=p.parent, prefix=p.name, suffix=".tmp")[1])

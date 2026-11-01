@@ -131,6 +131,15 @@ class ExecutableBuilder:
             if result.returncode == 0:
                 exe_path = self.dist_dir / f"{exe_name}.exe"
                 if exe_path.exists():
+                    # Copy settings directory next to the executable
+                    settings_src = Path("settings")
+                    settings_dst = self.dist_dir / "settings"
+                    if settings_src.exists():
+                        if settings_dst.exists():
+                            shutil.rmtree(settings_dst)
+                        shutil.copytree(settings_src, settings_dst)
+                        print(f"✓ Copied settings to: {settings_dst}")
+                    
                     print(f"\n✓ Build successful!")
                     print(f"✓ Executable: {exe_path}")
                     print(f"✓ Size: {exe_path.stat().st_size / (1024*1024):.2f} MB")
