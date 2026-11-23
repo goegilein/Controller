@@ -1,0 +1,33 @@
+ui   G91
+ui   G0 X5 F1200
+ui   G90
+ui   G91
+ui   G0 Z-2 F1800
+ui   G90
+ui   G90
+ui   M114
+ui   G0 Z10 F1800
+ui   G0 X120 Y80 F1800
+ui   G90
+ui   M114
+ui   G0 X100 Y100 F1800
+ui   G0 Z4 F1800
+ui   M114
+ui   G92 X0 Y0 Z0
+ui   G91
+ui   G0 X1.5 Y-2 Z0 F600
+ui   G90
+ui   G90
+ui   G0 X0 Y0 Z0 F1800
+ui   G90
+ui   M2000 L13 P1
+ui   M2000 L13 P0
+ui   M2000 W1 P100
+ui   M2000 W1 P0
+ui   M2000 W2 P100
+ui   M2000 W2 P0
+ui   M8
+ui   M9
+ui   G28 Z
+ui   M114
+# shown absolute position after G28 Z: [0.0, 0.0, 0.0], machine: [100.0, 100.0, 0.0]

@@ -19,7 +19,7 @@ This file is the single source of truth for status – update it in the same com
 | Phase | State | Notes |
 |---|---|---|
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
-| 0 – Safety net | open | protocol log first, so real conversations can be recorded |
+| 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | open | only what production needs now |
 | 2 – Machine core without Qt (Marlin) | open | |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
@@ -124,7 +124,7 @@ Severity: **S** = safety (person, machine, workpiece), **F** = wrong function, *
 | B12 | F | Serial I/O in the UI thread: homing blocks the UI up to 60 s, every move / fit-point capture blocks; `disconnect()` sleeps 1.5 s. | many | P2 | open |
 | B13 | F | Position tracking dies on the first failed `M114` (`current_position = None` → `TypeError` in the setter) and is not restarted; every reconnect starts another tracking thread. | [Artisan_Controller.py:146-157](Artisan_Controller.py#L146-L157) | P2 | open |
 | B14 | F | `cancel_process` joins the job thread in the UI thread (UI frozen during the move back); called from the job thread itself on a failed sync it raises `cannot join current thread`. Cancel is refused when disconnected. | [Process_Handler.py:385-401](Process_Handler.py#L385-L401), [:358](Process_Handler.py#L358) | P2 | open |
-| B15 | F | `origin_offset` / `is_homed` live only in the app: after a reconnect without homing (or an app crash) the machine still has the old `G92` shift, the app assumes none → all "absolute" positions (stored points, work positions) are wrong. | [Artisan_Controller.py:456-473](Artisan_Controller.py#L456-L473) | P2 | open |
+| B15 | F | `origin_offset` / `is_homed` live only in the app: after a reconnect without homing (or an app crash) the machine still has the old `G92` shift, the app assumes none → all "absolute" positions (stored points, work positions) are wrong. Homing a single axis (`G28 Z`) resets the offset of *all* axes in the app (pinned in `manual_operations.txt`). | [Artisan_Controller.py:456-473](Artisan_Controller.py#L456-L473) | P2 | open |
 | B16 | F | A settings change calls `get_toolhead_info` (`M1006` twice) – also during a running job. Typo `artisan.motoin.max_z_speed` (always the fallback 30). `move_axis_to` / `move_axis_absolute` clamp X/Y speed to the Z limit too. | [Artisan_Controller.py:96-108](Artisan_Controller.py#L96-L108), [:344](Artisan_Controller.py#L344) | P2 | open |
 | B17 | F | Default work position `[1, 400, 400, 0]` when the position is unknown. `J0` without `Z` / `R` reuses stale values or raises `NameError`. | [Process_Handler.py:83](Process_Handler.py#L83), [:307-318](Process_Handler.py#L307-L318) | P2 | open |
 | B18 | F | After the job the work position is set to the *start* position, not restored to the user's previous one (intended? → C6). | [Process_Handler.py:237-238](Process_Handler.py#L237-L238) | P2 | open |
@@ -133,6 +133,7 @@ Severity: **S** = safety (person, machine, workpiece), **F** = wrong function, *
 | B21 | M | User data (settings, stored positions, homographies) is written next to the program, not into the user folder. | [PathManager.py](PathManager.py) | P4 | open |
 | B22 | M | Rotary `connect()` reports "connected" even if `openPort()` fails; gear ratio 3 hard-coded (LaserMachine spec says 4:1 today). | [RotMotor_Cotroller.py:61-112](RotMotor_Cotroller.py#L61-L112), [:279](RotMotor_Cotroller.py#L279) | P2 | open |
 | B24 | F | Comment stripping only cuts at `;`: BildHatcher's line `===;start of new Processblock===` is sent to the machine as `===` (Marlin answers "Unknown command" + `ok`). Parentheses comments are not handled. | [Process_Handler.py:555-563](Process_Handler.py#L555-L563) | P2 | open |
+| B25 | M | Coordinates are sent with float noise (`G0 X21.3 Y1.1999999999999993`, `X-21.299999999999997`) – harmless for Marlin, but noisy logs and longer lines. Seen in the golden files. | [Artisan_Controller.py](Artisan_Controller.py) moves | P2 | open |
 | B23 | M | Remaining-time estimate uses a fudge factor 2; long-move segmentation and the estimate ignore acceleration and `G2/G3`. | [Process_Handler.py:354](Process_Handler.py#L354) | P3 | open |
 
 ---
@@ -176,13 +177,18 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
   rotary-motor targets and stops; `%USERPROFILE%\Documents\MachineControl\logs\protocol.log` (20 MB × 10).
   *No change to what is sent.* Lets us record real conversations
   of the Artisan (connect, M114, M1006 per toolhead, homing, short job, pause, cancel).
-- [ ] P0.3 **Simulated Artisan**: a fake serial port that answers like the recorded firmware (`ok`, `M114`
-  format, `M1006` lines, `M118` echo, `M400` delay, `busy:`).
-- [ ] P0.4 **Characterization tests** (golden files): for recorded J-code / G-code jobs, the exact sequence of
-  lines the current code sends (incl. `G91/G90`, `G92`, segmentation, sync points), plus `NCCodeInterpreter`
-  output (segments, times, bounding box). `python -m pytest`, no hardware.
-- [ ] P0.5 Manual hardware checklist (connect, home, jog, set WP, frame, short job, pause / resume, cancel,
-  emergency stop, cable pulled during a job, rotary stage move) – run before every merge.
+- [~] P0.3 **Simulated Artisan** ([tests/sim_artisan.py](tests/sim_artisan.py)): fake `serial.Serial` with
+  G90/G91/G92/G28 position model, `M114`, `M1006`, `M118`, `M112`, unknown commands. Answers are modelled after
+  Marlin – **to be checked against the recordings** of [tests/HARDWARE_CHECKLIST.md](tests/HARDWARE_CHECKLIST.md)
+  section A (`M114` format, `M1006` text per head, `M118` prefix, G28 vs G92 shift, `busy:`).
+- [x] P0.4 **Characterization tests** ([tests/test_characterization.py](tests/test_characterization.py), golden
+  files in `tests/golden/`): connect (both heads), manual operations, a BildHatcher cluster file as `.nc` job,
+  a J-code job with two clusters + rotary axis + a second step, bounding box twice in laser coordinates, and
+  `NCCodeInterpreter` output (segments, times, box). `python -m pytest`, no hardware, < 1 s.
+  Not covered (timing dependent): pause / resume, cancel, continuous jog, the position-tracking thread – they
+  get tests on the new core (P2.3 / P2.4). Regenerate only for agreed changes: `UPDATE_GOLDEN=1 python -m pytest`.
+- [x] P0.5 Manual hardware checklist and list of recordings for the simulator:
+  [tests/HARDWARE_CHECKLIST.md](tests/HARDWARE_CHECKLIST.md).
 
 ### Phase 1 – Safety fixes in the existing code (each one agreed, tested on the machine)
 
@@ -269,4 +275,5 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 |---|---|---|
 | 2026-11-23 | Inventory, bug list, phase plan (draft) | `fbb214b` |
 | 2026-11-23 | P0.1: `__pycache__` untracked, requirements pinned; B24 found | `14e6d3f` |
-| 2026-11-23 | P0.2: protocol log | see git log |
+| 2026-11-23 | P0.2: protocol log | `f99f194` |
+| 2026-11-23 | P0.3 (draft) / P0.4 / P0.5: simulated Artisan, 8 characterization tests, hardware checklist; B25 found, B15 extended | see git log |
