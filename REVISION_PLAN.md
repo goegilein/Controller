@@ -20,7 +20,7 @@ This file is the single source of truth for status – update it in the same com
 |---|---|---|
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
-| 1 – Safety fixes in the existing code | open | only what production needs now |
+| 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | open | |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
@@ -190,14 +190,18 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 - [x] P0.5 Manual hardware checklist and list of recordings for the simulator:
   [tests/HARDWARE_CHECKLIST.md](tests/HARDWARE_CHECKLIST.md).
 
-### Phase 1 – Safety fixes in the existing code (each one agreed, tested on the machine)
+### Phase 1 – Safety fixes in the existing code
 
-- [ ] P1.1 B01 laser off (`M5`, `M9`) on cancel, on exception in the job thread and in a `closeEvent` / `aboutToQuit`.
-- [ ] P1.2 B04 emergency-stop button + hotkey; `M112` written directly to the port, bypassing the lock, no ack wait.
-- [ ] P1.3 B05 move controls stay disabled in `Paused` (or see C4).
-- [ ] P1.4 B06 rotary motors: speed 0 on disconnect / exit / control-loop exception, timeout in `move_to_angle`.
-- [ ] P1.5 B07 process-state updates to widgets through signals.
-- [ ] P1.6 B08 part: refuse to start a job without a detected toolhead (remove the `"TEST"` return).
+Merged into phase 2 (decision 2026-11-23): production keeps running v1.0 until the hardware tests, so the fixes
+are made once, in the new core, and tested on the simulated machine. Each P1 item stays as an acceptance test.
+
+
+- [-] P1.1 (→ phase 2) B01 laser off (`M5`, `M9`) on cancel, on exception in the job thread and in a `closeEvent` / `aboutToQuit`.
+- [-] P1.2 (→ phase 2) B04 emergency-stop button + hotkey; `M112` written directly to the port, bypassing the lock, no ack wait.
+- [-] P1.3 (→ phase 2) B05 move controls stay disabled in `Paused` (or see C4).
+- [-] P1.4 (→ phase 2) B06 rotary motors: speed 0 on disconnect / exit / control-loop exception, timeout in `move_to_angle`.
+- [-] P1.5 (→ phase 2) B07 process-state updates to widgets through signals.
+- [-] P1.6 (→ phase 2) B08 part: refuse to start a job without a detected toolhead (remove the `"TEST"` return).
 
 ### Phase 2 – Machine core without Qt (Marlin)
 
@@ -246,18 +250,19 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 
 | ID | Question | Proposal |
 |---|---|---|
-| C1 | Snapmaker firmware version, connection (USB only? is TCP used?), own hardware modules / M-codes besides rotary stages and cameras? | drop TCP if unused |
-| C2 | Is there a physical emergency stop on the Artisan? Software: `M112` (firmware halt, machine needs a restart) as E-stop, plus a soft "Stop" (`M410` quick stop + `M5`, keeps the connection)? | both, E-stop also by hotkey |
-| C3 | Streaming: today effectively 2 lines in flight (side effect of B03). Pure ping-pong after the fix could starve the planner on short hatch segments → slower, different burn result. | keep a fixed window of 2 lines intentionally, configurable, compare a test burn |
-| C4 | Pause: laser off (`M5`) during pause and restore mode / power on resume? Jogging during pause allowed (then return to the pause position with laser off before resuming)? | laser off in pause; no jogging in pause for 2.0 |
-| C5 | Work position via `G92` + app-side offset (today) vs `G54…` / `G53` (if the Snapmaker firmware supports them) | test what the firmware supports, then decide |
-| C6 | After a job: set the work position to the start position (today) or restore the previous one? | restore the previous one |
-| C7 | Toolhead detection by `M1006` line count – firmware updates could break it. Is there a field in the answer that identifies 1064 nm / 455 nm? | need a recorded `M1006` of both heads |
-| C8 | Rotary stages: keep the PC-side PID for 2.0 (with safety fixes) or move the loop into the ESP32 firmware now (protocol `MOVE / DONE / heartbeat` as planned in LaserMachine Kap. 8.7 – the same stages will be used on the new machine)? Gear ratio 3 or 4? | PC PID + fixes in 2.0; ESP32 firmware as a separate step |
-| C9 | Production uses the built exe with `settings/` next to it – OK to move to `%USERPROFILE%\Documents\…` with migration? | yes, like BildHatcher |
-| C10 | Who owns machine profiles in the suite (BildHatcher, machine control, shared package)? | shared package in v3.0; for 2.0 a copy of the format |
-| C11 | Arduino joystick / keypad (commented out), camera autofocus (WIP): keep, freeze or remove? | freeze, not in scope |
-| C12 | Priorities: what is needed for production soon, and which hardware tests / log recordings can you do when? | – |
+| C1 | Firmware version, connection, own modules | **answered:** USB only, TCP not used → remove. Own hardware: rotary stages and cameras only. Firmware version still to read out. |
+| C2 | Emergency stop | **decided:** the Artisan has a hardware emergency stop. Software has two levels – *Stop* (`M410` quick stop + `M5`, keeps the connection) and *E-Stop* (`M112`) – **both ask for confirmation** first (Enter confirms, so it stays fast). Hotkey opens the same confirmation. |
+| C3 | Streaming window | **decided:** strict ack matching (fixes B03), one line in flight. Marlin acknowledges when a line is queued, so the planner stays full while we stream; it only drains at the sync point (`M400`). Today's accidental 2-line window is dropped – measure throughput in the simulator, check with a test burn later. |
+| C4 | Pause | **decided:** laser off (`M5`) in pause, restore laser mode / power on resume; no jogging in pause. Plus C13. |
+| C5 | Work position: `G92` vs firmware work coordinates vs app-side coordinates | open – options in the chat 2026-11-23; proposal for 2.0: keep `G92`, homing required after every connect (the team always homes), single-axis homing handled correctly. |
+| C6 | Work position after a job | **decided:** known bug – restore the previous work position (B18). |
+| C7 | Toolhead detection | postponed (needs recordings). |
+| C8 | Rotary stages | **decided:** own hardware, driven by this software (not by the Snapmaker controller); PC-side PID stays, with safety fixes (B06). Gear ratio **3:1 is correct** (LaserMachine Nur_Gantry.md Kap. 8.1 says 4:1 – to be corrected there). |
+| C9 | User data folder | **decided:** move to `Documents\MachineControl` with a one-time migration. |
+| C10 | Owner of machine profiles | open (v3.0). |
+| C11 | Arduino joystick, autofocus | **decided:** Arduino stays unchanged (maybe re-enabled later); autofocus is work in progress and must be integrable later – keep camera code movable to the core. |
+| C12 | Priorities | **answered:** production works with v1.0, no time pressure; hardware tests later → work as far as possible on the simulated machine. |
+| C13 | Laser keeps firing when commands stop (PC crash, cable lost) | open. The PC cannot act after a lost connection – needs a firmware or hardware answer. Known: the Artisan firmware switches the laser off on `G0` in M3 and M4 (Snapmaker forum changelog). Unknown: standstill in M3 with no further commands. To do: hardware test at low power (stop the stream in the middle of a `G1`), look for a laser idle timeout in the firmware; if none, prefer `M4` (dynamic) in BildHatcher's profile and / or a hardware watchdog. |
 
 ---
 
@@ -266,6 +271,7 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 | Date | Decision |
 |---|---|
 | 2026-11-23 | Branch `revision_2.0` created from `main` (`3605785`, contains `stored_pos`). |
+| 2026-11-23 | Answers to C1–C12 (section 6). Phase 1 merged into phase 2; work on the simulated machine until hardware tests are possible. TCP is removed. |
 
 ---
 
