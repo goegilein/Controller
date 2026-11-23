@@ -71,9 +71,11 @@ class SimStageBus:
     """Simulated servo board: speed in ticks/s, acceleration `acc` × 100 ticks/s² (STS units), raw position wraps.
 
     Faults for tests: `jammed` (ids that do not turn), `fail_reads` (ids whose reads fail), `raise_on_read`.
+    `cycle_dt`: if set, the motors advance by this fixed time once per control cycle (keepalive) instead of by the
+    wall clock – tests then do not depend on how busy the PC is (see C16 for what load does on the real PC).
     """
 
-    def __init__(self, ids=(1,), positions=None):
+    def __init__(self, ids=(1,), positions=None, cycle_dt=None):
         self.motors = {sid: {"pos": float((positions or {}).get(sid, 0)), "speed": 0.0, "cmd": 0.0, "acc": 50}
                        for sid in ids}
         self.wheel_mode = set()
@@ -82,12 +84,17 @@ class SimStageBus:
         self.jammed = set()
         self.fail_reads = set()
         self.raise_on_read = False
+        self.cycle_dt = cycle_dt
+        self.virtual_time = 0.0
         self._t = time.monotonic()
         self._lock = threading.Lock()
 
-    def _advance(self):
-        now = time.monotonic()
-        dt, self._t = now - self._t, now
+    def _advance(self, dt=None):
+        if dt is None:
+            if self.cycle_dt is not None:
+                return
+            now = time.monotonic()
+            dt, self._t = now - self._t, now
         for sid, mo in self.motors.items():
             step = mo["acc"] * 100 * dt
             mo["speed"] += max(-step, min(step, mo["cmd"] - mo["speed"]))
@@ -101,7 +108,15 @@ class SimStageBus:
         self.wheel_mode.add(sid)
 
     def keepalive(self):
-        pass
+        if self.cycle_dt is not None:
+            with self._lock:
+                self.virtual_time += self.cycle_dt
+                self._advance(self.cycle_dt)
+
+    @property
+    def clock(self):
+        """The PID's time source: virtual with `cycle_dt`, so controller and motors share one time base."""
+        return (lambda: self.virtual_time) if self.cycle_dt is not None else time.time
 
     def read_pos(self, sid):
         with self._lock:
@@ -134,6 +149,8 @@ class SimStageBus:
 # --------------------------------------------------------------------------- one motor (PID unchanged from v1.0)
 
 class StageMotor:
+    clock = staticmethod(time.time)        # PID time source; the simulator may give a virtual one
+
     def __init__(self, ID, raw_position=0, speed=1000, acc=50, gear_ratio=3):
         self.ID = ID
         self.last_raw_pos = raw_position
@@ -146,7 +163,7 @@ class StageMotor:
         self.Kp, self.Ki, self.Kd = 1.5, 0.5, 1
         self.integral_error = 0.0
         self.last_error = 0.0
-        self.last_update_time = time.time()
+        self.last_update_time = self.clock()
         self.position_reached = True
         self.position_stable_counter = 0
         self.position_stable_threshold = 5
@@ -169,7 +186,10 @@ class StageMotor:
         self.last_raw_pos = new_raw_pos
         self.total_ticks = self.turn_count * TICKS_PER_REV + new_raw_pos
         for callback in self.position_changed_callback:
-            callback(self.angle(self.total_ticks))
+            try:
+                callback(self.angle(self.total_ticks))
+            except Exception:
+                pass  # a broken display (e.g. a closed widget) must not stop the control loop
 
     def set_target_angle(self, angle):
         new_target = self.ticks(angle)
@@ -178,7 +198,7 @@ class StageMotor:
             self.target_ticks = new_target
             self.integral_error = 0.0
             self.last_error = new_target - self.total_ticks
-            self.last_update_time = time.time()
+            self.last_update_time = self.clock()
         if abs(self.target_ticks - self.total_ticks) >= 3:
             # v1.0 left this to the next loop cycle (and slept 0.1 s); a wait right after must not see the old True
             self.position_reached = False
@@ -204,7 +224,7 @@ class StageMotor:
 
     def calculate_control_speed(self):
         """Full PID controller (v1.0). Returns speed -1000..1000."""
-        now = time.time()
+        now = self.clock()
         dt = now - self.last_update_time
         if dt <= 0.0001:
             dt = 0.001
@@ -281,16 +301,29 @@ class RotaryStages:
                 if pos is None:
                     continue
                 bus.setup_wheel_mode(sid)
-                motors.append(StageMotor(sid, raw_position=pos, gear_ratio=self.gear_ratio))
+                motor = StageMotor(sid, raw_position=pos, gear_ratio=self.gear_ratio)
+                if hasattr(bus, "clock"):
+                    motor.clock = bus.clock
+                    motor.last_update_time = motor.clock()
+                motors.append(motor)
         with self.lock:
             self.bus, self.motors, self.fault = bus, motors, None
         self._halt.clear()
         self._thread = threading.Thread(target=self._loop, name="rotary-control", daemon=True)
         self._thread.start()
         if not self._atexit:
-            atexit.register(self.disconnect)
+            atexit.register(self._stop_at_exit)
             self._atexit = True
         self.on_log(f"rotary stages: motors {[mo.ID for mo in motors]}")
+
+    def _stop_at_exit(self):
+        """Interpreter exit: speed 0 and close; the UI that would show a log line may already be gone."""
+        if self.bus is None:
+            return
+        try:
+            RotaryStages.disconnect(self)
+        except Exception:
+            pass
 
     def disconnect(self):
         if self.bus is None:

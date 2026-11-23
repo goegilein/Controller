@@ -305,7 +305,7 @@ class RotaryFacade(RotaryStages):
 
     def _make_bus(self):
         if self.port == SIMULATOR_PORT:
-            return SimStageBus(ids=(1, 2))
+            return SimStageBus(ids=(1, 2), cycle_dt=self.loop_interval)  # one nominal cycle per loop (C16)
         return ScservoBus(self.port, self.series)
 
     @property

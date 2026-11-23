@@ -38,8 +38,13 @@ Start the app, do the step, close the app, copy `protocol.log` to `tests/fixture
 | 6 | Bounding box (camera and laser mode) | frames the job at the right place |
 | 7 | Short job to the end | burns correctly, ends at the start position, laser off |
 | 8 | Pause, wait 10 s, resume | no burn mark at the pause point, continues correctly |
-| 9 | Cancel during a job | stops, laser off, returns to the start position |
-| 10 | Emergency stop (software, from Phase 1) and machine button | motion and laser stop at once |
+| 9 | Cancel during a job | stops, laser off; v2.0: the head **stays** where it stopped (no return move) |
+| 10 | Emergency stop: software (button / F12, confirm with Enter) and machine button | motion and laser stop at once; v2.0 shows "E-STOP", reconnect + home needed |
 | 11 | USB cable pulled during a job (only at 0 % power until Phase 1) | job stops with a clear error, laser off |
 | 12 | Close the app during a job (only at 0 % power until Phase 1) | laser off, rotary motors stop |
 | 13 | Rotary stage: move to angle, job with `R` | reaches the angle, job waits for it |
+| 14 | v2.0: Stop (button / F9, confirm with Enter) while jogging, moving and in a job | quick stop (`M410`), laser off, state back to Idle |
+| 15 | v2.0: work area – after homing, move to 400 / 400 / 400 (slowly) and note the real limits; homing point = 0 / 0 / 0? | values for `ArtisanConfig.work_area` (P2.5, VERIFY) |
+| 16 | v2.0: job positions – the same job as in v1.0 on scrap | identical burn position (C5 machine coordinates) |
+| 17 | v2.0: rotary moves with both cameras running (C16) | settles at the angle, no oscillation |
+| 18 | v2.0: stop the rotary while it turns (disconnect / Stop) and close the app while it turns | stage stops at once |

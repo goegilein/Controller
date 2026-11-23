@@ -147,7 +147,7 @@ def test_rotary_facade_simulator(qapp):
     rot.connect()
     assert seen == [True] and rot.get_motor_ids() == [1, 2] and rot.is_connection_active()
     assert rot.move_to_angle(7, 10) is False and "no rotary motor 7" in logs[-1]    # a click never raises
-    assert rot.move_to_angle(1, 5, wait_for_position=True, timeout=10) is True
+    assert rot.move_to_angle(1, 5, wait_for_position=True, timeout=30) is True
     bus = rot.bus
     rot.disconnect()
     assert seen == [True, False] and bus.last_speed(1) == 0 and bus.last_speed(2) == 0

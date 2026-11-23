@@ -99,11 +99,13 @@ class RotMotorInterface(BaseClass):
         widget.pos_step_button.clicked.connect(lambda _, d=1: move_by_steps(d))
         widget.neg_step_button.clicked.connect(lambda _, d=-1: move_by_steps(d))
 
-        #position tracking
-        self.position_emitter = SignalEmitter()
+        #position tracking: one emitter per motor (v1.0 overwrote self.position_emitter, so every motor showed in the
+        #last tab and the earlier emitters were garbage collected – B26)
+        position_emitter = SignalEmitter()
+        self.position_emitters = getattr(self, "position_emitters", []) + [position_emitter]
 
         def update_pos_threadsave(position):
-            self.position_emitter.float_signal.emit(position)
+            position_emitter.float_signal.emit(position)
 
         def update_current_position(position):
             widget.current_pos_spinbox.blockSignals(True)
@@ -113,7 +115,7 @@ class RotMotorInterface(BaseClass):
             widget.current_pos_spinbox.blockSignals(False)
             widget.home_pos_spinbox.blockSignals(False)
 
-        self.position_emitter.float_signal.connect(update_current_position)
+        position_emitter.float_signal.connect(update_current_position)
         motor.set_position_changed_callback(update_pos_threadsave)
 
 

@@ -11,7 +11,7 @@ from test_core_worker import Rig, wait_for
 
 
 def make_stages(ids=(1,), **kw):
-    bus = SimStageBus(ids)
+    bus = SimStageBus(ids, cycle_dt=0.02)
     stages = RotaryStages(lambda: bus, **kw)
     stages.connect()
     return stages, bus
@@ -27,7 +27,7 @@ def stages():
 def test_connect_and_move_with_gear_ratio_3(stages):
     s, bus = stages
     assert [mo.ID for mo in s.motors] == [1, 2] and bus.wheel_mode == {1, 2}
-    assert s.move_to_angle(1, 20, wait_for_position=True, timeout=10) is True
+    assert s.move_to_angle(1, 20, wait_for_position=True, timeout=30) is True
     assert bus.motors[1]["pos"] == pytest.approx(20 * 3 / 360 * TICKS_PER_REV, abs=4)   # 3:1 (C8)
     assert s.get_current_angle(1)[0] == pytest.approx(20, abs=0.2)
     assert bus.motors[2]["pos"] == 0
@@ -138,3 +138,9 @@ def test_rotary_timeout_in_a_job_is_an_error_with_the_laser_off(tmp_path):
     assert rig.sent()[-2:] == ["M5", "M9"] and bus.last_speed(1) == 0
     rig.close()
     stages.disconnect()
+
+
+def test_a_broken_position_display_does_not_stop_the_control(stages):
+    s, bus = stages
+    s.motors[0].set_position_changed_callback(lambda deg: 1 / 0)
+    assert s.move_to_angle(1, 10, wait_for_position=True, timeout=30) is True and s.fault is None

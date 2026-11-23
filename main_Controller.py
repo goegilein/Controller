@@ -3,22 +3,22 @@ import os
 import json
 from pathlib import Path
 from PyQt6 import QtWidgets, uic, QtCore
-import Artisan_Controller
 import Main_GUI_Interface
 import Camera_Controller
 import Camera_GUI_Interface
 import Artisan_GUI_Interface
 import ArduinoController
-import Process_Handler
 import Process_GUI_Interface
 import Settings_Manager
-import RotMotor_Cotroller
 import RotMotor_GUI_Interface
 import Interactive_Image_Control
 import Maschine_Helper
 import Gcode_Plotter
 from PathManager import get_gui_file_path, get_settings_path, get_base_dir
 import protocol_log
+from machine_bridge import ArtisanFacade, MachineBridge, RotaryFacade, config_from_settings
+from job_bridge import CoreProcessHandler
+from machine_safety_ui import MachineBar
 
 protocol_log.setup()
 
@@ -45,12 +45,12 @@ gui.show()
 settings = Settings_Manager.SettingsManager(default_settings_path=DEFAULT_SETTINGS_PATH, schema_path=SCHEMA_PATH, use_validation=False)
 
 
-#setup controllers
-#artisan_controller=Artisan_Controller.ArtisanController(connection_type="usb", port="COM6")
-artisan_controller = Artisan_Controller.ArtisanController(settings=settings)
+#setup controllers: the machine core runs in its own thread, the UI talks to it through the facades (v2.0, P2.8)
+rot_motor_controller = RotaryFacade(settings=settings)
+machine_bridge = MachineBridge(config=config_from_settings(settings), rotary=rot_motor_controller)
+artisan_controller = ArtisanFacade(machine_bridge, settings=settings)
 overview_camera_controller = Camera_Controller.USBCameraController(settings=settings, camera_type="overview_camera")
 laser_camera_controller = Camera_Controller.USBCameraController(settings=settings, camera_type="laser_camera")
-rot_motor_controller = RotMotor_Cotroller.RotMotorCotroller(settings=settings)
 controllers={"artisan_controller":artisan_controller,
              "overview_camera_controller":overview_camera_controller, 
              "laser_camera_controller":laser_camera_controller,
@@ -59,7 +59,7 @@ controllers={"artisan_controller":artisan_controller,
 
 # arduino_controller = ArduinoController.ArduinoController(gui, artisan_controller=artisan_controller)
 # arduino_controller.connect(port="COM5", baudrate=9600)
-process_handler = Process_Handler.ProcessHandler(gui, artisan_controller, rot_motor_controller)
+process_handler = CoreProcessHandler(gui, artisan_controller, rot_motor_controller)
 
 #setup interfaces
 main_interface=Main_GUI_Interface.MainInterface(gui, controllers, settings)
@@ -77,6 +77,18 @@ maschine_helper = Maschine_Helper.MaschineHelpers(gui, artisan_controller)
 maschine_helper.setup_helpers()
 
 gcode_plotter = Gcode_Plotter.GCodePlotter(gui, process_handler)
+
+#machine state, Stop / E-stop (F9 / F12, with confirmation)
+machine_bar = MachineBar(gui, artisan_controller)
+
+
+def shutdown():
+    """Laser off and stages stopped before the process ends."""
+    machine_bridge.shutdown()
+    rot_motor_controller.disconnect()
+
+
+app.aboutToQuit.connect(shutdown)
 
 
 sys.exit(app.exec())

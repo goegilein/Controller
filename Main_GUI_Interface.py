@@ -137,9 +137,17 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         
         self.update_gui()
 
+        # connecting runs in the machine thread now: refresh the machine / rotary status while the window is open
+        self.status_timer = QtCore.QTimer(self)
+        self.status_timer.timeout.connect(self.update_connection_status)
+        self.status_timer.start(500)
+
     def update_gui(self):
+        self.update_connection_status()
+        self.update_camera_status()
+
+    def update_connection_status(self):
         #artisan
-        #self.artisan_port_combobox.setText(self.artisan_controller.port)
         if self.artisan_controller.is_connection_active():
             self.artisan_connect_button.setText('disconnect')
             self.artisan_connect_label.setText(f'Connected on {self.artisan_controller.port}')
@@ -148,8 +156,18 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
             self.artisan_connect_button.setText('connect')
             self.artisan_connect_label.setText('Disconnected')
             self.artisan_connect_label.setStyleSheet("color: red;")
-        
-        #Overview Camera (Overview Camera)
+
+        #Rotary Motor Controller
+        if self.rot_mot_controller.is_connection_active():
+            self.rot_mot_connect_button.setText('disconnect')
+            self.rot_mot_connect_label.setText(f'Connected on {self.rot_mot_controller.port}')
+            self.rot_mot_connect_label.setStyleSheet("color: green;")
+        else:
+            self.rot_mot_connect_button.setText('connect')
+            self.rot_mot_connect_label.setText('Disconnected')
+            self.rot_mot_connect_label.setStyleSheet("color: red;")
+
+    def update_camera_status(self):
         self.overview_camera_select_comboBox.setCurrentIndex(self.overview_camera_controller.camera_index+1)  # +1 to account for the placeholder
         if self.overview_camera_controller.connected:
             self.overview_camera_connect_button.setText('disconnect')
@@ -170,17 +188,6 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
             self.laser_camera_connect_button.setText('connect')
             self.laser_camera_connect_label.setText('Disconnected')
             self.laser_camera_connect_label.setStyleSheet("color: red;")
-
-        #Rotary Motor Controller
-        #self.artisan_port_combobox.setText(self.artisan_controller.port)
-        if self.rot_mot_controller.is_connection_active():
-            self.rot_mot_connect_button.setText('disconnect')
-            self.rot_mot_connect_label.setText(f'Connected on {self.rot_mot_controller.port}')
-            self.rot_mot_connect_label.setStyleSheet("color: green;")
-        else:
-            self.rot_mot_connect_button.setText('connect')
-            self.rot_mot_connect_label.setText('Disconnected')
-            self.rot_mot_connect_label.setStyleSheet("color: red;")
     
     def connect_disconnect(self,controller):
         sender=self.sender()
@@ -214,7 +221,7 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
     def populate_comports(self, combobox):
         combobox.clear()
         ports = [p.device for p in list_ports.comports()]
-        combobox.addItems(ports)
+        combobox.addItems(ports + ["simulator"])  # virtual machine / stages for dry runs (P2.8c)
 
 
 
