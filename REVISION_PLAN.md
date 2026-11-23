@@ -255,8 +255,21 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   the loop drove on to the old target 20 ms later; a wait could return before the move started (relied on a 0.1 s
   sleep). Not covered: a killed process / PC power loss leaves the last speed active (wheel mode has no watchdog –
   VERIFY in the STS3215 manual). The old `RotMotor_Cotroller` is replaced in P2.8. Fixes B06.
-- [ ] P2.8 QtBridge; switch `Artisan_GUI_Interface`, `Process_GUI_Interface`, `Maschine_Helper`,
+- [~] P2.8 QtBridge; switch `Artisan_GUI_Interface`, `Process_GUI_Interface`, `Maschine_Helper`,
   `Interactive_Image_Control` to commands / events. Characterization tests updated **only** for agreed changes.
+  Done in three commits:
+  - [x] P2.8a `machine_bridge.py`: `MachineBridge` (worker events → queued Qt signal, UI thread only, B07),
+    `ArtisanFacade` (the old `ArtisanController` methods the UI calls, as commands; positions from the cache, no I/O
+    in the UI thread, B12), `RotaryFacade` (old `RotMotorCotroller` API on `machine_core.stages`; a click never
+    raises). Mapping of the old API: `move_axis_to("absolute")` = work frame, one `G0` (as v1.0);
+    `move_axis_absolute` = machine coordinates, Z-safe; `home_axis(False)` from `clicked()` homes all (v1.0 sent
+    `G28 False`); the homing question after connect stays (needed for machine coordinates). Settings: the misspelt
+    `max_z_speed` key is fixed (B16; value is 30 in the default settings, so no change); the worker's config is only
+    replaced while disconnected (B16: no `M1006` during a job).
+  - [ ] P2.8b `Process_Handler`: jobs, pause / resume / cancel and the bounding box through the worker.
+  - [ ] P2.8c `main_Controller` wiring; Stop and E-stop buttons with confirmation and hotkey; `simulator` port;
+    TCP removed. The old `Artisan_Controller` / `RotMotor_Cotroller` and their characterization tests stay until
+    the release clean-up (phase 4) as the v1.0 reference.
 
 ### Phase 3 – J-code and machine profile (prepare v3.0)
 
@@ -331,4 +344,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | P2.3: machine worker, stop race found and fixed on the simulator | `4778766` |
 | 2026-11-23 | P2.4: J-code reader and job runner in machine coordinates; burn path equal to v1.0; C15 | `62a9519` |
 | 2026-11-23 | P2.5: preflight – work area, power, feed; manual moves inside the work area; C15 answered | `f1d4637` |
-| 2026-11-23 | P2.7: rotary stages without Qt – safe stop, timeouts, cancel by the machine stop (B06) | see git log |
+| 2026-11-23 | P2.7: rotary stages without Qt – safe stop, timeouts, cancel by the machine stop (B06) | `037824b` |
+| 2026-11-23 | P2.8a: Qt bridge, Artisan and rotary facades with the old API | see git log |

@@ -192,6 +192,10 @@ class StageMotor:
         self.last_error = 0.0
         self.position_reached = True
 
+    def set_position_changed_callback(self, callback):
+        """Called with the stage angle (deg) from the control thread – receivers must be thread-safe (v1.0 API)."""
+        self.position_changed_callback.append(callback)
+
     def get_target_angle(self):
         return self.angle(self.target_ticks)
 
