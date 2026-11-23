@@ -25,7 +25,7 @@ class Rotary:
         self.sim = sim
         self.calls = []
 
-    def move_to_angle(self, sid, angle, wait_for_position=False):
+    def move_to_angle(self, sid, angle, wait_for_position=False, **kwargs):
         still = not self.sim._planner and not self.sim._busy_block
         self.calls.append((sid, angle, wait_for_position, still))
 

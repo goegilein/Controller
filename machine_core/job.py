@@ -163,7 +163,10 @@ class JobRunner:
                 self._move_to(matrix @ np.array([0.0, 0.0, 0.0, 1.0]))
                 if step.rot_motor_id is not None:
                     self._sync(0)
-                    self.rotary.move_to_angle(step.rot_motor_id, step.rot_base + seg.ref[3], wait_for_position=True)
+                    reached = self.rotary.move_to_angle(step.rot_motor_id, step.rot_base + seg.ref[3],
+                                                        wait_for_position=True, cancel=w._stop_requested.is_set)
+                    if reached is False:
+                        raise JobCancelled()
                 self._stream(seg, matrix, si, gi)
         self._sync(0)
         for line in w.config.laser_off:

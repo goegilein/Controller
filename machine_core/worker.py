@@ -21,6 +21,7 @@ import protocol_log
 from machine_core import messages as m
 from machine_core.job import JobCancelled, JobRunner, JobStep
 from machine_core.marlin import ConnectionLost, MarlinConnection, MarlinError, SendsBlocked
+from machine_core.stages import StageError
 from machine_core.state import MachineState as S, StateMachine
 from machine_core.transport import SerialTransport, SimTransport, TransportClosed
 
@@ -99,7 +100,16 @@ class MachineWorker:
         return self.homed >= {"X", "Y", "Z"}
 
     # ------------------------------------------------------------------ stop paths (caller's thread)
+    def _stop_rotary(self):
+        stop_all = getattr(self.rotary, "stop_all", None)
+        if stop_all:
+            try:
+                stop_all()
+            except Exception as e:
+                protocol_log.note("rotary", f"stop failed: {e!r}")
+
     def _emergency_stop(self):
+        self._stop_rotary()
         con = self.con
         if con is None or con.lost:
             return
@@ -113,6 +123,7 @@ class MachineWorker:
             self.state.to(S.ESTOP, "emergency stop – restart the machine, then reconnect")
 
     def _stop(self):
+        self._stop_rotary()
         con = self.con
         if con is None or con.lost:
             return
@@ -140,6 +151,8 @@ class MachineWorker:
                 pass  # a stop interrupted this command; _AfterStop (already queued) finishes the stop
             except MarlinError as e:
                 self._fail(str(e))
+            except StageError as e:
+                self._fail(f"rotary stage: {e}")
             except Exception as e:  # a bug in this thread must still switch the laser off (safety rule)
                 self._fail(f"internal error: {e!r}")
 

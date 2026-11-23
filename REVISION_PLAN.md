@@ -21,7 +21,7 @@ This file is the single source of truth for status – update it in the same com
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
-| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.5 done; next P2.7 rotary stages |
+| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.5, P2.7 done; next P2.8 Qt bridge / UI |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
@@ -115,7 +115,7 @@ Severity: **S** = safety (person, machine, workpiece), **F** = wrong function, *
 | B03 | F | **Acknowledgements are off by one after every `M114`.** `M114` waits for `"X:"`, its `ok` stays in the buffer and is consumed by the next command (the "do it twice" workaround for `M1006` is caused by this). In practice the job runs with up to 2 lines in flight. Fixing it changes the streaming timing → see C3. | [Artisan_Controller.py:432](Artisan_Controller.py#L432), [:579](Artisan_Controller.py#L579) | P2 | open |
 | B04 | S | **Emergency stop is not reachable.** `emergency_stop()` is not wired to any button or hotkey (`stop_axis_button` in the .ui is unused). If it were: `M112` waits for the command lock (held up to 60 s by the job thread) and then 60 s for an `ok` that never comes. | [Artisan_Controller.py:510](Artisan_Controller.py#L510) | P1 | open |
 | B05 | S | **Jogging during pause, then resume, burns a line.** Move controls are enabled in `Paused`; after resume the next `G1` starts from the jogged position. | [Artisan_GUI_Interface.py:194-196](Artisan_GUI_Interface.py#L194-L196) | P1 | open |
-| B06 | S | **Rotary motors can keep spinning.** Wheel mode with a PC-side PID: if the control thread dies (the dummy `read_pos(0)` is outside the `try`), the app exits or `disconnect()` closes the port, the last speed stays active. `move_to_angle(wait_for_position=True)` waits forever (the 100 s timeout is unused) → job hangs. | [RotMotor_Cotroller.py:114-180](RotMotor_Cotroller.py#L114-L180) | P1 | open |
+| B06 | S | **Rotary motors can keep spinning.** Wheel mode with a PC-side PID: if the control thread dies (the dummy `read_pos(0)` is outside the `try`), the app exits or `disconnect()` closes the port, the last speed stays active. `move_to_angle(wait_for_position=True)` waits forever (the 100 s timeout is unused) → job hangs. | [RotMotor_Cotroller.py:114-180](RotMotor_Cotroller.py#L114-L180) | P1 | fixed in core (P2.7), app switch P2.8 |
 | B07 | S | **Widgets are changed from worker threads.** `Artisan_GUI_Interface.threadsafe_update_process_state` calls the update directly (the emitter is unused); `ProcessInterface.update_process_state` is registered as a plain callback and runs in the job thread. Can crash Qt during a job. | [Artisan_GUI_Interface.py:186-189](Artisan_GUI_Interface.py#L186-L189), [Process_GUI_Interface.py:44](Process_GUI_Interface.py#L44) | P1 | open |
 | B08 | S | **No checks before the job:** work area, power / speed limits, a known toolhead / laser offset. `get_toolhead_info` returns `"TEST"` if the machine does not answer, so a job can start with `laser_offset = None` (fails mid-way). Unknown toolhead is detected by the *number* of `M1006` lines (39 / 34). | [Artisan_Controller.py:568-612](Artisan_Controller.py#L568-L612), [Process_Handler.py:261](Process_Handler.py#L261) | P2 (`"TEST"` in P1) | open |
 | B09 | F | A missing G-code file of a J-code is only printed and skipped; the `J1` indices then point to the wrong / no segment → `IndexError` mid-job, the rest of the step is skipped, **the next step still runs**. `J1` paths are resolved against the working directory, not the J-code folder. | [Process_Handler.py:578-579](Process_Handler.py#L578-L579) | P2 | open |
@@ -245,7 +245,16 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 - [ ] P2.6 Coordinates (C5): no `G92`; per-step 4×4 transform raw → machine applied to every `G0/G1` (X, Y, Z; F unchanged
   for rigid transforms); camera → laser offset as a translation; stored positions / fit points stay valid (already
   absolute). Fixes B10, B15, B18, B25.
-- [ ] P2.7 `stages.py` from `RotMotor_Cotroller` with safe stop and timeouts; direction per C8.
+- [x] P2.7 `stages.py` from `RotMotor_Cotroller` with safe stop and timeouts; direction per C8.
+  `machine_core/stages.py`: `RotaryStages` (no Qt) with the v1.0 PID unchanged, bus interface (`ScservoBus` real,
+  `SimStageBus` simulated with acceleration and faults). Speed 0 to every motor on disconnect, interpreter exit
+  (atexit), any exception in the control loop and 5 failed reads / writes in a row (fault, waits raise until
+  reconnect). `move_to_angle(wait)` has a timeout (default 100 s, as the unused v1.0 value) and a cancel hook; the
+  job runner passes the machine stop, so Stop / E-stop end a rotary wait at once and stop the stage. A stage error
+  in a job → machine error with the laser off. Two v1.0 bugs fixed on the way: `stop_motor` only wrote speed 0 and
+  the loop drove on to the old target 20 ms later; a wait could return before the move started (relied on a 0.1 s
+  sleep). Not covered: a killed process / PC power loss leaves the last speed active (wheel mode has no watchdog –
+  VERIFY in the STS3215 manual). The old `RotMotor_Cotroller` is replaced in P2.8. Fixes B06.
 - [ ] P2.8 QtBridge; switch `Artisan_GUI_Interface`, `Process_GUI_Interface`, `Maschine_Helper`,
   `Interactive_Image_Control` to commands / events. Characterization tests updated **only** for agreed changes.
 
@@ -321,4 +330,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | P2.2: Marlin protocol, transports, realtime simulator | `7a1bb39` |
 | 2026-11-23 | P2.3: machine worker, stop race found and fixed on the simulator | `4778766` |
 | 2026-11-23 | P2.4: J-code reader and job runner in machine coordinates; burn path equal to v1.0; C15 | `62a9519` |
-| 2026-11-23 | P2.5: preflight – work area, power, feed; manual moves inside the work area; C15 answered | see git log |
+| 2026-11-23 | P2.5: preflight – work area, power, feed; manual moves inside the work area; C15 answered | `f1d4637` |
+| 2026-11-23 | P2.7: rotary stages without Qt – safe stop, timeouts, cancel by the machine stop (B06) | see git log |
