@@ -266,7 +266,12 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
     `G28 False`); the homing question after connect stays (needed for machine coordinates). Settings: the misspelt
     `max_z_speed` key is fixed (B16; value is 30 in the default settings, so no change); the worker's config is only
     replaced while disconnected (B16: no `M1006` during a job).
-  - [ ] P2.8b `Process_Handler`: jobs, pause / resume / cancel and the bounding box through the worker.
+  - [x] P2.8b `job_bridge.CoreProcessHandler` (subclass of the v1.0 `ProcessHandler`, which stays untouched as the
+    reference): step management inherited unchanged; start → `StartJob` with `step_transform(x, y, z)` and the rotary
+    base angle r per step; pause / resume → `Pause` / `Resume`; cancel → `Stop` (no return move, agreed in P2.4);
+    process state and remaining time from the machine's events (UI thread, B07; no `join` in the UI, B14). Bounding
+    box: `MoveTo` in machine coordinates, the stored box is not changed and no `G92` is left (B10). Tested: a job
+    from the UI's process steps burns exactly what the runner burns (which equals v1.0, P2.4).
   - [ ] P2.8c `main_Controller` wiring; Stop and E-stop buttons with confirmation and hotkey; `simulator` port;
     TCP removed. The old `Artisan_Controller` / `RotMotor_Cotroller` and their characterization tests stay until
     the release clean-up (phase 4) as the v1.0 reference.
@@ -345,4 +350,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | P2.4: J-code reader and job runner in machine coordinates; burn path equal to v1.0; C15 | `62a9519` |
 | 2026-11-23 | P2.5: preflight – work area, power, feed; manual moves inside the work area; C15 answered | `f1d4637` |
 | 2026-11-23 | P2.7: rotary stages without Qt – safe stop, timeouts, cancel by the machine stop (B06) | `037824b` |
-| 2026-11-23 | P2.8a: Qt bridge, Artisan and rotary facades with the old API | see git log |
+| 2026-11-23 | P2.8a: Qt bridge, Artisan and rotary facades with the old API | `468fe90` |
+| 2026-11-23 | P2.8b: process steps run as core jobs; bounding box without G92 (B10) | see git log |
