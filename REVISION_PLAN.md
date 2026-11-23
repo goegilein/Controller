@@ -214,8 +214,9 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   on missing files (B09), relative `J1` paths, no joins in the UI (B14), work position per C6 (B18).
 - [ ] P2.5 Preflight checks: work area, toolhead / laser offset known, files present, rotary motor assigned,
   power / speed within the profile (B08, B17).
-- [ ] P2.6 Coordinates: decide G92 vs work coordinate systems (C5) and make the absolute position survive
-  reconnects (B15).
+- [ ] P2.6 Coordinates (C5): no `G92`; per-step 4×4 transform raw → machine applied to every `G0/G1` (X, Y, Z; F unchanged
+  for rigid transforms); camera → laser offset as a translation; stored positions / fit points stay valid (already
+  absolute). Fixes B10, B15, B18, B25.
 - [ ] P2.7 `stages.py` from `RotMotor_Cotroller` with safe stop and timeouts; direction per C8.
 - [ ] P2.8 QtBridge; switch `Artisan_GUI_Interface`, `Process_GUI_Interface`, `Maschine_Helper`,
   `Interactive_Image_Control` to commands / events. Characterization tests updated **only** for agreed changes.
@@ -254,7 +255,8 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | C2 | Emergency stop | **decided:** the Artisan has a hardware emergency stop. Software has two levels – *Stop* (`M410` quick stop + `M5`, keeps the connection) and *E-Stop* (`M112`) – **both ask for confirmation** first (Enter confirms, so it stays fast). Hotkey opens the same confirmation. |
 | C3 | Streaming window | **decided:** strict ack matching (fixes B03), one line in flight. Marlin acknowledges when a line is queued, so the planner stays full while we stream; it only drains at the sync point (`M400`). Today's accidental 2-line window is dropped – measure throughput in the simulator, check with a test burn later. |
 | C4 | Pause | **decided:** laser off (`M5`) in pause, restore laser mode / power on resume; no jogging in pause. Plus C13. |
-| C5 | Work position: `G92` vs firmware work coordinates vs app-side coordinates | open – options in the chat 2026-11-23; proposal for 2.0: keep `G92`, homing required after every connect (the team always homes), single-axis homing handled correctly. |
+| C5 | Work position / coordinates | **decided:** the app works in **absolute machine coordinates** and never sends `G92`. Every G-code coordinate is transformed in the app before sending; each process step holds a full 4×4 transform (rotation + translation) from the job's raw data into machine coordinates, so a rotated part can be processed (fits the sample-holder measurement and stored positions, which are already absolute). Homing is required after every connect. The "work position" stays as an app-side reference only. See C14. |
+| C14 | Does `G28` clear a `G92` shift left by v1.0 or another program, and does `M114` then report machine coordinates? Are `G53` / `G92.1` supported? | to verify with the G-code reference (the wiki blocks automated fetches – user saves a copy) and on the machine; until then: home on connect and refuse jobs before homing |
 | C6 | Work position after a job | **decided:** known bug – restore the previous work position (B18). |
 | C7 | Toolhead detection | postponed (needs recordings). |
 | C8 | Rotary stages | **decided:** own hardware, driven by this software (not by the Snapmaker controller); PC-side PID stays, with safety fixes (B06). Gear ratio **3:1 is correct** (LaserMachine Nur_Gantry.md Kap. 8.1 says 4:1 – to be corrected there). |
@@ -282,4 +284,7 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | Inventory, bug list, phase plan (draft) | `fbb214b` |
 | 2026-11-23 | P0.1: `__pycache__` untracked, requirements pinned; B24 found | `14e6d3f` |
 | 2026-11-23 | P0.2: protocol log | `f99f194` |
-| 2026-11-23 | P0.3 (draft) / P0.4 / P0.5: simulated Artisan, 8 characterization tests, hardware checklist; B25 found, B15 extended | see git log |
+| 2026-11-23 | P0.3 (draft) / P0.4 / P0.5: simulated Artisan, 8 characterization tests, hardware checklist; B25 found, B15 extended | `380e6d5` |
+| 2026-11-23 | Decisions C1–C12 | `ab0270d` |
+| 2026-11-23 | P2.1: messages and state machine | `3373954` |
+| 2026-11-23 | Decision C5: absolute machine coordinates, per-step transform; C14 | see git log |
