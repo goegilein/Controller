@@ -36,6 +36,10 @@ class ConnectionLost(MarlinError):
     pass
 
 
+class SendsBlocked(Exception):
+    """A stop was written; normal sends are refused until `unblock()` (not an error)."""
+
+
 def is_ok(line: str) -> bool:
     return line == "ok" or line.startswith("ok ")
 
@@ -46,6 +50,7 @@ class MarlinConnection:
         self.device = device
         self.on_unsolicited = on_unsolicited  # called with lines that belong to no command
         self.lost = None                      # reason, once the connection is gone
+        self._blocked = False                 # set by stop(): no line may follow the stop lines
         self._lines = queue.Queue()
         self._send_lock = threading.Lock()
         self._write_lock = threading.Lock()
@@ -85,8 +90,10 @@ class MarlinConnection:
                 self.on_unsolicited(line)
 
     # ------------------------------------------------------------------ writing
-    def _write(self, line):
+    def _write(self, line, bypass_block=False):
         with self._write_lock:
+            if self._blocked and not bypass_block:
+                raise SendsBlocked(line)
             protocol_log.sent(self.device, line)
             try:
                 self.transport.write_line(line)
@@ -120,8 +127,23 @@ class MarlinConnection:
                     deadline = time.monotonic() + timeout
 
     def write_now(self, line: str):
-        """Write without waiting for an ack and without the send lock (stop / emergency stop)."""
-        self._write(line)
+        """Write without waiting for an ack and without the send lock (laser off, emergency stop)."""
+        self._write(line, bypass_block=True)
+
+    def stop(self, lines):
+        """Write `lines` at once and refuse every normal send until `unblock()`.
+
+        Taken under the write lock, so no line of a sender that is just about to write can slip in behind the stop.
+        """
+        with self._write_lock:
+            self._blocked = True
+        for line in lines:
+            self._write(line, bypass_block=True)
+
+    def unblock(self):
+        with self._write_lock:
+            self._blocked = False
+        self._drain_stale()
 
     def close(self):
         self._mark_lost("closed by host")

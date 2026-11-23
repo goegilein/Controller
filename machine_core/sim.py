@@ -64,6 +64,8 @@ class SimArtisan:
         self._input = deque()
         self._planner = deque()
         self._busy_block = False
+        self._abort_block = False
+        self._block = None
         self._last_block_end = None
         self._stop = False
         if realtime:
@@ -197,18 +199,28 @@ class SimArtisan:
             return ["Tool Head: LASER"] + [f"info{i}: placeholder" for i in range(n - 2)] + ["ok"]
         if code == "M118":
             return [line.split(None, 1)[1] if " " in line else "", "ok"]
-        if code == "M112":
-            self.halted = True
-            self.laser_mode = None
+        if code in ("M112", "M410"):
             self._planner.clear()
-            return []
-        if code == "M410":
-            self._planner.clear()
-            self.machine = list(self.executed) if self.realtime else self.machine
+            if self.realtime:
+                self.executed = self._head_position()
+                self.machine = list(self.executed)
+                self._abort_block = True
+            if code == "M112":
+                self.halted = True
+                self.laser_mode = None
+                return []
             return ["ok"]
         if not (code[:1] in ("G", "M") and code[1:].isdigit()):
             return [f'echo:Unknown command: "{line}"', "ok"]
         return ["ok"]  # M8/M9, M400 (instant mode), M2000, ...
+
+    def _head_position(self):
+        """Where the head is right now: interpolated inside the running block."""
+        if self._block is None:
+            return list(self.executed)
+        start, target, t0, t1 = self._block
+        progress = 1.0 if t1 <= t0 else min(1.0, (time.time() - t0) / (t1 - t0))
+        return [s + (t - s) * progress for s, t in zip(start, target)]
 
     def _queue(self, duration, target, emits):
         while len(self._planner) + self._busy_block >= self.planner_size and not self._stop and not self.halted:
@@ -244,12 +256,18 @@ class SimArtisan:
                     return
                 duration, target, emits = self._planner.popleft()
                 self._busy_block = True
+                self._abort_block = False
                 now = time.time()
                 if self._last_block_end is not None:  # time the head stood still between two blocks
                     self.idle_gaps += max(0.0, now - self._last_block_end)
-            time.sleep(duration / self.speedup)
-            with self._lock:
-                self.executed = target
+                # run the block; M410 / M112 interrupt it where the head is (see _head_position)
+                end = now + duration / self.speedup
+                self._block = (list(self.executed), target, now, end)
+                while not self._abort_block and not self._stop and time.time() < end:
+                    self._lock.wait(min(0.01, max(0.0, end - time.time())))
+                if not self._abort_block:
+                    self.executed = target
+                self._block = None
                 self.blocks_executed += 1
                 self._busy_block = False
                 self._last_block_end = time.time()

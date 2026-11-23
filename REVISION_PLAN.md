@@ -21,7 +21,7 @@ This file is the single source of truth for status – update it in the same com
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
-| 2 – Machine core without Qt (Marlin) | in progress | P2.1, P2.2 done; next P2.3 worker |
+| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.3 done; next P2.4 job runner |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
@@ -213,8 +213,15 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   fault injection. Tests `tests/test_core_marlin.py` (both sim modes): one `M1006` is enough now; with one line in
   flight 200 short hatch segments at 10× speed never let the planner run empty (C3, in-process – real USB latency to
   be checked on the machine); M3 standstill emission is visible in the simulator (C13).
-- [ ] P2.3 `worker.py`: single owner of the port, atomic command sequences (B11), emergency-stop bypass, tracking
-  by `M114` polling in the worker (B13), no serial I/O in the UI (B12).
+- [x] P2.3 [machine_core/worker.py](machine_core/worker.py): the only thread on the port; `submit()` never blocks;
+  machine coordinates without `G92` (C5), app-side work position; absolute moves only after homing; atomic
+  `G91 … G90` (B11); M114 polling while idle (B13); one `M1006`, unknown head → error (B08); Stop = `M410` + laser
+  off, E-stop = `M112` → `estop` until reconnect (B04, confirmation in the UI per C2); laser off on error, ack timeout,
+  lost connection, exception in the thread and shutdown (B01); coordinates without float noise (B25); simulator
+  port `"simulator"` for dry runs. Tests `tests/test_core_worker.py` (15 scenarios).
+  Found on the simulator: a stop racing with a line that is just being sent let that line reach the machine after
+  `M410` – fixed by `MarlinConnection.stop()` blocking all sends under the write lock until the worker finished the
+  stop. Note: Marlin acks a move when it is queued, so `idle` does not mean the head stands still (as in v1.0).
 - [ ] P2.4 Job runner on the worker: today's J-code semantics, pause / resume / cancel per C4, fails at load time
   on missing files (B09), relative `J1` paths, no joins in the UI (B14), work position per C6 (B18).
 - [ ] P2.5 Preflight checks: work area, toolhead / laser offset known, files present, rotary motor assigned,
@@ -293,4 +300,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | Decisions C1–C12 | `ab0270d` |
 | 2026-11-23 | P2.1: messages and state machine | `3373954` |
 | 2026-11-23 | Decision C5: absolute machine coordinates, per-step transform; C14 | `711e919` |
-| 2026-11-23 | P2.2: Marlin protocol, transports, realtime simulator | see git log |
+| 2026-11-23 | P2.2: Marlin protocol, transports, realtime simulator | `7a1bb39` |
+| 2026-11-23 | P2.3: machine worker, stop race found and fixed on the simulator | see git log |
