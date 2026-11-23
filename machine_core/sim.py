@@ -11,6 +11,9 @@ Laser model: modal `M3` / `M4` / `M5` with the power of the last `S` / `P`; `G0`
 `laser_armed` is True while the laser would fire on the next `G1` – or at standstill in `M3` mode, which is recorded
 in `standstill_emission` (worst case of C13, unless `laser_off_at_standstill=True`).
 
+Emergency parser (`emergency_parser=True`, Marlin option): `M112` / `M410` act on arrival, even while the firmware
+waits in `M400` or on a full planner. Whether the Snapmaker firmware has it is open (C15).
+
 Faults for tests: `fail_after` (cable pulled after n lines), `drop_ack(line)`, `error_reply(line)`, `extra_lines(line)`.
 
 Answers are modelled after Marlin and after what the current code expects. VERIFY against recorded protocol logs
@@ -32,12 +35,14 @@ class SimDisconnected(Exception):
 
 
 class SimArtisan:
-    def __init__(self, toolhead="laser1064", realtime=False, speedup=1.0, planner_size=16, laser_off_at_standstill=False):
+    def __init__(self, toolhead="laser1064", realtime=False, speedup=1.0, planner_size=16, laser_off_at_standstill=False,
+                 emergency_parser=True):
         self.toolhead = toolhead
         self.realtime = realtime
         self.speedup = speedup
         self.planner_size = planner_size
         self.laser_off_at_standstill = laser_off_at_standstill
+        self.emergency_parser = emergency_parser  # Marlin EMERGENCY_PARSER: M112 / M410 act on arrival (VERIFY C15)
 
         self.machine = [0.0, 0.0, 0.0]   # planned position (end of the queue) in machine coordinates – what M114 reports
         self.executed = [0.0, 0.0, 0.0]  # where the head is now (realtime mode)
@@ -58,6 +63,7 @@ class SimArtisan:
         self.standstill_emission = []    # times at which M3 kept the laser on with nothing moving
         self.idle_gaps = 0.0             # s the head stood still between two blocks (planner starvation, sync points)
         self.blocks_executed = 0
+        self.moves = []                  # (code, machine position after the line, laser would emit) per G0 / G1
 
         self._out = deque()
         self._lock = threading.Condition()
@@ -84,6 +90,11 @@ class SimArtisan:
             if self.halted:
                 return
             if self.realtime:
+                code = line.split(";")[0].strip().upper().split(" ")[0] if line.strip() else ""
+                if self.emergency_parser and code in ("M112", "M410"):
+                    self._execute(code)  # acts at once, even while the firmware waits in M400 or on a full planner
+                    if code == "M112":
+                        return
                 self._input.append(line)
                 self._lock.notify_all()
             else:
@@ -152,6 +163,7 @@ class SimArtisan:
                     self.laser_power = words["S"]
                 elif "P" in words:
                     self.laser_power = words["P"]
+            self.moves.append((code, tuple(self.machine), code == "G1" and self.laser_armed))
             if self.realtime:
                 duration = math.dist(start, self.machine) / self.feed * 60 if self.feed > 0 else 0.0
                 self._queue(duration, list(self.machine), emits=(code == "G1" and self.laser_armed))

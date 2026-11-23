@@ -20,12 +20,12 @@ def wait_for(predicate, timeout=3.0, what="condition"):
 
 
 class Rig:
-    def __init__(self, toolhead="laser1064", speedup=20, **config):
-        self.sim = SimArtisan(toolhead=toolhead, realtime=True, speedup=speedup)
+    def __init__(self, toolhead="laser1064", speedup=20, realtime=True, rotary=None, **config):
+        self.sim = SimArtisan(toolhead=toolhead, realtime=realtime, speedup=speedup)
         self.events = []
         self._lock = threading.Lock()
         self.worker = MachineWorker(on_event=self._on_event, config=ArtisanConfig(**config),
-                                    transport_factory=lambda port, baud: SimTransport(self.sim))
+                                    transport_factory=lambda port, baud: SimTransport(self.sim), rotary=rotary)
 
     def _on_event(self, event):
         with self._lock:

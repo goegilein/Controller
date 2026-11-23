@@ -21,7 +21,7 @@ This file is the single source of truth for status – update it in the same com
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
-| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.3 done; next P2.4 job runner |
+| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.4 done; next P2.5 preflight / work area |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
@@ -222,8 +222,19 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   Found on the simulator: a stop racing with a line that is just being sent let that line reach the machine after
   `M410` – fixed by `MarlinConnection.stop()` blocking all sends under the write lock until the worker finished the
   stop. Note: Marlin acks a move when it is queued, so `idle` does not mean the head stands still (as in v1.0).
-- [ ] P2.4 Job runner on the worker: today's J-code semantics, pause / resume / cancel per C4, fails at load time
-  on missing files (B09), relative `J1` paths, no joins in the UI (B14), work position per C6 (B18).
+- [x] P2.4 [machine_core/jcode.py](machine_core/jcode.py) (J-code v0 reader, `J1` relative to the J-code folder,
+  missing files / `G2 G3 G28 G92 G53–G59` refused at load, non-command lines skipped with a warning, v1.0
+  segmentation ≤ 1 s) and [machine_core/job.py](machine_core/job.py) (runner on the worker thread):
+  `machine = T_laser · T_step · Trans(J0) · p_raw` with a 4×4 `T_step` per step (rotation supported), absolute G90
+  lines in machine coordinates, `M400` before every segment move and before the rotary axis turns, pause per C4
+  (drain, `M5`, restore mode line and power words on resume), no jogging in pause, laser off and back to the start
+  at the end, work position untouched. Tests `tests/test_core_job.py` (12), among them: **the burn path of a
+  J-code job with two steps, rotary axis and segmentation is identical to v1.0** (machine positions of every `G1`,
+  laser state), a 90° rotated part, pause / stop / E-stop / cable pulled during a job.
+  **Intended changes vs v1.0** (to confirm on the machine): sync is `M400` only (no `M118`); the head moves
+  directly to each segment origin (v1.0: to the camera position, then by the laser offset); after a *Stop* the
+  head stays where it stopped (v1.0 cancel drove back to the start – moving without the user is avoided); `J0`
+  without an axis means 0 (v1.0 reused the previous value); `M5`, `M9` are always sent at the end of a job.
 - [ ] P2.5 Preflight checks: work area, toolhead / laser offset known, files present, rotary motor assigned,
   power / speed within the profile (B08, B17).
 - [ ] P2.6 Coordinates (C5): no `G92`; per-step 4×4 transform raw → machine applied to every `G0/G1` (X, Y, Z; F unchanged
@@ -268,6 +279,7 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | C3 | Streaming window | **decided:** strict ack matching (fixes B03), one line in flight. Marlin acknowledges when a line is queued, so the planner stays full while we stream; it only drains at the sync point (`M400`). Today's accidental 2-line window is dropped – measure throughput in the simulator, check with a test burn later. |
 | C4 | Pause | **decided:** laser off (`M5`) in pause, restore laser mode / power on resume; no jogging in pause. Plus C13. |
 | C5 | Work position / coordinates | **decided:** the app works in **absolute machine coordinates** and never sends `G92`. Every G-code coordinate is transformed in the app before sending; each process step holds a full 4×4 transform (rotation + translation) from the job's raw data into machine coordinates, so a rotated part can be processed (fits the sample-holder measurement and stored positions, which are already absolute). Homing is required after every connect. The "work position" stays as an app-side reference only. See C14. |
+| C15 | Does the Snapmaker firmware have Marlin's emergency parser (`M112` / `M410` act on arrival)? Without it, a software stop only acts after the queued moves (≤ 16 blocks) or a running `M400`. | verify with the G-code reference / on the machine; the simulator assumes yes, `emergency_parser=False` tests the other case. The hardware E-stop is independent of it. |
 | C14 | Does `G28` clear a `G92` shift left by v1.0 or another program, and does `M114` then report machine coordinates? Are `G53` / `G92.1` supported? | to verify with the G-code reference (the wiki blocks automated fetches – user saves a copy) and on the machine; until then: home on connect and refuse jobs before homing |
 | C6 | Work position after a job | **decided:** known bug – restore the previous work position (B18). |
 | C7 | Toolhead detection | postponed (needs recordings). |
@@ -301,4 +313,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | P2.1: messages and state machine | `3373954` |
 | 2026-11-23 | Decision C5: absolute machine coordinates, per-step transform; C14 | `711e919` |
 | 2026-11-23 | P2.2: Marlin protocol, transports, realtime simulator | `7a1bb39` |
-| 2026-11-23 | P2.3: machine worker, stop race found and fixed on the simulator | see git log |
+| 2026-11-23 | P2.3: machine worker, stop race found and fixed on the simulator | `4778766` |
+| 2026-11-23 | P2.4: J-code reader and job runner in machine coordinates; burn path equal to v1.0; C15 | see git log |

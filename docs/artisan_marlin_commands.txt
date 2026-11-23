@@ -1,0 +1,1138 @@
+
+Snapmaker Wiki
+Search...
+General
+
+/
+/
+/
+Snapmaker Artisan G-code commands
+This article provides a list of Snapmaker Artisan G-code commands.
+Page Contents
+Talk
+Last edited by
+Administrator
+08/23/2024
+Preamble
+Here are some important notes that you must read before jumping to the detailed commands references.
+
+The Artisan firmware is based on Marlin v2.0.x. Therefore, its supported G-code commands are mostly the same as the official G-code commands of Marlin. For specifics, please refer to Marlin official documentation.
+This article is based on Artisan v2.5.22 and later versions. If there are any discrepancies, it is recommended to upgrade the Artisan firmware to the latest version.
+This article describes the Artisan G-code commands by dividing them into three sub-commands:
+(1) Supported And Verified Commands -- recommended for use.
+(2) Supported But Unverified Commands -- not recommended for use.
+(3) Incompatible Or Unadapted Commands -- do not use.
+Marking Instructions:
+(1) For commands that have both the same name and behavior as those supported by Marlin, the command description will also be almost consistent with Marlin, without any special markings. For example: G4.
+(2) For commands that have the same name as those supported by Marlin but exhibit different behavior, the command description will be marked with 'Modified'. For example: M3/M4 (Modified).
+(3) For commands that are unique to Artisan, the command description will be marked with 'Artisan'. For example: M101 (Artisan).
+Supported And Verified Commands
+The commands described in this section are all normally supported and have been rigorously tested and verified. They are recommended for use.
+
+G0 - G1 - Linear Move
+Description
+The G0 and G1 commands add a linear move to the queue to be performed after all previous moves are completed. These commands yield control back to the command parser as soon as the move is queued, but they may delay the command parser while awaiting a slot in the queue.
+A linear move traces a straight line from one point to another, ensuring that the specified axes will arrive simultaneously at the given coordinates (by linear interpolation). The speed may change over time following an acceleration curve, according to the acceleration and jerk settings of the given axes.
+A command like G1 F1000 sets the feedrate for all subsequent moves.
+By convention, most G-code generators use G0 for non-extrusion movements (those without the E axis) and G1 for moves that include extrusion. This is meant to allow a kinematic system to, optionally, do a more rapid uninterpolated movement requiring much less calculation.
+For Cartesians and Deltas the G0 (rapid linear movement) command is (and must be) a direct alias for G1 (rapid movement). On SCARA machines G0 does a fast non-linear move. Marlin 2.0 introduces an option to maintain a separate default feedrate for G0. Note: Slicers tend to override firmware feedrates!
+Notes
+Coordinates are given in millimeters by default.
+In Relative Mode (G91) all coordinates are interpreted as relative, adding onto the previous position.
+In Extruder Relative Mode (M83) the E coordinate is interpreted as relative, adding onto the previous E position.
+A single linear move may generate several smaller moves to the planner due to kinematics and bed leveling compensation.
+Usage
+G0 [E<pos>] [F<rate>] [S<power>] [X<pos>] [Y<pos>] [Z<pos>] ...
+G1 [E<pos>] [F<rate>] [S<power>] [X<pos>] [Y<pos>] [Z<pos>] ...
+Parameters
+E: An absolute or relative coordinate on the E (extruder) axis (in current units). The E axis describes the position of the filament in terms of input to the extruder feeder.
+F: The maximum movement rate of the movement between the start and end point. The feedrate set here applies to subsequent moves that omit this parameter.
+S: Set the laser power for the move.
+X: An absolute or relative coordinate on the X axis (in current units).
+Y: An absolute or relative coordinate on the Y axis (in current units).
+Z: An absolute or relative coordinate on the Z axis (in current units).
+B: An absolute or relative coordinate on the B axis (in current units).
+Examples
+The most basic move sets a feedrate and moves the tool to the given position.
+G0 X12         ; Move to 12mm on the X axis
+G0 F1500       ; Set the feedrate to 1500 mm/min
+G0 X90.6 Y13.8 ; Move to 90.6mm on the X axis and 13.8mm on the Y axis
+There are some caveats related with feedrates. Consider the following:
+G1 F1500           ; Set the feedrate to 1500 mm/min
+G92 E0
+G1 X50 Y25.3 E22.4 ; Move while extruding
+In the above example the feedrate is set to 1500 mm/min, then the tool is moved 50mm on the X axis and 25.3mm on the Y axis while extruding 22.4mm of filament between the two points.
+G1 F1500
+G92 E0
+G1 X50 Y25.3 E22.4 F3000
+However, in the above example, we set a feedrate of 1500 mm/min on line 1 then do the move described above, accelerating to a feedrate of 3000 mm/min (if possible). The extrusion will accelerate along with the X and Y movement, so everything stays synchronized.
+G4 - Dwell
+Description
+Dwell pauses the command queue and waits for a period of time.
+Notes
+If both S and P are included, S takes precedence.
+G4 with no arguments is effectively the same as M400.
+Usage
+G4 [P<time(ms)>] [S<time(sec)>]
+Parameters
+P ：Amount of time to dwell.
+S ：Amount of time to dwell.
+Examples
+G4 P500 ; Dwell for 1/2 second
+G21 - Millimeter Units
+Description
+Set units to millimeters. In this mode, all positions, offsets, rates, accelerations, etc., specified in G-code parameters are interpreted as millimeters.
+Notes
+Since Artisan does not support G20 currently, the unit used within Artisan remains millimeters, regardless of whether G21 is set.
+Usage
+G21
+Examples
+G21 ; set units to millimeters
+G28 - Auto Home
+Description
+When you first start up your machine, it has no idea where the toolhead is positioned, so Marlin needs to use a procedure called “homing” to establish a known position. To do this, it moves each axis towards one end of its track until it triggers a switch, commonly called an “endstop”. Marlin knows where the endstops are, so once all the endstops have been triggered, the position is known.
+The G28 command is used to home one or more axes. The default behavior with no parameters is to home all axes.
+The position is easy to lose when the steppers are turned off, so homing may be required or advised after the machine has been sitting idle for a period of time.
+Notes
+To prevent collisions, the machine will only home all axes for 3DP scenes.
+Usage
+G28 [L] [O] [R] [X] [Y] [Z]
+Parameters
+L: Flag to restore bed leveling state after homing. (default true)
+O: Flag to skip homing if the position is already trusted.
+R: The distance to raise the nozzle before homing.
+X: Flag to home the X axis.
+Y: Flag to home the Y axis.
+Z: Flag to home the Z axis.
+Examples
+The most-used form of this command is to home all axes:
+G28    ; Home all axes
+G28 X Z ; Home the X and Z axes
+G28 O ; Home all "untrusted" axes
+G42 - Move to mesh coordinate
+Description
+The G42 command moves the nozzle to the location corresponding to a specific coordinate in the bed leveling mesh. It operates similarly to the G0 and G1 commands except that the provided coordinates are a mesh row and column instead of an absolute or relative position on the bed.
+The G42 command will determine the bed position that corresponds to the provided mesh row and column and move the nozzle to that position.
+Usage
+G42 [F<rate>] [I<pos>] [J<pos>]
+Parameters
+F: The maximum movement rate of the movement between the start and end point. The feedrate set here applies to subsequent moves that omit this parameter.
+I: The column of the mesh coordinate.
+J: The row of the mesh coordinate.
+Examples
+Move to various points on a 5x5 mesh.
+G42 I0 J0 ; front left corner
+G42 I2 J2 ; center
+G42 I2 J4 ; back center
+G42 I4 J4 ; back right
+G53 - Move in Machine Coordinates
+Description
+G53 applies native workspace to the current move. See G54 - G59.3 for workspace coordinate system. In CNC G-code G53 is a modifier. It precedes a movement command (or other modifiers) on the same line. Marlin also accepts G53 on a line by itself as the command to return to the native workspace.
+Usage
+G53
+Examples
+Rapid linear move to the machine origin in native space.
+G53 G0 X0 Y0 Z0
+Rapid linear move to absolute coordinate X20 in native space.
+G53 G1 X20
+Use native space
+G53
+G54 - G59.3 - Workspace Coordinate System
+Description
+A workspace is an XYZ offset to the native machine space. All workspaces default to (0,0,0) at start, or with EEPROM support they may be restored from a previous session. See G53 for native space.
+G92: used to set the current workspace’s offset.
+G54: use coordinate system 1.
+G55: use coordinate system 2.
+G56: use coordinate system 3.
+G57: use coordinate system 4.
+G58: use coordinate system 5.
+G59: use coordinate system 6.
+G59.1: use coordinate system 7.
+G59.2: use coordinate system 8.
+G59.3: use coordinate system 9.
+Notes
+Between Artisan and Luban, as well as between Artisan's controller and screen, only G53 and G54 are recommended for use.
+Usage
+G54
+G55
+G56
+G57
+G58
+G59
+G59.1
+G59.2
+G59.3
+Examples
+Use coordinate system 1 and rapid move to workspace offset origin:
+G54 ; Select workspace 1
+G0 X0 Y0 X0
+G90 - Absolute Positioning
+Description
+In absolute mode, all coordinates given in G-code are interpreted as positions in the logical coordinate space. This includes the extruder position unless overridden by M83.
+Notes
+Absolute positioning is the default.
+Usage
+G90
+Examples
+Enable absolute mode.
+G90 ; Set all axes to absolute
+G91 - Relative Positioning
+Description
+Set relative position mode. In this mode, all coordinates are interpreted as relative to the last position. This includes the extruder position unless overridden by M82.
+Usage
+G91
+Examples
+Enable relative mode.
+G91 ; Set all axes to relative
+G92 - Set Position
+Description
+Set the current position to the values specified, and the software endstops are adjusted to preserve the physical movement limits. Thus, you could use G92 to set the middle of the bed to (0,0,0) and then run .gcode.
+The CNC_COORDINATE_SYSTEMS option enables use of G92.1 to reset the selected workspace to native machine space. See G54 - G59 and G53.
+Usage
+G92 [E<pos>] [X<pos>] [Y<pos>] [Z<pos>]
+Parameters
+E: New extruder position.
+X: New X axis position.
+Y: New Y axis position.
+Z: New Z axis position.
+Examples
+Specify that the nozzle’s current X position is 10 and the current extruder position is 90.
+G92 X10 E90
+Specify that the nozzle’s current XYZ position is 0, 0, 0.
+G92 X0 Y0 Z0
+Resets selected workspace is 0, 0, 0.
+G92.1
+M3/M4 (Modified) - CNC/Laser On
+Description
+For laser toolhead, both M3 and M4 are used to set the laser power.
+M3 is used to set a constant power. That is, in M3 mode, the machine will not change the laser power during motion.
+M4 is used to set a variable power. That is, in M4 mode, the machine will dynamically adjust the laser power based on the movement speed of the toolhead during motion, in pursuit of better and smoother laser engraving effects.
+For CNC toolhead, both M3 and M4 are used to set the CNC spindle speed, and the effects of M3 and M4 are consistent in the current version.
+Notes
+For laser toolhead, when the M3/M4 command is used without parameters, the laser toolhead will output at the power configured most recently.
+For CNC toolhead, it is not allowed to use M3/M4 command without parameters.
+Usage
+M3 [P] [S]
+M4 [P] [S]
+Parameters
+laser toolhead
+P: power, in the [0, 100]% range.
+S: power, in the PWM [0, 255] range.
+If both S and P are included, P takes precedence.
+CNC toolhead
+P: spindle speed, in the [0, 100]% range.
+S: spindle speed, in the [8000, 18000]rpm range, usually.
+If both S and P are included, P takes precedence.
+Examples
+M3 P80
+M4 S255
+M5 - CNC/Laser Off
+Description
+Wait for moves to complete, then turn off the spindle / laser power and PWM.
+Notes
+G0 and G28 will also turn the laser off.
+Usage
+M5
+Examples
+Turn off the spindle or laser.
+M5
+M7 - M9 (Modified) - Coolant/Air Assist Controls
+Description
+These commands pertain to a CNC machine with a liquid cooling system or a laser with air assist.
+Both M7 and M8 have the same effect, which is used to turn on the coolant/air assist.
+M9 is used to turn off the coolant/air assist.
+Usage
+M7
+M8
+M9
+Examples
+M8    ; turn on the coolant/air assist
+M9    ; turn off the coolant/air assist
+M82 - E Absolute
+Description
+This command is used to override G91 and put the E axis into absolute mode independent of the other axes.
+Notes
+G90 and G91 clear this mode.
+Usage
+M82
+Examples
+Set E to Absolute Positioning.
+M82
+M83 - E Relative
+Description
+This command is used to override G90 and put the E axis into relative mode independent of the other axes.
+Notes
+G90 and G91 clear this mode.
+Usage
+M83
+Examples
+Set E to Relative Positioning.
+M83
+M92 - Set Axis Steps-per-unit
+Description
+Use M92 to set the steps-per-unit for one or more axes. This setting affects how many steps will be done for each unit of movement.
+In the current version, the unit on the XYZE axis is set in steps-per-millimeter, and the unit on the AB axis is steps-per-degree.
+Notes
+These are saved with M500 and loaded with M501 and reset with M502.
+Get the current settings using M92 with no parameters or M503.
+Usage
+M92 [E] [T] [X] [Y] [Z] [A] [B]
+Parameters
+E: E steps per unit.
+T: Target extruder.
+X: X steps per unit.
+Y: Y steps per unit.
+Z: Z steps per unit.
+A: A steps per unit.
+B: B steps per unit.
+Examples
+Set E steps for a new extruder.
+M92 E688.4
+M101 (Artisan) - FreeRTOS Tasks Info
+Description
+Obtain FreeRTOS task information, such as remaining available memory information.
+Usage
+M101
+Examples
+M101
+M104 - Set Hotend Temperature
+Description
+Set a new target hot end temperature and continue without waiting. The firmware will continue to try to reach and hold the temperature in the background.
+Use M109 to wait for the hot end to reach the target temperature.
+Usage
+M104 [T] [S]
+Parameters
+T: Hotend index. If omitted, the currently active hotend will be used.
+S: Target temperature.
+Examples
+Set target temperature for the active hotend.
+M104 S185
+Set target temperature for E1.
+M104 T1 S205
+M105 - Report Temperatures
+Description
+Request a temperature report to be sent to the host as soon as possible.
+Notes
+A better way for hosts to get regular temperature updates is to use M155 . Hosts then no longer need to run an extra process or use up slots in the command buffer to receive temperatures.
+Usage
+M105 [T<index>]
+Parameters
+T: Hotend index.
+Examples
+Get a temperature report.
+M105
+M106 - Set Fan Speed
+Description
+Turn on one of the fans and set its speed. If no fan index is given, the print cooling fan is selected. The fan speed applies to the next block added to the planner, so it will not take effect until previous moves in the planner are done. Under manual control with an idle machine, M106 will change the fan speed immediately.
+Notes
+M106 with no speed sets the fan to full speed.
+Turn off fans with M107.
+Usage
+M106 [P<index>] [S<speed>]
+Parameters
+P: Fan index.
+S: Speed, from 0 to 255. S255 provides 100% duty cycle; S128 produces 50%.
+Examples
+Turn on the fan at 200/255 DC
+M106 S200
+M107 - Fan Off
+Description
+Turn off one of the fans. If no fan index is given, the print cooling fan.
+Notes
+Turn on fans with M106.
+Usage
+M107 [P<index>]
+Parameters
+P: Fan index.
+Examples
+M107
+M108 - Break and Continue
+Description
+Some G-code commands cause Marlin to go into a closed loop, waiting indefinitely for a certain state or event. For example, M109 waits for the target temperature to be reached.
+In the case of M109, the M108 command stops waiting for the target temperature and continues processing G-code. This may result in “cold extrude” messages.
+Usage
+M108
+Examples
+M108
+M109 (Modified) - Wait for Hotend Temperature
+Description
+This command optionally sets a new target hot end temperature and waits for the target temperature to be reached before proceeding. If the temperature is set with S then M109 waits only when heating. If the temperature is set with R then M109 will also wait for the temperature to go down.
+To optimize temperature control performance and ensure the stability of the hot end temperature, two concepts, the temperature window and the temperature residency time, are used in the machine's firmware.
+The temperature window refers to the maximum allowable deviation between the actual temperature of the hot end and the target temperature, measured in ℃, and is specified by the C parameter. For example, C3 represents a maximum allowable deviation of ±3℃. This means that when the actual temperature of the hot end is within ±3℃ of its target temperature, the machine considers the hot end to have reached the target temperature.
+The temperature residency time refers to the duration that the actual temperature of the hot end needs to remain within the configured temperature window, measured in seconds, and is specified by the W parameter. For instance, W1 indicates that when the actual temperature of the hot end remains within its target temperature window for 1 second, the machine considers the actual temperature of the hot end to have reached and stabilized at its target temperature.
+Only when the actual temperature of the hot end falls within the specified temperature window and maintains the specified temperature residency time, the machine considers the hot end to have truly reached the target temperature, thus ending the wait.
+Notes
+To set the hot end temperature and proceed without waiting, use M104.
+Usage
+M109 [T] [S] [R] [C] [W]
+Parameters
+T: Hotend index. If omitted, the currently active hotend will be used.
+S: Target temperature (wait only when heating).
+R: Target temperature (wait for cooling or heating).
+C: the temperature window. If omitted, it is 1.
+W: the temperature residency time. If omitted, it is 3.
+Examples
+Set target temperature and wait (if heating up).
+M109 S180
+Set target temperature, wait even if cooling.
+M109 R120
+Set target temperature, temperature window, and temperature residency time for the hot end E1.
+M109 T1 S185 C1 W3
+M111 - Debug Level
+Description
+Marlin has several debug bits that can be set, in combination, to help configure, troubleshoot, and debug the firmware. Add up the debug bits you need:
+Mask	Name	Description
+1	ECHO	Echo all commands sent to the parser.
+2	INFO	Print extra informational messages.
+4	ERRORS	Print extra error messages.
+8	DRYRUN	Don’t extrude, don’t save leveling data, etc.
+16	COMMUNICATION	Not currently used.
+32	LEVELING	Detailed messages for homing, probing, and leveling. (Requires DEBUG_LEVELING_FEATURE.)
+64	Reserved	Reserved for future usage.
+128	Reserved	Reserved for future usage.
+Usage
+M111 [S]
+Parameters
+S: Debug flag bits.
+Examples
+M111 S38
+M114 (Modified) - Get Current Position
+Description
+Get the “current position” of the active tool. Stepper values are included.
+Usage
+M114
+Examples
+M114
+M115 - Firmware Info
+Description
+This command causes Marlin to output a string like this:
+FIRMWARE_NAME:Marlin V2.2.32-1117 (Nov 17 2023 17:02:24) SOURCE_CODE_URL:github.com/MarlinFirmware/Marlin PROTOCOL_VERSION:1.0 MACHINE_TYPE:STM32F407VGT6 EXTRUDER_COUNT:2 AXIS_COUNT:5 UUID:cede2a2f-41a2-4748-9b12-c55c62f367ff
+Cap:SERIAL_XON_XOFF:0
+Cap:BINARY_FILE_TRANSFER:0
+Cap:EEPROM:1
+Cap:VOLUMETRIC:1
+Cap:AUTOREPORT_POS:0
+Cap:AUTOREPORT_TEMP:1
+Cap:PROGRESS:0
+Cap:PRINT_JOB:1
+Cap:AUTOLEVEL:1
+Cap:RUNOUT:1
+Cap:Z_PROBE:1
+Cap:LEVELING_DATA:1
+Cap:BUILD_PERCENT:0
+Cap:SOFTWARE_POWER:0
+Cap:TOGGLE_LIGHTS:0
+Cap:CASE_LIGHT_BRIGHTNESS:0
+Cap:EMERGENCY_PARSER:0
+Cap:HOST_ACTION_COMMANDS:0
+Cap:PROMPT_SUPPORT:0
+Cap:SDCARD:0
+Cap:REPEAT:0
+Cap:SD_WRITE:0
+Cap:AUTOREPORT_SD_STATUS:0
+Cap:LONG_FILENAME:0
+Cap:EXTENDED_M20:0
+Cap:THERMAL_PROTECTION:1
+Cap:MOTION_MODES:0
+Cap:ARCS:1
+Cap:BABYSTEPPING:1
+Cap:CHAMBER_TEMPERATURE:1
+Cap:COOLER_TEMPERATURE:0
+Cap:MEATPACK:0
+Cap:CONFIG_EXPORT:0
+Hosts use this information to improve interoperability, so it’s a good feature to enable.
+Usage
+M115
+Examples
+M115
+M118 - Serial print
+Description
+Send a message to the connected host for display in the host console or to perform a host action.
+Notes
+The E, A, and P parameters must precede the message.
+Can also send the message to the serial port for hosts to display.
+Usage
+M118 [A1] [E1] [Pn<0|1|2>] [string]
+Parameters
+A1: Prepend // to denote a comment or action command. Hosts like OctoPrint can interpret such commands to perform special actions. See your host’s documentation.
+E1: Prepend echo: to the message. Some hosts will display echo messages differently when preceded by echo:.
+Pn<0|1|2>: Send message to host serial port (1-9). Due to Artisan having only one serial port for communication with the PC, configuration is usually not required.
+string: Message string. If omitted, a blank line will be sent.
+Examples
+M118 E1 Hello World!
+M118 A1 action:cancel
+M119 - Endstop States
+Description
+Use this command to get the current state of all endstops, useful for setup and troubleshooting. Endstops are reported as either “open” or “TRIGGERED”.
+The state of the Z probe and filament runout sensors are also reported with this command.
+Usage
+M119
+Examples
+Get all endstop states.
+> M119
+Reporting endstop status
+x_min: open
+y_min: open
+z_min: TRIGGERED
+z_probe: open
+filament: open
+M140 (Modified) - Set Bed Temperature
+Description
+Set a new target temperature for the heated bed and continue without waiting. The firmware manages heating in the background.
+Notes
+Use M190 to set the bed temperature and pause until the target is reached.
+Usage
+M140 [P] [S]
+Parameters
+P: Set the heating mode. 0 represents the central area heating mode, while non-0 represents the full-area heating mode. If omitted, it represents the full-area heating mode.
+S: Target temperature.
+Examples
+M140 P0
+M140 S80
+M140 P1 S50
+M155 - Temperature Auto-Report
+Description
+It can be useful for host software to track temperatures, display and graph them over time, but polling with M105 is less than optimal. With M155 hosts simply set an interval and Marlin will keep sending data automatically. This method is preferred over polling with M105.
+Usage
+M155 S<seconds>
+Parameters
+S: Interval in seconds between auto-reports. S0 to disable.
+Examples
+Report temperatures every 4 seconds
+M155 S4
+Stop reporting temperatures
+M155 S0
+M190 (Modified) - Wait for Bed Temperature
+Description
+This command optionally sets a new target temperature for the heated bed and waits for the target temperature to be reached before proceeding. If the temperature is set with S, then it waits only when heating.
+Notes
+This command may block the command queue. And hosts can break in using M108.
+Use M140 to set the bed temperature and proceed without waiting.
+Usage
+M190 [P] [S] [R]
+Parameters
+P: Set the heating mode. 0 represents the central area heating mode, while non-0 represents the full-area heating mode. If omitted, it represents the full-area heating mode.
+S: Target temperature (wait only when heating).
+R: Target temperature (wait for cooling or heating).
+Examples
+Set target bed temperature and wait (if heating).
+M190 S80
+Set target bed temperature and wait even if cooling.
+M190 R40
+M201 - Print / Travel Move Limits
+Description
+Set the max acceleration for one or more axes (in current units-per-second per-second). The acceleration limit for extruder(s) only applies for print moves where at least one other axis is also in motion.
+To set the acceleration limit for retract / recover in which only the E axis is moving use M204 R instead.
+Notes
+These are saved with M500 and loaded with M501 and reset with M502.
+Get the current settings using M201 with no parameters or M503.
+Usage
+M201 [E<accel>] [T<index>] [X<accel>] [Y<accel>] [Z<accel>] [A<accel>] [B<accel>]
+Parameters
+E: E axis max acceleration.
+T: Target extruder.
+X: X axis max acceleration.
+Y: Y axis max acceleration.
+Z: Z axis max acceleration.
+A: A axis max acceleration.
+B: B axis max acceleration.
+Examples
+Set max acceleration lower so it sounds like a robot:
+M201 X50 Y50
+Set the max acceleration for E1 print moves:
+M201 E1000 T1
+M203 - Set Max Feedrate
+Description
+Set the max feedrate for one or more axes (in current units-per-second).
+Notes
+These are saved with M500 and loaded with M501 and reset with M502.
+Get the current settings using M203 with no parameters or M503.
+Usage
+M203 [E<units/s>] [T<index>] [X<units/s>] [Y<units/s>] [Z<units/s>] [A<units/s>] [B<units/s>]
+Parameters
+E: E axis max feedrate.
+T: Target extruder.
+X: X axis max feedrate
+Y: Y axis max feedrate.
+Z: Z axis max feedrate.
+A: A axis max feedrate.
+B: B axis max feedrate.
+Examples
+Set max feedrate for XY to 100mm/s:
+M203 X100 Y100
+M204 (Modified) - Set Starting Acceleration
+Description
+Set the preferred starting acceleration (in units/s/s) for moves of different types. Send M204 with no parameters to get current settings.
+Notes
+These are saved with M500 and loaded with M501 and reset with M502.
+Get the current settings using M204 with no parameters or M503.
+Usage
+M204 [P<accel>] [R<accel>] [T<accel>] [D<rate>]
+Parameters
+P: Printing acceleration. Used for moves that include extrusion (i.e., which employ the current tool).
+R: Retract acceleration. Used for extruder retract / recover moves.
+T: Travel acceleration. Used for moves that include no extrusion.
+D: Artisan has implemented a mechanism similar to that used on Klipper for smoothing short zigzag movements. In this mechanism, "virtual acceleration" is used to adjust the nominal speed (i.e., the target maximum speed) for related short-distance movements. The D parameter in M204 (with a unit of 1%) is used to calculate the "virtual acceleration" rate. The relationship is: virtual acceleration = acceleration * D * 0.01. For more details on the mechanism used on Klipper to smooth short zigzag movements, please refer to: https://www.klipper3d.org/zh/Kinematics.html#minimum-cruise-ratio.
+Examples
+Set acceleration for printing moves to 2400mm/s/s.
+M204 P2400
+M205 (Modified) - Set Advanced Settings
+Description
+Set various motion settings. See parameters for details.
+Notes
+These are saved with M500 and loaded with M501 and reset with M502.
+Get the current settings using M205 with no parameters or M503.
+Usage
+M205 [B<µs>] [S<units/s>] [T<units/s>] [V<units/s>]
+Parameters
+B: Minimum segment time (µs).
+S: Minimum feedrate for print moves (units/s).
+T: Minimum feedrate for travel moves (units/s).
+V: Corner velocity. It can be used to calculate Junction_deviation in the planner.
+Examples
+M205 T40 ; Travel feedrate = 40mm/s
+M211 - Software Endstops
+Description
+Optionally enable/disable software endstops, then report the current state.With software endstops enabled, moves will be clipped to the physical boundaries from [XYZ]_MIN_POS to [XYZ]_MAX_POS.
+Usage
+M211 [S<flag>]
+Parameters
+S: Software endstops state (S1=enable S0=disable).
+Examples
+M211
+M211 S1
+M220 - Set Feedrate Percentage
+Description
+Set speed percentage factor, aka “Feed Rate” which applies to all G-code-based moves in all (X, Y, Z, and E) axes. Report the current speed percentage factor if no parameter is specified.
+Usage
+M220 [B<flag>] [R<flag>] [S<percent>]
+Parameters
+B: Back up current factor.
+R: Restore the last-saved factor.
+S: Feedrate percentage.
+Examples
+Set feedrate to 80%.
+M220 S80
+Report feedrate.
+M220
+Back up current feedrate.
+M220 B
+M221 - Set Flow Percentage
+Description
+Set the flow percentage, which applies to all E moves added to the planner.
+Usage
+M221 [S<percent>] [T<index>]
+Parameters
+S: Flow percentage.
+T: Target extruder.
+Examples
+Set the flow rate to 150%.
+M221 S150
+M301 - Set Hotend PID
+Description
+Set the values that control the PID loop for a hotend.
+Notes
+These are saved with M500, loaded with M501, and reset with M502.
+Get the current settings using M301 with no parameters or M503.
+Usage
+M301 [E<index>] [D<value>] [I<value>] [P<value>]
+Parameters
+E: Extruder index to set. Default 0.
+D: Derivative value.
+I: Integral value.
+P: Proportional value.
+Examples
+M301
+M301 E0 P150.000 I1.000 D30000.000
+M302 - Cold Extrude
+Description
+Set the minimum extrusion temperature, potentially allowing E movement at temperatures below the melting point of the material.
+Usage
+M302 [P<flag>] [S<temp>]
+Parameters
+P: Flag to allow extrusion at any temperature.
+S: Minimum temperature for safe extrusion.
+Examples
+M302         ; report current cold extrusion state
+M302 P0      ; enable cold extrusion checking
+M302 P1      ; disable cold extrusion checking
+M302 S0      ; always allow extrusion (disable checking)
+M302 S170    ; only allow extrusion above 170
+M302 S170 P1 ; set min extrude temp to 170 but leave disabled
+M400 - Finish Moves
+Description
+This command causes G-code processing to pause and wait in a loop until all moves in the planner are completed.
+Usage
+M400
+Examples
+M400
+M412 - Filament Runout
+Description
+Get or set filament runout status and distance. Omit all parameters to get a report of the current stats. Enable or disable filament runout detection with S and set distance with D. When filament sensors are enabled, Marlin will respond to a filament runout by running the configured G-code. When filament runout detection is disabled, Marlin will take no action for filament runout.
+Usage
+M412 [D<linear>] [R<bool>] [S<bool>]
+Parameters
+D: Set the filament runout distance.
+R: Flag to reset the filament runout sensor. Not needed with S.
+S: Flag to enable or disable Filament Runout Detection. If omitted, the current enabled state will be reported.
+Examples
+Enable (and reset) filament runout detection.
+M412 S1
+Disable filament runout detection.
+M412 S0
+Report filament runout state.
+M412
+Set filament runout distance。
+M412 D35 ; requires FILAMENT_RUNOUT_DISTANCE_MM
+M412
+Filament runout ON
+Filament runout distance (mm): 35
+M420 (Modified) - Bed Leveling State
+Description
+Get and/or set bed leveling state.
+Notes
+In the current version, M420 only supports the S and V parameters. And other parameters available for M420 in official Marlin documentation are not compatible here and should not be used.
+Usage
+M420 [S<bool>] [V<bool>]
+Parameters
+S: Set enabled or disabled.
+V: Verbose, Print the stored mesh / matrix data.
+Examples
+M420 S1
+M420 V
+M500 - Save Settings
+Description
+Save all configurable settings to EEPROM.
+Usage
+M500
+Examples
+M500
+M501 - Restore Settings
+Description
+Load all saved settings from EEPROM.
+Usage
+M501
+Examples
+M501
+M502 - Factory Reset
+Description
+Reset all configurable settings to their factory defaults. This only changes the settings in memory, not on EEPROM.
+To also reset settings in EEPROM, follow with M500.
+Usage
+M502
+Examples
+Reset settings and save them to EEPROM
+M502 ; reset
+M500 ; saved
+M503 - Report Settings
+Description
+Print a concise report of all runtime-configurable settings (in SRAM) to the host console. This command reports the active settings which may or may not be the same as those stored in the EEPROM.
+Usage
+M503 [S]
+Parameters
+S: Detailed output flag. (true if omitted.)
+Examples
+M503
+M504 - Validate EEPROM contents
+Description
+Validate the contents of the EEPROM.
+Usage
+M504
+Examples
+Validate EEPROM contents.
+M504
+M593 (Modified) - ZV Input Shaping
+Description
+M593 is used to set relevant parameters of the input shaping function, such as the type of input shaper, the frequency of the input shaper, damping ratio, etc.
+Use M593 with no parameters to report the current settings.
+Usage
+M593 [X] [Y] [I] [R] [F<Hz>] [P] [D]
+Parameters
+X: Flag to set the X axis value. If X and Y are omitted, both will be set.
+Y: Flag to set the Y axis value. If X and Y are omitted, both will be set.
+I: Print debugging information.
+R: Reset debugging information.
+F: Set the frequency of the input shaper, in Hz.
+P: Set the type of input shaper.
+0 : Disable the input shaping function.
+1 : ei.
+2 : ei2.
+3 : ei3.
+4 : mzv.
+5 : zv.
+6 : zvd.
+7 : zvdd.
+8 : zvddd.
+D: Damping ratio of vibrations used by input shapers to improve vibration suppression. Default value is 0.1 which is a good all-round value for most printers. In most circumstances, this parameter requires no tuning and should not be changed.
+Examples
+M593
+M593 X F38 P1
+M600 (Modified) - Pause the Printing Job
+Description
+Actively pause the job to perform operations such as filament change.
+Usage
+M600
+Examples
+M600
+M900 (Modified) - Linear Advance Factor
+Description
+This command sets and/or reports the Linear Advance K factors.
+Setting the K factor to 0 disables Linear Advance.
+Notes
+See Linear Advance for details on how to determine the K factor and a link to our calibration tool.
+Usage
+M900 [K<kfactor>] [T<index>]
+Parameters
+K: The K factor to set for the specified extruder. Unchanged if omitted. Set this value higher for more flexible filament or a longer filament path.
+T: Target extruder.
+Examples
+Fetch the K factor.
+M900
+Set the K factor
+M900 T0 K0.035
+M900 T1 K0.035
+M1005 (Artisan) - Get Basic Info of Controller and Modules
+Description
+Get the basic information of the controller and modules, see the following example for details.
+Marlin V2.3.2-0615
+Compiled: Jun 15 2024, 10:08:00
+product SN: 810152402210xxxxxxxx
+
+module list:
+Module ID: 0x204, SN: 0x7ffff, FW ver: v1.0.0, HW ver: 0xff, sta: 2
+Module ID: 0x204, SN: 0x7ffff, FW ver: v1.0.0, HW ver: 0xff, sta: 2
+Module ID: 0x204, SN: 0x7ffff, FW ver: v1.0.0, HW ver: 0xff, sta: 2
+Module ID: 0x204, SN: 0x7ffff, FW ver: v1.0.0, HW ver: 0xff, sta: 2
+Module ID: 0x204, SN: 0x7ffff, FW ver: v1.0.0, HW ver: 0xff, sta: 2
+Module ID: 0x203, SN: 0x7ffff, FW ver: v1.0.0, HW ver: 0xff, sta: 2
+Module ID: 0x205, SN: 0x7ffff, FW ver: v1.0.0, HW ver: 0xff, sta: 2
+Module ID: 0xd, SN: 0x3e8, FW ver: v1.14.3, HW ver: 0x0, sta: 2
+
+Machine Size: A400
+ok
+Marlin V2.3.2-0615: Controller firmware version.
+Compiled: Jun 15 2024, 10:08:00: Firmware compilation time.
+product SN: 810152402210xxxxxxxx: Product SN.
+module list:: Information of each module.
+Module ID: 0x204：Module ID.
+0x2: 1.6W Laser.
+0x6: Rotary Module, 2020 model.
+0x7: Purifier.
+0xd: Dual Extruder 3DP.
+0xe: 10W Laser.
+0xf: 200W CNC.
+0x10: Enclosure.
+0x13: 20W Laser.
+0x14: 40W Laser.
+0x15: Rotary Module, 2023 model.
+0x17: 2W Infrared Laser.
+0x203: Bed.
+0x204: Linear Module.
+0x205: Emergency Stop Button.
+SN: 0x3e8: Module serial number, no need to pay attention.
+FW ver: v1.14.3: Module firmware version.
+HW ver: 0x0: Module hardware version.
+Usage
+M1005
+Examples
+M1005
+M1006 (Artisan) - Get Toolhead Details
+Description
+Get detailed information of the toolhead. For different toolheads, the information format may vary. Only key fields are explained here, and see the following example for details.
+3DP
+Tool Head: 3DP
+fdm fault state: 0x0
+fdm status: 2
+live_z_offset  [0] = 0.000, [1] = 0.000
+z compensation [0] = 0.311, [1] = 0.287
+
+SACP V1
+endstop:
+X axis: Open
+Y axis: Open
+Y2 axis: Open
+Z axis: Open
+Z2 axis: Open
+Emergency Stop button: Open
+ok
+Tool Head: 3DP: Toolhead type - 3DP.
+z compensation [0] = 0.311, [1] = 0.287: Z probe compensation.
+Laser
+Tool Head: LASER
+got focal length from moduel: 65000
+Laser status:
+pwm pin: 67
+tube status: 0
+master switch state: 2
+current power: 0.00
+power pwm: 0
+power limit: 0.00
+power pwm limit: 0
+fan state: 2
+focal length: 65000
+safety state: 0
+pitch: 0
+roll: 0
+tube temp: 25
+imu temp: 27
+platform hight: 55000
+4axis center hight: 83999
+safety_lock: LOCK
+exception_state: 0x0
+half power mode: close
+laser_inline: 0, inline_power: 0.000000, inline_pwm: 0, is_sync : 0, is_map: 0
+laser weak power: 0.200000
+BT MAC: ineffective
+
+SACP V1
+endstop:
+X axis: Open
+Y axis: Open
+Y2 axis: Open
+Z axis: Open
+Z2 axis: Open
+Emergency Stop button: Open
+ok
+Tool Head: LASER: Toolhead type - Laser.
+power limit: 0.00: Laser power limitation, in %.
+safety state: 0: Safety state. 0 is normal, while others are abnormal.
+tube temp: 25: Laser tube temperature, in ℃.
+safety_lock: LOCK: Safety lock.
+CNC
+Tool Head: CNC
+HP_CNC rpm: 0, error: 0x0
+HP_CNC M_I: 346, M_V: 24.07
+HP_CNC M_TEMP: 25.40, PCB_TEMP: 26.50
+HP_CNC ctr mode: CNC_CONSTANT_RPM_MODE
+HP_CNC run status: STOP
+HP_CNC cur_power: 0 target_power: 0
+HP_CNC cur_rpm: 0 target_rpm: 0
+HP_CNC calibration mode: 4
+HP_CNC mode status: 2
+HP_CNC last error: 0x0
+
+SACP V1
+endstop:
+X axis: Open
+Y axis: Open
+Y2 axis: Open
+Z axis: Open
+Z2 axis: Open
+Emergency Stop button: Open
+ok
+Tool Head: CNC: Toolhead type - CNC.
+HP_CNC cur_rpm: 0 target_rpm: 0: Current rpm and target rpm.
+Usage
+M1006
+Examples
+M1006
+M2000 L1 (Artisan) - Set Safety Lock
+Description
+Lock/unlock the safety lock.
+When the safety lock is locked, the power of the laser will be limited, and it will not be able to work normally.
+Get the current safety lock state using M1006.
+Usage
+M2000 L1 P<n>
+Parameters
+P: Safety lock state, 0 indicates unlocked, non-zero indicates locked.
+Examples
+Unlock.
+M2000 L1 P0
+Lock.
+M2000 L1 P1
+M2000 L12 (Artisan) - Set Laser Fan
+Description
+Set the speed and switch status of the fan for the laser toolhead.
+Usage
+M2000 L12 P<n>
+Paramters
+P: Speed, from 0 to 255. 0 represents turning off the fan, 255 represents running the fan at full speed.
+Examples
+Run the fan at full speed.
+M2000 L12 P255
+Turn off the fan.
+M2000 L12 P0
+M2000 L13 (Artisan) - Set Laser Crosshair
+Description
+Set the switch status of the crosshair for the laser toolhead.
+Notes
+In the current version, this is only applicable to 20W/40W blue laser modules and 2W infrared laser modules.
+Usage
+M2000 L13 P<n>
+Parameters
+P: Switch status, 0 represents turning off, non-zero represents turning on.
+Examples
+Turn on the crosshair.
+M2000 L13 P1
+M2000 L15 (Artisan) - Set Laser Main Power Supply
+Description
+Set the switch status of the laser main power supply for the toolhead.
+Usually, to ensure the toolhead can emit laser normally, the laser main power supply needs to be turned on first.
+Usage
+M2000 L15 P<n>
+Parameters
+P: Switch status, 0 represents turning off, non-zero represents turning on.
+Examples
+M2000 L15 P1
+M2000 L23 (Artisan) - Set Laser Branch Power Supply|Half Power Mode
+Description
+Set the switch status of the branch power supply for the toolhead, that is, set the half power mode.
+Notes
+In the current version, this is only applicable to 40W laser module.
+Usage
+M2000 L23 P<n>
+Parameters
+P: 0 represents turning off the branch power supply, which means entering the half-power mode, while non-zero represents turning on the branch power supply, which means exiting the half-power mode.
+Examples
+M2000 L23 P1
+M2000 L30 (Artisan) - Set Laser Module Standby Mode
+Description
+The laser module enters/exits standby mode.
+Notes
+In the current version, this is only applicable to 2W infrared laser module.
+In the current version, for the 2W infrared laser module, the so-called standby mode refers to putting some functions of the module into a standby state for hardware protection (rather than energy saving), such as the TEC temperature control function.
+Usage
+M2000 L30 P<n>
+Parameters
+P: Standby mode, 0 represents exiting standby mode, non-zero represents entering standby mode.
+Examples
+exits standby mode.
+M2000 L30 P0
+M2000 C21 (Artisan) - Set CNC Fan
+Description
+Set the switch status of the fan for the CNC toolhead.
+Usage
+M2000 C21 P<n>
+Parameters
+P: Switch status, 0 represents turning off, non-zero represents turning on.
+Examples
+Turn on the fan.
+M2000 C21 P1
+M2000 W1 (Artisan) - Set Enclosure Light
+Description
+Set the brightness and on/off status of the enclosure light.
+Usage
+M2000 W1 P<n>
+Parameters
+P: brightness, from 0 to 100. 0 represents turning off the light, 100 represents turning on the light at maximum brightness.
+Examples
+Turn off the light.
+M2000 W1 P0
+Turn on the light at 100% brightness.
+M2000 W1 P100
+M2000 W2 (Artisan) - Set Enclosure Fan
+Description
+Set the speed and switch status of the fan for the enclosure.
+Usage
+M2000 W2 P<n>
+Parameters
+P: Speed, from 0 to 100. 0 represents turning off the fan, 100 represents running the fan at full speed.
+Examples
+M2000 W2 P100
+M2000 W40 (Artisan) - Set Purifier Fan Gear
+Description
+Set the speed gear of the purifier fan.
+After setting the speed gear, the purifier fan may not necessarily turn on, because it also depends on its switch status.
+Usage
+M2000 W40 P<n>
+Parameters
+P: gear, ranging in {0, 1, 2, 3}, 0 represents turning off the fan, 3 represents turning on the fan at maximum speed gear.
+Examples
+Set the speed gear.
+M2000 W40 P2
+Set the speed gear and turn on the fan.
+M2000 W40 P2
+M2000 W44 P1
+M2000 W42 (Artisan) - Set Purifier Fan Switch - Force Flag
+Description
+Set the on/off status of the purifier fan. When there is an abnormality in the purifier, the fan can be forced to turn on through a force flag.
+Usage
+M2000 W42 [P] [Q]
+Parameters
+P: Switch status, 0 represents turning off, non-zero represents turning on.
+Q: Force flag, 0 represents non-force, non-zero represents force.
+Examples
+Turn on the purifier fan.
+M2000 W42 P1
+Turn off the purifier fan.
+M2000 W42 P0
+Forcefully turn on the purifier fan.
+M2000 W42 P1 Q1
+M2000 W44 (Artisan) - Set Purifier Fan Switch - Delay Off
+Description
+Set the on/off status of the purifier fan.
+Usage
+M2000 W44 [P] [Q]
+Parameters
+P: Switch status, 0 represents turning off, non-zero represents turning on.
+Q: Delay time, in seconds. When it is necessary to delay turning off the fan for a period of time, the delay time can be set through the Q parameter.
+Examples
+Turn on the purifier fan.
+M2000 W44 P1
+Immediately turn off the purifier fan.
+M2000 W44 P0
+Turn off the purifier fan after 5 seconds.
+M2000 W44 P0 Q5
+T0-T1 (Modified) - Select The Nozzle
+Description
+Switch or select the nozzle.
+T0 represents selecting the left nozzle, and T1 represents selecting the right nozzle.
+¶Notes
+The machine can only switch nozzles normally after homed.
+Usage
+T0
+T1
+Examples
+T0
+T1
+Supported But Unverified Commands
+(1) The commands described in this section, although supported by the code and expected to behave consistently with official Marlin, are not recommended for use due to lack of rigorous validation. If you really need to use them, please refer to the [Marlin official documentation] for relevant command details.
+(2) Snapmaker Luban will not actively use the commands described in this chapter.
+
+Commands
+G2-G3
+G27
+G29
+G30
+M110
+M113
+M122
+M200
+M421
+M906
+Incompatible Or Unadapted Commands
+(1) The commands described in this section have not been adapted for Artisan or may be incompatible with other functions. If used, they may cause unexpected issues/exceptions, and it is strongly recommended not to use them. If you use them, you should be responsible for any actual effects or consequences.
+(2) In the later versions, code support for these commands may be gradually removed.
+
+Commands
+M17
+M18
+M31
+M42
+M75
+M76
+M77
+M81
+M84
+M85
+M112
+M120
+M121
+M206
+M217
+M218
+M226
+M290
+M303
+M401
+M402
+M410
+M428
+M569
+M710
+M851
+M997
+M999
+Comments
+
+© 2026 Snapmaker. All rights reserved. | Powered by Wiki.js

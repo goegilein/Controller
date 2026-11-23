@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 
 import protocol_log
 from machine_core import messages as m
+from machine_core.job import JobCancelled, JobRunner, JobStep
 from machine_core.marlin import ConnectionLost, MarlinConnection, MarlinError, SendsBlocked
 from machine_core.state import MachineState as S, StateMachine
 from machine_core.transport import SerialTransport, SimTransport, TransportClosed
@@ -54,7 +55,8 @@ def _fmt(value: float) -> str:
 
 
 class MachineWorker:
-    def __init__(self, on_event=None, config: ArtisanConfig = None, transport_factory=None):
+    def __init__(self, on_event=None, config: ArtisanConfig = None, transport_factory=None, rotary=None):
+        self.rotary = rotary               # RotMotorCotroller-like: move_to_angle(sid, angle, wait_for_position)
         self.config = config or ArtisanConfig()
         self.on_event = on_event or (lambda event: None)
         self._transport_factory = transport_factory or self._default_transport
@@ -97,7 +99,7 @@ class MachineWorker:
         if con is None or con.lost:
             return
         try:
-            con.write_now("M112")
+            con.stop(("M112",))  # also blocks every further send: a running job ends at once
         except ConnectionLost:
             pass
         self._stop_requested.set()
@@ -129,7 +131,7 @@ class MachineWorker:
                     self._idle_tick()
                 else:
                     self._handle(command)
-            except SendsBlocked:
+            except (SendsBlocked, JobCancelled):
                 pass  # a stop interrupted this command; _AfterStop (already queued) finishes the stop
             except MarlinError as e:
                 self._fail(str(e))
@@ -189,7 +191,7 @@ class MachineWorker:
             on, off = self.config.outputs[c.name]
             self._send(on if c.on else off)
         elif isinstance(c, m.StartJob):
-            self._log("job execution on the new core is not available yet (P2.4)", "warning")
+            self._start_job(c)
         else:
             self._log(f"command {type(c).__name__} not handled", "warning")
 
@@ -283,6 +285,33 @@ class MachineWorker:
         else:
             moves = [xy]
         self._send_block(["G90"] + moves)
+
+    def _start_job(self, c):
+        runner = JobRunner(self, [JobStep.from_dict(d) for d in c.steps], self.rotary)
+        problems = runner.prepare()
+        if problems:
+            for problem in problems:
+                self._log(f"job refused: {problem}", "error")
+            return
+        self.state.to(S.RUNNING, "job started")
+        runner.run()
+        self.state.to(S.IDLE, "job finished")
+
+    # commands while a job runs (called by the runner on this thread)
+    def _next_command_nowait(self):
+        return self._next_command(timeout=None)
+
+    def _next_command(self, timeout):
+        if self._stop_requested.is_set():
+            raise JobCancelled()
+        try:
+            command = self._queue.get(timeout=timeout) if timeout else self._queue.get_nowait()
+        except queue.Empty:
+            return None
+        if isinstance(command, (_AfterStop, _Shutdown)):
+            self._queue.put(command)  # handled by the main loop once the job has ended
+            raise JobCancelled()
+        return command
 
     # ------------------------------------------------------------------ stop / error handling
     def _after_stop(self):

@@ -7,7 +7,7 @@ from machine_core.state import ALLOWED, InvalidTransition, MachineState as S, St
 SAMPLES = [
     m.Connect("COM7"), m.Disconnect(), m.Home("Z"), m.Jog("X", -0.5, 20), m.JogStart("Y", 1, 10), m.JogStop(),
     m.MoveTo(1, 2, 3, speed=30, frame="work"), m.SetWorkPosition(), m.SetOutput("air_assist", True),
-    m.StartJob("C:/jobs/a.jcode"), m.Pause(), m.Resume(), m.Stop(), m.EmergencyStop(), m.AcknowledgeError(),
+    m.StartJob(({"name": "S1", "path": "C:/jobs/a.jcode", "transform": [1.0] * 16, "rot_motor_id": None, "rot_base": 0.0},)), m.Pause(), m.Resume(), m.Stop(), m.EmergencyStop(), m.AcknowledgeError(),
     m.StateChanged("running", "job started"), m.PositionChanged((1.0, 2.0, 3.0), (11.0, 12.0, 13.0)),
     m.ToolheadDetected("laser1064", (21.3, -11.3, 0)), m.JobProgress(1, 2, 33.5), m.LogLine("hi", "warning"),
     m.ErrorRaised("ack timeout", "timeout"),

@@ -92,7 +92,8 @@ class SetOutput:
 
 @_message
 class StartJob:
-    path: str
+    """steps: dicts of machine_core.job.JobStep.to_dict() – name, path, 4×4 transform (16 floats), rotary motor."""
+    steps: tuple
 
 
 @_message
