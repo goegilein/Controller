@@ -18,6 +18,9 @@ import Interactive_Image_Control
 import Maschine_Helper
 import Gcode_Plotter
 from PathManager import get_gui_file_path, get_settings_path, get_base_dir
+import protocol_log
+
+protocol_log.setup()
 
 #Define paths using PathManager
 MAIN_GUI_PATH = get_gui_file_path("Controller.ui")

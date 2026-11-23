@@ -5,6 +5,7 @@ import time
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QMessageBox
 from Settings_Manager import SettingsManager
+import protocol_log
 
 class ArtisanController():
     #def __init__(self, connection_type="usb", port=None, baudrate=115200, ip=None, tcp_port=None):
@@ -112,13 +113,16 @@ class ArtisanController():
             try:
                 self.connection = serial.Serial(self.port, self.baudrate, timeout=1)
                 self.last_log=f"Connected to Artisan via USB on {self.port}"
+                protocol_log.note("artisan", f"connected via USB on {self.port} at {self.baudrate} baud")
             except serial.SerialException as e:
                 self.last_log=f"Failed to connect to Artisan via USB at the Port {self.port}: {e}"
+                protocol_log.note("artisan", f"connect failed on {self.port}: {e}")
                 return
         elif self.connection_type == "tcp" and self.ip and self.tcp_port:
             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection.connect((self.ip, self.tcp_port))
             self.last_log=f"Connected to Artisan via TCP/IP at {self.ip}:{self.tcp_port}"
+            protocol_log.note("artisan", f"connected via TCP at {self.ip}:{self.tcp_port}")
         else:
             raise ValueError("Could not connect with given Parameters")
         
@@ -152,6 +156,7 @@ class ArtisanController():
 
             except Exception as e:
                 self.last_log = f"Error in tracking axis: {e}"
+                protocol_log.note("artisan", f"position tracking stopped: {e!r}")
         tracking_thread = threading.Thread(target=track_axis)
         tracking_thread.daemon = True
         tracking_thread.start()
@@ -175,6 +180,7 @@ class ArtisanController():
             return
         self.connected=False
         self.last_log = "Disconnecting from Artisan..."
+        protocol_log.note("artisan", "disconnecting")
         time.sleep(1.5)
         if self.connection_type == "usb":
             self.connection.close()
@@ -194,11 +200,13 @@ class ArtisanController():
         """
         if not self.is_connection_active():
             self.last_log = "Error: Not Connected to Artisan!"
+            protocol_log.note("artisan", f"not connected, dropped {command!r}")
             return
-        
+
         try:
-            
+
             with self.comand_lock:
+                protocol_log.sent("artisan", command)
                 if self.connection_type == "usb":
                     self.connection.write((command + '\n').encode())
                 else:  # TCP/IP
@@ -213,6 +221,7 @@ class ArtisanController():
                     
         except Exception as e:
             self.last_log = f"Failed to send command: {e}"
+            protocol_log.note("artisan", f"exception while sending {command!r}: {e!r}")
     
     def get_response(self):
         """
@@ -225,6 +234,8 @@ class ArtisanController():
         
         try:
             response=self.connection.readline().decode().strip()
+            if response:
+                protocol_log.received("artisan", response)
             return response
         except Exception as e:
             self.last_log = f"Failed to get response: {e}"
@@ -242,11 +253,13 @@ class ArtisanController():
 
                 if line:
                     lines.append(line)
+                    protocol_log.received("artisan", line)
                 if text in line: #line == text:
                     got_text = True
                     break
             if not got_text:
                 self.last_log = f"Error: {text} not received from Artisan!"
+                protocol_log.note("artisan", f"timeout: {text!r} not received within {timeout} s")
             return lines
 
     def move_axis_continuous(self, axis, direction, speed=None, job_save=False):

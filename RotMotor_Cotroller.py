@@ -4,6 +4,7 @@ from libraries.scservo_sdk import *
 import threading
 import numpy as np
 import time
+import protocol_log
 
 
 class RotMotorCotroller:
@@ -104,10 +105,12 @@ class RotMotorCotroller:
                 # tracking_thread.start()
 
                 self.last_log = f"Detected motors with IDs: {motor_ids}."
+                protocol_log.note("rotary", f"connected on {self.port} ({self.series}), motors {motor_ids}")
             except Exception as e:
                 self.connected = False
                 self.portHandler = None
                 self.last_log = f"Rotary Motor Board connection error: {e}."
+                protocol_log.note("rotary", f"connect failed on {self.port}: {e!r}")
         else:
             self.last_log = "Rotary Motor Board already connected."
           
@@ -118,6 +121,7 @@ class RotMotorCotroller:
                 self.portHandler.closePort()
                 self.portHandler = None
                 self.last_log = "Rot Motor Board disconnected."
+                protocol_log.note("rotary", "disconnected")
                 self.connected = False
             except Exception as e:
                 self.last_log = f"Rotary Motor Board disconnection error: {e}"
@@ -154,6 +158,7 @@ class RotMotorCotroller:
                                 
                         except Exception as e:
                             print(f"Error control loop ID {motor.ID}: {e}")
+                            protocol_log.note("rotary", f"control loop error on motor {motor.ID}: {e!r}")
 
                 # Loop-Frequency: 20ms = 50Hz (Important for PID!)
                 time.sleep(0.02) 
@@ -168,6 +173,7 @@ class RotMotorCotroller:
         """Sets new target (also > 360 degrees)"""
         # If sid is -1, move all motors
         motors = self.get_motor_by_id(sid)
+        protocol_log.note("rotary", f"move motor {sid} to {angle} deg (wait={wait_for_position})")
 
         with self.lock:
             for m in motors:
@@ -201,6 +207,7 @@ class RotMotorCotroller:
         """Stops a specific motor immediately"""
         # If sid is -1, move all motors
         motors = self.get_motor_by_id(sid)
+        protocol_log.note("rotary", f"stop motor {sid}")
 
         with self.lock:
             for m in motors:

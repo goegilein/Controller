@@ -171,8 +171,10 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 
 - [x] P0.1 `CLAUDE.md`, this plan, untrack `__pycache__` (B20), `requirements.txt` pinned to the versions of the
   build machine (Python 3.14).
-- [ ] P0.2 **Protocol log** in the existing `send_command` / `_read_until`: every line sent and received with a
-  timestamp, rotating file in the user folder. *No change to what is sent.* Lets us record real conversations
+- [x] P0.2 **Protocol log** ([protocol_log.py](protocol_log.py)) in the existing `send_command` / `_read_until` /
+  `get_response`: every line sent and received with timestamp and thread, notes for connect / timeouts / exceptions,
+  rotary-motor targets and stops; `%USERPROFILE%\Documents\MachineControl\logs\protocol.log` (20 MB × 10).
+  *No change to what is sent.* Lets us record real conversations
   of the Artisan (connect, M114, M1006 per toolhead, homing, short job, pause, cancel).
 - [ ] P0.3 **Simulated Artisan**: a fake serial port that answers like the recorded firmware (`ok`, `M114`
   format, `M1006` lines, `M118` echo, `M400` delay, `busy:`).
@@ -266,4 +268,5 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 | Date | What | Commit |
 |---|---|---|
 | 2026-11-23 | Inventory, bug list, phase plan (draft) | `fbb214b` |
-| 2026-11-23 | P0.1: `__pycache__` untracked, requirements pinned; B24 found | see git log |
+| 2026-11-23 | P0.1: `__pycache__` untracked, requirements pinned; B24 found | `14e6d3f` |
+| 2026-11-23 | P0.2: protocol log | see git log |

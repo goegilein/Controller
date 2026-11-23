@@ -1,6 +1,11 @@
+import os
 import sys
 import shutil
 from pathlib import Path
+
+# everything the app writes for the user (logs now, settings later – REVISION_PLAN.md C9);
+# MACHINECONTROL_USER_DIR overrides it (tests)
+USER_DIR = Path(os.environ.get("MACHINECONTROL_USER_DIR", Path.home() / "Documents" / "MachineControl"))
 
 
 def get_base_dir():
