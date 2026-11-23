@@ -21,7 +21,7 @@ This file is the single source of truth for status – update it in the same com
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
-| 2 – Machine core without Qt (Marlin) | in progress | P2.1 done; next P2.2 Marlin protocol on the simulator |
+| 2 – Machine core without Qt (Marlin) | in progress | P2.1, P2.2 done; next P2.3 worker |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
@@ -206,8 +206,13 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 ### Phase 2 – Machine core without Qt (Marlin)
 
 - [x] P2.1 [machine_core/messages.py](machine_core/messages.py) (commands / events, JSON round trip), [machine_core/state.py](machine_core/state.py) (states and allowed transitions: no way from error / estop back into a job, error needs an acknowledge, estop needs a reconnect); tests in `tests/test_core_messages_state.py`.
-- [ ] P2.2 `transport.py`, `marlin.py`: line reader, ack matching (fixes B03), `Error:` handling, timeouts and a
-  watchdog that stop the job safely (B02); in-flight window as decided in C3.
+- [x] P2.2 [machine_core/transport.py](machine_core/transport.py) (serial + simulator), [machine_core/marlin.py](machine_core/marlin.py):
+  reader thread, strict ack matching (B03), `Error:` / timeout / lost connection raise instead of being swallowed (B02),
+  `busy:` extends the deadline, `write_now` for stop / E-stop without the send lock (B04). The simulator moved to
+  [machine_core/sim.py](machine_core/sim.py) and got a realtime planner (16 blocks, ack when queued), a laser model and
+  fault injection. Tests `tests/test_core_marlin.py` (both sim modes): one `M1006` is enough now; with one line in
+  flight 200 short hatch segments at 10× speed never let the planner run empty (C3, in-process – real USB latency to
+  be checked on the machine); M3 standstill emission is visible in the simulator (C13).
 - [ ] P2.3 `worker.py`: single owner of the port, atomic command sequences (B11), emergency-stop bypass, tracking
   by `M114` polling in the worker (B13), no serial I/O in the UI (B12).
 - [ ] P2.4 Job runner on the worker: today's J-code semantics, pause / resume / cancel per C4, fails at load time
@@ -287,4 +292,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | P0.3 (draft) / P0.4 / P0.5: simulated Artisan, 8 characterization tests, hardware checklist; B25 found, B15 extended | `380e6d5` |
 | 2026-11-23 | Decisions C1–C12 | `ab0270d` |
 | 2026-11-23 | P2.1: messages and state machine | `3373954` |
-| 2026-11-23 | Decision C5: absolute machine coordinates, per-step transform; C14 | see git log |
+| 2026-11-23 | Decision C5: absolute machine coordinates, per-step transform; C14 | `711e919` |
+| 2026-11-23 | P2.2: Marlin protocol, transports, realtime simulator | see git log |
