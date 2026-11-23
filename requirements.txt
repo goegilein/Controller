@@ -1,10 +1,12 @@
-PyQt6
-opencv-python
-numpy
-pyserial
-pyqtgraph
-PyOpenGL
-wmi
-jsonschema
-pyinstaller
-pillow
+# Versions of the development / build machine (2026-11-23); the production exe is built with these.
+PyQt6==6.11.0
+opencv-python==4.13.0.92
+numpy==2.5.0
+pyserial==3.5
+pyqtgraph==0.14.0
+PyOpenGL==3.1.10
+WMI==1.5.1
+jsonschema==4.26.0
+pyinstaller==6.21.0
+pillow==12.2.0
+pytest==9.2.0

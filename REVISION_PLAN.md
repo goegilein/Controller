@@ -129,9 +129,10 @@ Severity: **S** = safety (person, machine, workpiece), **F** = wrong function, *
 | B17 | F | Default work position `[1, 400, 400, 0]` when the position is unknown. `J0` without `Z` / `R` reuses stale values or raises `NameError`. | [Process_Handler.py:83](Process_Handler.py#L83), [:307-318](Process_Handler.py#L307-L318) | P2 | open |
 | B18 | F | After the job the work position is set to the *start* position, not restored to the user's previous one (intended? → C6). | [Process_Handler.py:237-238](Process_Handler.py#L237-L238) | P2 | open |
 | B19 | M | Icons loaded by relative path (`QIcon("GUI_files/resources/pause.png")`) – break in the built exe or another working directory. | [Process_GUI_Interface.py:294-304](Process_GUI_Interface.py#L294-L304) | P4 | open |
-| B20 | M | 26 `__pycache__/*.pyc` files are tracked despite `.gitignore`. | repo | P0 | open |
+| B20 | M | 26 `__pycache__/*.pyc` files are tracked despite `.gitignore`. | repo | P0 | done |
 | B21 | M | User data (settings, stored positions, homographies) is written next to the program, not into the user folder. | [PathManager.py](PathManager.py) | P4 | open |
 | B22 | M | Rotary `connect()` reports "connected" even if `openPort()` fails; gear ratio 3 hard-coded (LaserMachine spec says 4:1 today). | [RotMotor_Cotroller.py:61-112](RotMotor_Cotroller.py#L61-L112), [:279](RotMotor_Cotroller.py#L279) | P2 | open |
+| B24 | F | Comment stripping only cuts at `;`: BildHatcher's line `===;start of new Processblock===` is sent to the machine as `===` (Marlin answers "Unknown command" + `ok`). Parentheses comments are not handled. | [Process_Handler.py:555-563](Process_Handler.py#L555-L563) | P2 | open |
 | B23 | M | Remaining-time estimate uses a fudge factor 2; long-move segmentation and the estimate ignore acceleration and `G2/G3`. | [Process_Handler.py:354](Process_Handler.py#L354) | P3 | open |
 
 ---
@@ -168,7 +169,8 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 
 ### Phase 0 – Safety net
 
-- [ ] P0.1 `CLAUDE.md`, this plan, untrack `__pycache__` (B20), `requirements.txt` with versions that run in production.
+- [x] P0.1 `CLAUDE.md`, this plan, untrack `__pycache__` (B20), `requirements.txt` pinned to the versions of the
+  build machine (Python 3.14).
 - [ ] P0.2 **Protocol log** in the existing `send_command` / `_read_until`: every line sent and received with a
   timestamp, rotating file in the user folder. *No change to what is sent.* Lets us record real conversations
   of the Artisan (connect, M114, M1006 per toolhead, homing, short job, pause, cancel).
@@ -263,4 +265,5 @@ ui/ (existing modules)   only display state and send commands; one QtBridge turn
 
 | Date | What | Commit |
 |---|---|---|
-| 2026-11-23 | Inventory, bug list, phase plan (draft) | – |
+| 2026-11-23 | Inventory, bug list, phase plan (draft) | `fbb214b` |
+| 2026-11-23 | P0.1: `__pycache__` untracked, requirements pinned; B24 found | see git log |
