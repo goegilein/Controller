@@ -21,7 +21,7 @@ This file is the single source of truth for status – update it in the same com
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
-| 2 – Machine core without Qt (Marlin) | open | |
+| 2 – Machine core without Qt (Marlin) | in progress | P2.1 done; next P2.2 Marlin protocol on the simulator |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
@@ -205,7 +205,7 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 
 ### Phase 2 – Machine core without Qt (Marlin)
 
-- [ ] P2.1 `messages.py`, `state.py` with tests.
+- [x] P2.1 [machine_core/messages.py](machine_core/messages.py) (commands / events, JSON round trip), [machine_core/state.py](machine_core/state.py) (states and allowed transitions: no way from error / estop back into a job, error needs an acknowledge, estop needs a reconnect); tests in `tests/test_core_messages_state.py`.
 - [ ] P2.2 `transport.py`, `marlin.py`: line reader, ack matching (fixes B03), `Error:` handling, timeouts and a
   watchdog that stop the job safely (B02); in-flight window as decided in C3.
 - [ ] P2.3 `worker.py`: single owner of the port, atomic command sequences (B11), emergency-stop bypass, tracking
