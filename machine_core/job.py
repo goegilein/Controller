@@ -1,4 +1,4 @@
-"""Job runner (REVISION_PLAN.md P2.4): executes J-code jobs on the worker thread, in machine coordinates (C5).
+"""Job runner (REVISION_PLAN.md P2.4, preflight P2.5): executes J-code jobs on the worker thread, in machine coordinates (C5).
 
     machine = T_laser · T_step · Trans(J0) · p_raw
 T_step (4×4) maps a step's raw job coordinates to the machine (camera / crosshair frame) and may rotate the part;
@@ -14,6 +14,7 @@ At the end: laser off, back to the start position. The work position is never to
 """
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -103,9 +104,51 @@ class JobRunner:
             needs_rotary = step.rot_motor_id is not None or any(seg.ref[3] != 0 for seg in segments)
             if needs_rotary and (step.rot_motor_id is None or self.rotary is None):
                 problems.append(f"{step.name}: needs a rotary motor (J0 R != 0)")
+            if w.laser_offset is not None:
+                problems += self._check_limits(step, segments)
             self.loaded.append((step, segments))
         self.remaining = sum(seg.duration for _, segs in self.loaded for seg in segs)
         return problems
+
+    def _check_limits(self, step, segments):
+        """P2.5: every move (and segment origin) in machine coordinates inside the work area; power / feed in range.
+        Straight moves between points inside the (convex) work area stay inside it."""
+        cfg = self.w.config
+        laser = translation(*self.w.laser_offset)
+        lows = np.full(3, np.inf)
+        highs = np.full(3, -np.inf)
+        problems = []
+
+        def check_words(words, where):
+            for word in words:
+                letter, value = word[0].upper(), word[1:]
+                try:
+                    value = float(value)
+                except ValueError:
+                    continue
+                limit = {"S": cfg.max_power_s, "P": cfg.max_power_p, "F": cfg.max_feed}.get(letter)
+                if letter in "SP" and not 0 <= value <= limit:
+                    problems.append(f"{step.name}: {where}: power {word} outside 0..{fmt(limit)}")
+                elif letter == "F" and (value <= 0 or (limit is not None and value > limit)):
+                    problems.append(f"{step.name}: {where}: feed {word} not allowed")
+
+        for seg in segments:
+            matrix = laser @ step.transform @ translation(*seg.ref[:3])
+            points = [np.zeros(3)] + [np.asarray(item.target, float) for item in seg.items if isinstance(item, Move)]
+            machine = (matrix @ np.column_stack([np.array(points), np.ones(len(points))]).T).T[:, :3]
+            lows, highs = np.minimum(lows, machine.min(axis=0)), np.maximum(highs, machine.max(axis=0))
+            for item in seg.items:
+                if isinstance(item, Move):
+                    check_words(item.words, Path(seg.source).name)
+                elif item.text.split()[0].upper() in ("M3", "M4"):
+                    check_words(item.text.split()[1:], Path(seg.source).name)
+        if np.isfinite(lows).all():
+            for i, axis in enumerate("XYZ"):
+                low, high = cfg.work_area[i]
+                if lows[i] < low - 1e-6 or highs[i] > high + 1e-6:
+                    problems.append(f"{step.name}: {axis} {fmt(lows[i])}..{fmt(highs[i])} outside the work area "
+                                    f"{fmt(low)}..{fmt(high)} (laser coordinates)")
+        return list(dict.fromkeys(problems))  # one message per distinct problem
 
     # ------------------------------------------------------------------ execution (worker thread)
     def run(self):

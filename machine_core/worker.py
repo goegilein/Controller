@@ -42,6 +42,11 @@ class ArtisanConfig:
         "fan": ("M2000 W2 P100", "M2000 W2 P0"),
         "air_assist": ("M8", "M9"),
     })
+    # preflight limits (P2.5); machine coordinates after homing. Datasheet values, VERIFY on the machine.
+    work_area: tuple = ((0.0, 400.0), (0.0, 400.0), (0.0, 400.0))  # (min, max) per X, Y, Z in mm
+    max_power_s: float = 255.0           # S word
+    max_power_p: float = 100.0           # P word, percent
+    max_feed: float = None               # mm/min; None = not checked (Artisan limit unknown)
     home_timeout: float = 120.0
     ack_timeout: float = 10.0
     poll_interval: float = 0.1           # M114 while idle
@@ -275,6 +280,9 @@ class MachineWorker:
         x, y, z = (c.x, c.y, c.z)
         if c.frame == "work":
             x, y, z = (x + self.work_position[0], y + self.work_position[1], z + self.work_position[2])
+        if problem := self.outside_work_area((x, y, z)):
+            self._log(f"move refused: {problem}", "error")
+            return
         xy, zz = f"G0 X{_fmt(x)} Y{_fmt(y)} {f}", f"G0 Z{_fmt(z)} {f}"
         if not c.z_safe:
             moves = [f"G0 X{_fmt(x)} Y{_fmt(y)} Z{_fmt(z)} {f}"]
@@ -355,6 +363,13 @@ class MachineWorker:
             self.state.to(S.DISCONNECTED, reason)
 
     # ------------------------------------------------------------------ helpers
+    def outside_work_area(self, point):
+        """None if the machine point lies inside the configured work area, else a description."""
+        for axis, value, (low, high) in zip("XYZ", point, self.config.work_area):
+            if not low - 1e-6 <= value <= high + 1e-6:
+                return f"{axis}{_fmt(value)} outside the work area {axis} {_fmt(low)}..{_fmt(high)}"
+        return None
+
     def _send(self, line, timeout=None):
         if self.con is None:
             raise ConnectionLost("not connected")

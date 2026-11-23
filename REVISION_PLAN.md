@@ -21,7 +21,7 @@ This file is the single source of truth for status – update it in the same com
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
-| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.4 done; next P2.5 preflight / work area |
+| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.5 done; next P2.7 rotary stages |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
@@ -235,8 +235,13 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   directly to each segment origin (v1.0: to the camera position, then by the laser offset); after a *Stop* the
   head stays where it stopped (v1.0 cancel drove back to the start – moving without the user is avoided); `J0`
   without an axis means 0 (v1.0 reused the previous value); `M5`, `M9` are always sent at the end of a job.
-- [ ] P2.5 Preflight checks: work area, toolhead / laser offset known, files present, rotary motor assigned,
-  power / speed within the profile (B08, B17).
+- [x] P2.5 Preflight checks: work area, toolhead / laser offset known, files present, rotary motor assigned,
+  power / speed within the profile (B08, B17). `JobRunner.prepare` refuses a job before anything moves if a move or a
+  segment origin, in laser machine coordinates (rotation included), leaves `ArtisanConfig.work_area`; if `S` is
+  outside 0..255 or `P` outside 0..100 (`M3` / `M4` / `G1`); if `F` ≤ 0 or above `max_feed` (not set: Artisan limit
+  unknown). Absolute manual moves (`MoveTo`) outside the work area are refused too. Work area = datasheet,
+  400 × 400 × 400 mm from the homing point (0, 0, 0) – **VERIFY** on the machine (homing position, real travel,
+  whether the work area differs per toolhead). Relative jogs are not checked (the firmware's soft endstops apply).
 - [ ] P2.6 Coordinates (C5): no `G92`; per-step 4×4 transform raw → machine applied to every `G0/G1` (X, Y, Z; F unchanged
   for rigid transforms); camera → laser offset as a translation; stored positions / fit points stay valid (already
   absolute). Fixes B10, B15, B18, B25.
@@ -279,7 +284,7 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | C3 | Streaming window | **decided:** strict ack matching (fixes B03), one line in flight. Marlin acknowledges when a line is queued, so the planner stays full while we stream; it only drains at the sync point (`M400`). Today's accidental 2-line window is dropped – measure throughput in the simulator, check with a test burn later. |
 | C4 | Pause | **decided:** laser off (`M5`) in pause, restore laser mode / power on resume; no jogging in pause. Plus C13. |
 | C5 | Work position / coordinates | **decided:** the app works in **absolute machine coordinates** and never sends `G92`. Every G-code coordinate is transformed in the app before sending; each process step holds a full 4×4 transform (rotation + translation) from the job's raw data into machine coordinates, so a rotated part can be processed (fits the sample-holder measurement and stored positions, which are already absolute). Homing is required after every connect. The "work position" stays as an app-side reference only. See C14. |
-| C15 | Does the Snapmaker firmware have Marlin's emergency parser (`M112` / `M410` act on arrival)? Without it, a software stop only acts after the queued moves (≤ 16 blocks) or a running `M400`. | verify with the G-code reference / on the machine; the simulator assumes yes, `emergency_parser=False` tests the other case. The hardware E-stop is independent of it. |
+| C15 | Does the Snapmaker firmware have Marlin's emergency parser (`M112` / `M410` act on arrival)? Without it, a software stop only acts after the queued moves (≤ 16 blocks) or a running `M400`. | **Yes** (user, 2026-11-23). The simulator default `emergency_parser=True` matches; still worth one look in the protocol recording of a stop (checklist A). |
 | C14 | Does `G28` clear a `G92` shift left by v1.0 or another program, and does `M114` then report machine coordinates? Are `G53` / `G92.1` supported? | to verify with the G-code reference (the wiki blocks automated fetches – user saves a copy) and on the machine; until then: home on connect and refuse jobs before homing |
 | C6 | Work position after a job | **decided:** known bug – restore the previous work position (B18). |
 | C7 | Toolhead detection | postponed (needs recordings). |
@@ -298,6 +303,7 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 |---|---|
 | 2026-11-23 | Branch `revision_2.0` created from `main` (`3605785`, contains `stored_pos`). |
 | 2026-11-23 | Answers to C1–C12 (section 6). Phase 1 merged into phase 2; work on the simulated machine until hardware tests are possible. TCP is removed. |
+| 2026-11-23 | C15: the Snapmaker firmware has the emergency parser. P2.5: check against the datasheet work area for now (VERIFY). |
 
 ---
 
@@ -314,4 +320,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | Decision C5: absolute machine coordinates, per-step transform; C14 | `711e919` |
 | 2026-11-23 | P2.2: Marlin protocol, transports, realtime simulator | `7a1bb39` |
 | 2026-11-23 | P2.3: machine worker, stop race found and fixed on the simulator | `4778766` |
-| 2026-11-23 | P2.4: J-code reader and job runner in machine coordinates; burn path equal to v1.0; C15 | see git log |
+| 2026-11-23 | P2.4: J-code reader and job runner in machine coordinates; burn path equal to v1.0; C15 | `62a9519` |
+| 2026-11-23 | P2.5: preflight – work area, power, feed; manual moves inside the work area; C15 answered | see git log |

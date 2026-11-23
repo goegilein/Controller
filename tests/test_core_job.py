@@ -236,3 +236,43 @@ def test_cable_pulled_during_a_job(tmp_path):
     assert "connection lost" in rig.of(m.ErrorRaised)[0].message
     rig.submit_and_wait(m.Resume(), state="error")                         # nothing resumes
     rig.close()
+
+
+# --------------------------------------------------------------------------- preflight (P2.5)
+
+@pytest.mark.parametrize("transform, lines, message", [
+    (step_transform(390, 100, 0), ["G1 X10 F600"], "X 411.3..421.3 outside the work area 0..400"),   # laser offset +21.3
+    (step_transform(100, 5, 0), ["G0 Y-10 F6000"], "Y -16.3..-6.3 outside"),
+    (step_transform(100, 100, 0, rotation_deg=90), ["G1 X320 F600"], "Y 88.7..408.7 outside"),        # rotated part
+    (step_transform(100, 100, 0), ["M3 S300", "G1 X10 F600"], "power S300 outside 0..255"),
+    (step_transform(100, 100, 0), ["M4 P0", "G1 X10 P120 F600"], "power P120 outside 0..100"),
+    (step_transform(100, 100, 0), ["G1 X10 F0"], "feed F0 not allowed"),
+])
+def test_preflight_refuses_jobs_outside_the_limits(tmp_path, transform, lines, message):
+    path = tmp_path / "job.nc"
+    path.write_text("\n".join(["G90"] + lines + ["M5"]), encoding="utf-8")
+    rig = Rig(realtime=False)
+    rig.connect()
+    before = len(rig.sim.trace)
+    start_job(rig, [JobStep("s", str(path), transform)])
+    errors = [e.text for e in rig.of(m.LogLine) if e.level == "error"]
+    assert any(message in text for text in errors), errors
+    assert not any(line.startswith(("G0", "G1", "M3", "M4")) for _, line in rig.sim.trace[before:])
+    rig.close()
+
+
+def test_preflight_feed_limit_when_configured(tmp_path):
+    rig = Rig(realtime=False, max_feed=3000)
+    rig.connect()
+    start_job(rig, [JobStep("s", str(JOBS / "long_moves.nc"), step_transform(100, 100, 0))])
+    assert any("not allowed" in e.text for e in rig.of(m.LogLine) if e.level == "error")
+    rig.close()
+
+
+def test_manual_move_outside_the_work_area_is_refused():
+    rig = Rig(realtime=False)
+    rig.connect()
+    rig.submit_and_wait(m.MoveTo(401, 10, 0))
+    assert not any(line.startswith("G0 X401") for line in rig.sent())
+    assert any("outside the work area" in e.text for e in rig.of(m.LogLine))
+    rig.close()
