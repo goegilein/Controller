@@ -144,3 +144,13 @@ def test_a_broken_position_display_does_not_stop_the_control(stages):
     s, bus = stages
     s.motors[0].set_position_changed_callback(lambda deg: 1 / 0)
     assert s.move_to_angle(1, 10, wait_for_position=True, timeout=30) is True and s.fault is None
+
+
+def test_gear_ratio_per_motor():
+    """5:1 upgrade of one stage: the ratio is set per motor id (settings rotary_motors.gear_ratios)."""
+    bus = SimStageBus((1, 2), cycle_dt=0.02)
+    s = RotaryStages(lambda: bus, gear_ratios={2: 5})
+    s.connect()
+    assert [mo.gear_ratio for mo in s.motors] == [3, 5]
+    assert s.motors[1].ticks(360) == 5 * TICKS_PER_REV
+    s.disconnect()

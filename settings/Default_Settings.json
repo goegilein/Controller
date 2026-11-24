@@ -62,7 +62,9 @@
   },
   "rotary_motors": {
     "port": "COM5",
-    "series": "STS"
+    "series": "STS",
+    "gear_ratio": 3,
+    "gear_ratios": {}
   },
   "overview_camera": {
     "camera_index": -1,

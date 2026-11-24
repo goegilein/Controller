@@ -302,6 +302,8 @@ class RotaryFacade(RotaryStages):
         get = self.s.get if self.s else (lambda key, default=None: default)
         self.port = get("rotary_motors.port", "COM7")
         self.series = get("rotary_motors.series", "STS")
+        self.gear_ratio = float(get("rotary_motors.gear_ratio", 3))     # applied on the next connect
+        self.gear_ratios = {int(k): float(v) for k, v in (get("rotary_motors.gear_ratios", {}) or {}).items()}
 
     def _make_bus(self):
         if self.port == SIMULATOR_PORT:

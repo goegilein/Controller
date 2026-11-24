@@ -270,9 +270,10 @@ class StageMotor:
 
 class RotaryStages:
     def __init__(self, bus_factory, gear_ratio=3, loop_interval=0.02, max_failures=5, move_timeout=100.0,
-                 on_log=None):
+                 on_log=None, gear_ratios=None):
         self.bus_factory = bus_factory     # () -> bus
-        self.gear_ratio = gear_ratio
+        self.gear_ratio = gear_ratio       # C8: 3:1 (GT2 20:60); 5:1 upgrade planned -> per motor in gear_ratios
+        self.gear_ratios = dict(gear_ratios or {})  # {motor id: ratio}, overrides gear_ratio
         self.loop_interval = loop_interval
         self.max_failures = max_failures
         self.move_timeout = move_timeout   # s, default for waits (v1.0 had 100 s, unused)
@@ -301,7 +302,7 @@ class RotaryStages:
                 if pos is None:
                     continue
                 bus.setup_wheel_mode(sid)
-                motor = StageMotor(sid, raw_position=pos, gear_ratio=self.gear_ratio)
+                motor = StageMotor(sid, raw_position=pos, gear_ratio=self.gear_ratios.get(sid, self.gear_ratio))
                 if hasattr(bus, "clock"):
                     motor.clock = bus.clock
                     motor.last_update_time = motor.clock()
