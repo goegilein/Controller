@@ -1,0 +1,9 @@
+{
+  "mode": 1,
+  "min_angle": 0,
+  "max_angle": 4095,
+  "phase": 12,
+  "cw_dead": 1,
+  "ccw_dead": 1,
+  "offset": 85
+}
