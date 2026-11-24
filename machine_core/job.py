@@ -14,6 +14,7 @@ At the end: laser off, back to the start position. The work position is never to
 """
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -100,6 +101,7 @@ class JobRunner:
         self.rotary = rotary
         self.loaded = []               # (step, [segments])
         self.headers = {}              # step name -> J-code v0.1 header (P3.2; empty for v0), for the run log
+        self.events = []               # (time, "paused" / "resumed") for the run log (P3.4)
         self.mode_line = None          # last M3 / M4 line, restored on resume
         self.power_words = []          # last S / P words of a G1, restored on resume
         self.restore_power = False
@@ -274,6 +276,7 @@ class JobRunner:
     def _pause(self):
         w = self.w
         w.state.to(S.PAUSED, "pausing – finishing the queued moves")
+        self.events.append((datetime.now().astimezone(), "paused"))
         self._sync(16)
         w._send("M5")
         w._update_position()
@@ -289,4 +292,5 @@ class JobRunner:
         if self.mode_line:
             w._send(self.mode_line)
         self.restore_power = True
+        self.events.append((datetime.now().astimezone(), "resumed"))
         w.state.to(S.RUNNING, "resumed")

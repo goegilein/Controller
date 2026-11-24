@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 import protocol_log
 from machine_core import messages as m
 from machine_core.job import JobCancelled, JobRunner, JobStep
+from machine_core.runlog import RunLog
 from machine_core.marlin import ConnectionLost, MarlinConnection, MarlinError, SendsBlocked
 from machine_core.stages import StageError
 from machine_core.state import MachineState as S, StateMachine
@@ -32,6 +33,8 @@ SIMULATOR_PORT = "simulator"
 class ArtisanConfig:
     """Machine settings the worker needs; filled from the settings today, from the machine profile later (P3.3)."""
     machine_id: str = "snapmaker_artisan"  # checked against `JH machine=` (P3.2); from the machine profile in P3.3
+    run_log_dir: str = None              # P3.4: one JSON file per job here; None = no run log (tests, core alone)
+    app_version: str = ""                # written into the run log
     baudrate: int = 115200
     default_speed: float = 30.0          # mm/s
     max_z_speed: float = 30.0            # mm/s; also limits combined moves, as in v1.0
@@ -70,6 +73,7 @@ class MachineWorker:
         self.state = StateMachine(lambda state, reason: self._emit(m.StateChanged(state.value, reason)))
         self.con = None
         self.toolhead = None
+        self._stop_kind = None               # "stopped" / "emergency stop" while a stop ends the job (run log)
         self.laser_offset = None
         self.homed = set()                 # axes homed since connect
         self.position = None               # last known machine position (x, y, z)
@@ -110,6 +114,7 @@ class MachineWorker:
                 protocol_log.note("rotary", f"stop failed: {e!r}")
 
     def _emergency_stop(self):
+        self._stop_kind = "emergency stop"     # before anything else: the job thread may end at once (run log)
         self._stop_rotary()
         con = self.con
         if con is None or con.lost:
@@ -124,6 +129,8 @@ class MachineWorker:
             self.state.to(S.ESTOP, "emergency stop – restart the machine, then reconnect")
 
     def _stop(self):
+        if self._stop_kind is None:
+            self._stop_kind = "stopped"
         self._stop_rotary()
         con = self.con
         if con is None or con.lost:
@@ -311,13 +318,33 @@ class MachineWorker:
     def _start_job(self, c):
         runner = JobRunner(self, [JobStep.from_dict(d) for d in c.steps], self.rotary)
         problems = runner.prepare()
+        run_log = RunLog(self.config.run_log_dir, self, runner, problems) if self.config.run_log_dir else None
         if problems:
             for problem in problems:
                 self._log(f"job refused: {problem}", "error")
+            if run_log:
+                run_log.finish("refused", "; ".join(problems))
             return
+        self._stop_kind = None
         self.state.to(S.RUNNING, "job started")
-        runner.run()
+        try:
+            runner.run()
+        except (JobCancelled, SendsBlocked):
+            if run_log:
+                run_log.finish(self._stop_kind or "stopped", "by user")
+            raise
+        except BaseException as e:
+            if run_log:
+                text = str(e) if isinstance(e, (MarlinError, StageError)) else repr(e)
+                if self._stop_kind:                 # the stop ended the job, e.g. an ack that never came after M112
+                    run_log.finish(self._stop_kind, f"by user ({text})")
+                else:
+                    run_log.finish("error", text)
+            raise
+        if run_log:
+            run_log.finish("done")
         self.state.to(S.IDLE, "job finished")
+
 
     # commands while a job runs (called by the runner on this thread)
     def _next_command_nowait(self):

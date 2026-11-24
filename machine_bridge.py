@@ -8,6 +8,7 @@ UI modules call, but every method only submits a command or reads cached state â
 Coordinates: `abs_position` / `get_absolute_position()` are machine coordinates (C5); `current_position` /
 `get_position()` are relative to the work position, which only lives in the app (no G92).
 """
+import json
 import time
 
 from PyQt6 import QtCore
@@ -28,6 +29,14 @@ def config_from_settings(settings):
     config.max_z_speed = get("artisan.motion.max_z_speed", config.max_z_speed)  # v1.0 read a misspelt key (B16)
     config.laser_offsets = {head: tuple(get(f"artisan.{head}.laser_offset", list(offset)))
                             for head, offset in config.laser_offsets.items()}
+    # P3.4: one run log per job; default folder Documents/MachineControl/runs, `run_log.folder` overrides it
+    from PathManager import USER_DIR, get_base_dir
+    config.run_log_dir = str(get("run_log.folder", "") or USER_DIR / "runs")
+    try:
+        v = json.loads((get_base_dir() / "version.json").read_text(encoding="utf-8"))
+        config.app_version = f"{v['major']}.{v['minor']}.{v['patch']}"
+    except (OSError, ValueError, KeyError):
+        pass
     return config
 
 

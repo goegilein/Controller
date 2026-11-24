@@ -22,7 +22,7 @@ This file is the single source of truth for status – update it in the same com
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
-| 3 – J-code and machine profile | in progress | P3.1, P3.2 done; next P3.4 run log, P3.3 profile |
+| 3 – J-code and machine profile | in progress | P3.1, P3.2, P3.4 done; next P3.3 machine profile |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
 
@@ -309,7 +309,15 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 - [ ] P3.3 Machine profile: read BildHatcher's `machine_profiles/*.json` format and extend it with capabilities
   (work area, power / speed range, toolheads with laser offset, rotary axis, laser-off sequence) instead of the
   `artisan.*` settings. Where the profiles live → C10.
-- [ ] P3.4 Run log (job + checksum, machine, profile, time, result) – first step of traceability.
+- [x] P3.4 Run log (job + checksum, machine, profile, time, result) – first step of traceability.
+  `machine_core/runlog.py`: one JSON file per job in `Documents\MachineControl\runs` (setting `run_log.folder`
+  overrides it), named `<start YYYY-MM-DD_HHMMSS>_<first step>.json`. Written at the start (result `running`, so a
+  crash leaves a trace) and again at the end: `done` / `stopped` / `emergency stop` / `error` / `refused` (with the
+  preflight problems), message, duration, pauses. Contents: app version, machine id, toolhead, laser offset, rotary
+  control mode, per step the job file + SHA-256, 4×4 transform, rotary motor / base angle, J-code header and every
+  segment (file, SHA-256, J0). A write error is only a warning – the log never stops a job. Seen on the way: after
+  an E-stop the job thread may wait up to `ack_timeout` (10 s) for an ack before it ends (state, laser and log are
+  right meanwhile).
 - [-] Neutral segments → machine code in the machine control: needs the shared library (notes, proposal 6);
   stays in BildHatcher until v3.0.
 
@@ -386,4 +394,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-24 | P3.1: J-code spec v0, reader fixes (parentheses in file names, bad J0, G20); C16 analysis | `57e0997` |
 | 2026-11-24 | C16: servo position mode (opt-in), loop recorder, hardware test script | `f35070c` |
 | 2026-11-24 | P3.2: J-code v0.1 header (`JH key=value`, refuse on mismatch, relative paths) | `973731f` |
-| 2026-11-24 | C16 run 1 evaluated; PC-side correction of the servo dead band; test script run 2 | see git log |
+| 2026-11-24 | C16 run 1 evaluated; PC-side correction of the servo dead band; test script run 2 | `ce543f1` |
+| 2026-11-24 | P3.4: run log, one JSON file per job | see git log |
