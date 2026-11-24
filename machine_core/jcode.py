@@ -17,7 +17,7 @@ from pathlib import Path
 
 MAX_PIECE_S = 1.0
 _COMMAND = re.compile(r"^[GMT]\d+(\.\d+)?$", re.IGNORECASE)
-_REFUSED = {"G2", "G3", "G28", "G92", "G53", "G54", "G55", "G56", "G57", "G58", "G59"}
+_REFUSED = {"G2", "G3", "G20", "G28", "G92", "G53", "G54", "G55", "G56", "G57", "G58", "G59"}  # G20: inch
 
 
 class JobError(Exception):
@@ -54,7 +54,13 @@ class Segment:
 
 
 def strip_comment(line: str) -> str:
+    """G-code comments: `( ... )` and everything after `;`."""
     line = re.sub(r"\([^)]*\)", "", line)
+    return line.split(";", 1)[0].strip()
+
+
+def strip_jcode_comment(line: str) -> str:
+    """J-code comments: only `;` – parentheses are allowed in J1 file names (e.g. `job (1).nc`)."""
     return line.split(";", 1)[0].strip()
 
 
@@ -124,15 +130,20 @@ def read_job_file(path) -> list:
         raise JobError(f"cannot read J-code file {path}: {e}") from e
     segments, ref = [], (0.0, 0.0, 0.0, 0.0)
     for number, raw in enumerate(lines, 1):
-        line = strip_comment(raw)
+        line = strip_jcode_comment(raw)
         if not line:
             continue
         parts = line.split(None, 1)
         if parts[0].upper() == "J0":
             values = dict.fromkeys("XYZR", 0.0)  # missing axes are 0, not the previous value (B17)
             for word in parts[1].split() if len(parts) > 1 else []:
-                if word[0].upper() in values:
-                    values[word[0].upper()] = float(word[1:])
+                letter = word[0].upper()
+                if letter not in values:
+                    raise JobError(f"{path.name}:{number}: unknown J0 word {word!r}")
+                try:
+                    values[letter] = float(word[1:])
+                except ValueError as e:
+                    raise JobError(f"{path.name}:{number}: bad number {word!r}") from e
             ref = tuple(values[a] for a in "XYZR")
         elif parts[0].upper() == "J1":
             if len(parts) < 2:

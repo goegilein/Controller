@@ -22,7 +22,7 @@ This file is the single source of truth for status – update it in the same com
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
-| 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
+| 3 – J-code and machine profile | in progress | P3.1 done; P3.2 header draft to decide |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
 
@@ -295,7 +295,11 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 
 ### Phase 3 – J-code and machine profile (prepare v3.0)
 
-- [ ] P3.1 Write down today's J-code as spec v0 (`J0 X Y Z R`, `J1 <file>`, comments) – the reader stays compatible.
+- [x] P3.1 Write down today's J-code as spec v0 (`J0 X Y Z R`, `J1 <file>`, comments) – the reader stays compatible.
+  [docs/JCODE_SPEC.md](docs/JCODE_SPEC.md) section 1, tests in `tests/test_jcode.py`. Reader fixes found while
+  writing it: parentheses in J-code lines are no comments again (as v1.0 – the P2.4 reader stripped them, so
+  `J1 job (1).nc` would not be found); a bad `J0` number or word is a clear refusal instead of an internal error;
+  `G20` (inch) is refused. Section 2 = header draft for P3.2.
 - [ ] P3.2 Optional header / manifest (format version, creator, target machine / profile, SHA-256 of linked files)
   read and checked if present – coordinated with BildHatcher.
 - [ ] P3.3 Machine profile: read BildHatcher's `machine_profiles/*.json` format and extend it with capabilities
@@ -329,7 +333,7 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | C4 | Pause | **decided:** laser off (`M5`) in pause, restore laser mode / power on resume; no jogging in pause. Plus C13. |
 | C5 | Work position / coordinates | **decided:** the app works in **absolute machine coordinates** and never sends `G92`. Every G-code coordinate is transformed in the app before sending; each process step holds a full 4×4 transform (rotation + translation) from the job's raw data into machine coordinates, so a rotated part can be processed (fits the sample-holder measurement and stored positions, which are already absolute). Homing is required after every connect. The "work position" stays as an app-side reference only. See C14. |
 | C15 | Does the Snapmaker firmware have Marlin's emergency parser (`M112` / `M410` act on arrival)? Without it, a software stop only acts after the queued moves (≤ 16 blocks) or a running `M400`. | **Yes** (user, 2026-11-23). The simulator default `emergency_parser=True` matches; still worth one look in the protocol recording of a stop (checklist A). |
-| C16 | Rotary PID under CPU load | open. User: only oscillation in the **tenth-of-a-degree** range seen, never degrees; stable with today's parameters. Drive: Waveshare **ST3215**, bought GT2 belt gear **20:60 (3:1)**, a **5:1** upgrade is planned (ratio now per motor in the settings: `rotary_motors.gear_ratio`, `gear_ratios`). **Full 360° on the part is required** (multi-turn at the motor). Options: A) PID hysteresis / I-freeze / D filter, B) servo position mode (multi-turn – VERIFY in the Waveshare ST3215 wiki), C) own process for the loop. Next: loop recording on the machine, simulator with belt backlash; decide with the user (affects production). |
+| C16 | Rotary PID under CPU load | open. User: only oscillation in the **tenth-of-a-degree** range seen, never degrees; stable with today's parameters. Drive: Waveshare **ST3215**, bought GT2 belt gear **20:60 (3:1)**, a **5:1** upgrade is planned (ratio now per motor in the settings: `rotary_motors.gear_ratio`, `gear_ratios`). **Full 360° on the part is required** (multi-turn at the motor). Options: A) PID hysteresis / I-freeze / D filter, B) servo position mode (multi-turn – VERIFY in the Waveshare ST3215 wiki), C) own process for the loop. Next: loop recording on the machine, simulator with belt backlash; decide with the user (affects production). **2026-11-24:** user observes the oscillation only in the *computed* motor positions, about 3 motor steps; single-step positioning in wheel mode does not work (tested) → the I-term builds up, the motor jumps too far, back again (stick-slip hunting). Not reproduced on the simulator with simple stiction / break-away / latency models – needs a recording of the loop. Register map (STS protocol, `sms_sts.py`): mode 33, CW / CCW dead zone 26 / 27; Waveshare: motor (step) mode positions relative within ±7 turns, servo mode 360° absolute at 360°/4096. |
 | C14 | Does `G28` clear a `G92` shift left by v1.0 or another program, and does `M114` then report machine coordinates? Are `G53` / `G92.1` supported? | to verify with the G-code reference (the wiki blocks automated fetches – user saves a copy) and on the machine; until then: home on connect and refuse jobs before homing |
 | C6 | Work position after a job | **decided:** known bug – restore the previous work position (B18). |
 | C7 | Toolhead detection | postponed (needs recordings). |
@@ -373,4 +377,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | P2.8b: process steps run as core jobs; bounding box without G92 (B10) | `45f9124` |
 | 2026-11-23 | P2.8c: app on the machine core, Stop / E-stop bar with confirmation and F9 / F12, simulator port; B26, C16 | `8a568ef` |
 | 2026-11-24 | Decisions C10, phase 3 scope; rotary gear ratio per motor | `363e595` |
-| 2026-11-24 | P2.6: part rotation per step from stored positions (Rz only, tilt shown) | see git log |
+| 2026-11-24 | P2.6: part rotation per step from stored positions (Rz only, tilt shown) | `eb7e6e8` |
+| 2026-11-24 | P3.1: J-code spec v0, reader fixes (parentheses in file names, bad J0, G20); C16 analysis | see git log |
