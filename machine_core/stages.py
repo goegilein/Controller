@@ -124,6 +124,7 @@ class SimStageBus:
         self.wheel_mode = set()
         self.position_mode = set()
         self.single_turn_feedback = False   # fault for tests: position mode without full-angle feedback
+        self.servo_deadband = 0             # position mode: stops this many ticks short, no move for a closer goal
         self.released = set()
         self.writes = []                 # (time, id, speed)
         self.closed = False
@@ -149,12 +150,21 @@ class SimStageBus:
                     continue
                 # the servo's own loop: trapezoid to the goal, stops on the tick
                 dist = mo["goal"] - mo["pos"]
+                if abs(dist) <= self.servo_deadband:     # measured ST3215: stops 2-4 ticks short (C16)
+                    mo["speed"] = 0.0
+                    mo["pos"] = float(round(mo["pos"]))
+                    continue
                 brake = (2 * max(step / dt, 1e-9) * abs(dist)) ** 0.5
                 want = max(-mo["limit"], min(mo["limit"], (1 if dist > 0 else -1) * min(brake, abs(dist) / dt)))
                 mo["speed"] += max(-step, min(step, want - mo["speed"]))
                 if sid not in self.jammed:
                     move = mo["speed"] * dt
-                    mo["pos"] = mo["goal"] if abs(move) >= abs(dist) else mo["pos"] + move
+                    if abs(dist - move) <= self.servo_deadband or abs(move) >= abs(dist):
+                        # arrives: on the goal, or (dead band) that many ticks short of it
+                        mo["pos"] = mo["goal"] - (1 if dist > 0 else -1) * self.servo_deadband
+                        mo["speed"] = 0.0
+                    else:
+                        mo["pos"] += move
                 continue
             mo["speed"] += max(-step, min(step, mo["cmd"] - mo["speed"]))
             if sid not in self.jammed:
@@ -352,18 +362,26 @@ class StageMotor:
 
 
 class ServoPositionMotor(StageMotor):
-    """C16: the servo positions itself (multi-turn absolute mode); the PC sends the goal once per new target.
+    """C16: the servo positions itself (multi-turn absolute mode); the PC writes the goal and corrects the rest.
 
-    Reached = within `tolerance` ticks and standing still for `position_stable_threshold` cycles. A servo that stands
-    still for `settle_cycles` within 3 ticks (v1.0's accuracy) also counts as reached, so a dead zone of the servo
-    does not turn into a timeout."""
+    Measured on the ST3215 (2026-11-24, tests/hardware/c16): the servo stops 2-4 ticks short of its goal and does not
+    move at all for a goal 1-3 ticks away (its own loop has the same break-away limit as the wheel mode). So the PC
+    aims past the target by the remaining error once the servo stands still (`max_corrections` times, at most
+    `max_aim` ticks past), like a nudge, without any PID on the PC.
+    Reached = within `tolerance` and still for `position_stable_threshold` cycles; after the corrections within
+    `accept` ticks also counts (logged), anything further away never counts (the wait times out)."""
 
     tolerance = 1
-    settle_cycles = 25                 # 0.5 s at 50 Hz
+    accept = 4                         # ticks, measured accuracy without correction
+    settle_cycles = 10                 # 0.2 s still = the servo has stopped
+    max_corrections = 3
+    max_aim = 12                       # ticks the goal may lie past the target
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+        self.goal_ticks = self.total_ticks
         self.sent_goal = None          # None: (re)send the goal in the next cycle
+        self.corrections = 0
         self.still_cycles = 0
         self._prev_ticks = self.total_ticks
         self.accuracy_note = None
@@ -389,40 +407,48 @@ class ServoPositionMotor(StageMotor):
                              f"(±{self.angle(GOAL_LIMIT)}° at {self.gear_ratio:g}:1)")
         self.stopped = False
         if new_target != self.target_ticks:
-            self.target_ticks = new_target
+            self.target_ticks = self.goal_ticks = new_target
+            self.corrections = 0
             self.still_cycles = 0
-        if abs(self.target_ticks - self.total_ticks) > self.tolerance or self.sent_goal != self.target_ticks:
+        if abs(self.target_ticks - self.total_ticks) > self.tolerance or self.sent_goal != self.goal_ticks:
             self.position_reached = False
             self.position_stable_counter = 0
 
     def hold(self):
         """Stop where the stage is now: goal := present position (sent in the next cycle or by the caller)."""
         self.stopped = True
-        self.target_ticks = self.total_ticks
+        self.target_ticks = self.goal_ticks = self.total_ticks
         self.sent_goal = None
+        self.corrections = 0
         self.position_reached = True
 
     def goal_command(self):
         """One control cycle: the goal to write, or None. Updates `position_reached`."""
         self.still_cycles = self.still_cycles + 1 if self.total_ticks == self._prev_ticks else 0
         self._prev_ticks = self.total_ticks
-        if self.sent_goal != self.target_ticks:
-            return self.target_ticks
-        error = abs(self.target_ticks - self.total_ticks)
-        if error <= self.tolerance:
-            self.position_stable_counter += 1
-        else:
-            self.position_stable_counter = 0
-        if not self.position_reached:
-            if self.position_stable_counter >= self.position_stable_threshold:
-                self.position_reached = True
-            elif error < 3 and self.still_cycles >= self.settle_cycles:
-                self.accuracy_note = f"motor {self.ID}: stands {error} ticks from the goal"
+        if self.sent_goal != self.goal_ticks:
+            return self.goal_ticks
+        error = self.target_ticks - self.total_ticks
+        self.position_stable_counter = self.position_stable_counter + 1 if abs(error) <= self.tolerance else 0
+        if self.position_reached or self.stopped:
+            return None
+        if self.position_stable_counter >= self.position_stable_threshold:
+            self.position_reached = True
+        elif self.still_cycles >= self.settle_cycles:
+            if self.corrections < self.max_corrections:
+                aim = max(-self.max_aim, min(self.max_aim, self.goal_ticks + error - self.target_ticks))
+                self.corrections += 1
+                self.still_cycles = 0
+                if self.target_ticks + aim != self.goal_ticks:
+                    self.goal_ticks = self.target_ticks + aim
+                    return self.goal_ticks
+            elif abs(error) <= self.accept:
+                self.accuracy_note = f"motor {self.ID}: stands {abs(error)} ticks from the target"
                 self.position_reached = True
         return None
 
     def goal_sent(self):
-        self.sent_goal = self.target_ticks
+        self.sent_goal = self.goal_ticks
 
 
 class LoopRecorder:

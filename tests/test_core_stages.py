@@ -261,3 +261,29 @@ def test_position_mode_setup_order_on_the_real_bus():
     assert calls == [("EnableTorque", 1, 0), ("unLockEprom", 1), ("write1ByteTxRx", 1, 33, 0),
                      ("write2ByteTxRx", 1, 9, 0), ("write2ByteTxRx", 1, 11, 0), ("write1ByteTxRx", 1, 18, 0x12),
                      ("LockEprom", 1), ("ReadPos", 1), ("WritePosEx", 1, 5000, 0, 0), ("EnableTorque", 1, 1)]
+
+
+@pytest.mark.parametrize("angle", [360, -45.1, 0.03, 0.06])
+def test_position_mode_corrects_the_servo_dead_band(angle):
+    """C16 measurement: the ST3215 stops 2-4 ticks short and ignores goals 1-3 ticks away; the PC aims past."""
+    bus = SimStageBus((1,), cycle_dt=0.02)
+    bus.servo_deadband = 3
+    s = RotaryStages(lambda: bus, control_mode="position")
+    s.connect()
+    s.motors[0].speed_limit = 3000
+    assert s.move_to_angle(1, angle, wait_for_position=True, timeout=30) is True
+    assert abs(bus.motors[1]["pos"] - s.motors[0].ticks(angle)) <= 1
+    s.disconnect()
+
+
+def test_position_mode_without_correction_success_still_reaches_within_accept():
+    bus = SimStageBus((1,), cycle_dt=0.02)
+    s = RotaryStages(lambda: bus, control_mode="position")
+    s.connect()
+    s.motors[0].max_aim = 0                                                  # corrections cannot help
+    bus.servo_deadband = 3
+    logs = []
+    s.on_log = lambda text, level="info": logs.append(text)
+    assert s.move_to_angle(1, 10, wait_for_position=True, timeout=30) is True
+    assert 1 < abs(bus.motors[1]["pos"] - s.motors[0].ticks(10)) <= 4 and "ticks from the target" in logs[-1]
+    s.disconnect()

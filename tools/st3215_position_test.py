@@ -7,10 +7,17 @@ Answers what the register map does not say, before `rotary_motors.control_mode =
   4. Does the servo finish and hold its goal when the PC goes away in the middle of a move (port closed)?
   5. Does the position survive a reconnect, and what is reported after a power cycle (manual step at the end)?
 
+  6. (--correction, run 2) Does the PC correction reach ±1 tick: once the servo stands still, aim past the target by
+     the remaining error, at most 3 times and 12 ticks (what machine_core.stages.ServoPositionMotor does)?
+
 Run with the stage free to turn (no part, no cables in the way), one motor at a time:
-    python tools/st3215_position_test.py COM5 --id 1 [--turns 5] [--speed 1000] [--keep]
+    python tools/st3215_position_test.py COM5 --id 1 [--turns 5] [--speed 1000] [--keep] [--correction]
 The registers changed (mode 33, angle limits 9-12, phase 18) are saved to st3215_backup_<id>.json first and written
-back at the end, unless --keep. Every reading goes to st3215_test_<id>_<time>.csv. Nothing here talks to the laser.
+back at the end, unless --keep. Readings go to <out>/st3215_test_<id>_<time>.csv, the result lines to
+<out>/st3215_test_<id>_<time>_summary.txt (default out: tests/hardware/c16). Nothing here talks to the laser.
+
+Run 1 (2026-11-24): multi-turn and full-angle feedback work, holds without the PC; the servo stops 2-4 ticks short
+and does not move for goals 1-3 ticks away (its own loop, default gains P/D/I in registers 21/22/23).
 """
 import argparse
 import csv
@@ -24,8 +31,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from libraries.scservo_sdk import COMM_SUCCESS, PortHandler, sms_sts  # noqa: E402
 
 TICKS = 4096
-REG = {"min_angle": 9, "max_angle": 11, "phase": 18, "cw_dead": 26, "ccw_dead": 27, "offset": 31, "mode": 33}
+REG = {"min_angle": 9, "max_angle": 11, "phase": 18, "p_gain": 21, "d_gain": 22, "i_gain": 23, "i_limit": 25,
+       "cw_dead": 26, "ccw_dead": 27, "offset": 31, "mode": 33}
 FULL_ANGLE = 0x10
+
+
+class SkipRest(Exception):
+    pass
 
 
 class Servo:
@@ -72,7 +84,9 @@ def snapshot(servo):
     return {"mode": servo.read1(REG["mode"]), "min_angle": servo.read2(REG["min_angle"]),
             "max_angle": servo.read2(REG["max_angle"]), "phase": servo.read1(REG["phase"]),
             "cw_dead": servo.read1(REG["cw_dead"]), "ccw_dead": servo.read1(REG["ccw_dead"]),
-            "offset": servo.read2(REG["offset"])}
+            "offset": servo.read2(REG["offset"]), "p_gain": servo.read1(REG["p_gain"]),
+            "d_gain": servo.read1(REG["d_gain"]), "i_gain": servo.read1(REG["i_gain"]),
+            "i_limit": servo.read1(REG["i_limit"])}
 
 
 def settle(servo, log, label, timeout=30.0):
@@ -96,11 +110,15 @@ def main():
     ap.add_argument("--turns", type=int, default=5, help="largest move in motor turns (5 = 360° at 5:1)")
     ap.add_argument("--speed", type=int, default=1000, help="ticks/s (v1.0 speed limit 1000)")
     ap.add_argument("--keep", action="store_true", help="leave the servo in position mode")
+    ap.add_argument("--correction", action="store_true", help="run 2: only the PC correction test (6.)")
+    ap.add_argument("--out", default=str(Path(__file__).resolve().parents[1] / "tests" / "hardware" / "c16"))
     args = ap.parse_args()
 
     servo = Servo(args.port, args.id)
     stamp = time.strftime("%Y%m%d_%H%M%S")
-    backup_path = Path(f"st3215_backup_{args.id}.json")
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    backup_path = out_dir / f"st3215_backup_{args.id}.json"
     before = snapshot(servo)
     if not backup_path.exists():                       # keep the very first backup if the test is run again
         backup_path.write_text(json.dumps(before, indent=2), encoding="utf-8")
@@ -108,7 +126,8 @@ def main():
     if input("The stage will turn up to %d motor turns in both directions. Type 'yes': " % args.turns) != "yes":
         return
 
-    out = open(f"st3215_test_{args.id}_{stamp}.csv", "w", newline="", encoding="utf-8")
+    name = f"st3215_test_{args.id}_{stamp}{'_correction' if args.correction else ''}"
+    out = open(out_dir / f"{name}.csv", "w", newline="", encoding="utf-8")
     rows = csv.writer(out)
     rows.writerow(["time", "step", "present", "moving"])
     t_start = time.monotonic()
@@ -136,20 +155,25 @@ def main():
         servo.goal(start, args.speed)                   # hold where it is
         print("start position", start)
 
+        if args.correction:
+            corrected_moves(servo, start, args, log, report)
+            raise SkipRest
+
         # --- 2. accuracy: small steps and whole turns, each relative to the start
         moves = [1, 2, 3, 0, -1, -2, -3, 0, 10, -10, 0, TICKS, 0, 3 * TICKS]
         moves += [args.turns * TICKS, 0, -TICKS, -args.turns * TICKS, 0] if args.turns > 3 else [0, -TICKS, 0]
-        max_abs = 0
+        max_abs, seen = 0, []
         for delta in moves:
             target = start + delta
             servo.goal(target, args.speed)
             p, took = settle(servo, log, f"goal {delta:+d}")
             err = None if p is None else p - target
             max_abs = max(max_abs, abs(err) if err is not None else 99)
+            seen.append(p)
             report(f"goal {delta:+6d} ticks", err is not None and abs(err) <= 1,
                    f"present {p}, error {err} ticks, {took and round(took, 2)} s")
-        report("full-angle feedback", max_abs <= 1 and args.turns >= 1,
-               "positions beyond 0..4095 were reported" if max_abs <= 1 else "see the errors above")
+        beyond = [q for q in seen if q is not None and not 0 <= q < TICKS]
+        report("full-angle feedback", bool(beyond), f"{len(beyond)} positions outside 0..4095 reported")
 
         # --- 3. stop in the middle of a move
         servo.goal(start + 2 * TICKS, args.speed)
@@ -173,6 +197,8 @@ def main():
                f"present {p}, goal {start + TICKS}")
         servo.goal(start, args.speed)
         settle(servo, log, "back")
+    except SkipRest:
+        pass
     finally:
         out.close()
         if not args.keep:
@@ -184,12 +210,30 @@ def main():
             print("registers restored:", snapshot(servo))
         servo.close()
 
+    lines = ["registers before: " + json.dumps(before)] + [f"{'OK ' if ok else 'BAD'} {n}: {d}" for n, ok, d in results]
+    (out_dir / f"{name}_summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\nSummary")
-    for name, ok, detail in results:
-        print(f"  {'OK ' if ok else 'BAD'} {name}: {detail}")
-    print("\n5. Manual: switch the servo power off and on, run again with --turns 1 and note the start position "
-          "(does the multi-turn count survive a power cycle?).")
-    print("Send st3215_test_*.csv and this output back.")
+    print("\n".join("  " + line for line in lines))
+    print(f"\nResults in {out_dir} – commit and push them.")
+
+
+def corrected_moves(servo, start, args, log, report, max_corrections=3, max_aim=12):
+    """6.: the PC correction of machine_core.stages.ServoPositionMotor, step by step."""
+    for delta in [2, 3, -2, -3, 10, -10, 0, 100, 0, TICKS, 0, 3 * TICKS, 0, -TICKS, 0, 1, -1, 0]:
+        target = start + delta
+        goal, corrections = target, 0
+        servo.goal(goal, args.speed)
+        p, took = settle(servo, log, f"corr {delta:+d}")
+        while p is not None and abs(target - p) > 1 and corrections < max_corrections:
+            aim = max(-max_aim, min(max_aim, goal + (target - p) - target))
+            if target + aim == goal:
+                break
+            goal, corrections = target + aim, corrections + 1
+            servo.goal(goal, args.speed)
+            p, _ = settle(servo, log, f"corr {delta:+d} #{corrections}")
+        err = None if p is None else p - target
+        report(f"corrected {delta:+6d} ticks", err is not None and abs(err) <= 1,
+               f"present {p}, error {err} ticks after {corrections} corrections (goal {goal - target:+d} past)")
 
 
 if __name__ == "__main__":
