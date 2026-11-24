@@ -15,6 +15,7 @@ from PyQt6 import QtCore
 
 import protocol_log
 from machine_core import messages as m
+from machine_core import profile
 from machine_core.stages import LoopRecorder, RotaryStages, ScservoBus, SimStageBus, StageError
 from machine_core.worker import SIMULATOR_PORT, ArtisanConfig, MachineWorker
 
@@ -29,6 +30,7 @@ def config_from_settings(settings):
     config.max_z_speed = get("artisan.motion.max_z_speed", config.max_z_speed)  # v1.0 read a misspelt key (B16)
     config.laser_offsets = {head: tuple(get(f"artisan.{head}.laser_offset", list(offset)))
                             for head, offset in config.laser_offsets.items()}
+    _apply_profile(config, get)
     # P3.4: one run log per job; default folder Documents/MachineControl/runs, `run_log.folder` overrides it
     from PathManager import USER_DIR, get_base_dir
     config.run_log_dir = str(get("run_log.folder", "") or USER_DIR / "runs")
@@ -38,6 +40,55 @@ def config_from_settings(settings):
     except (OSError, ValueError, KeyError):
         pass
     return config
+
+
+# settings keys of v1.0 / 2.0 that the machine profile replaces (P3.3): settings key -> machine section key
+LEGACY_KEYS = {"artisan.baudrate": "baudrate",
+               "artisan.motion.default_speed": "limits.default_speed",
+               "artisan.motion.max_z_speed": "limits.max_z_speed",
+               "artisan.laser1064.laser_offset": "toolheads.laser1064.laser_offset",
+               "artisan.laser455.laser_offset": "toolheads.laser455.laser_offset"}
+
+
+def _apply_profile(config, get):
+    """P3.3: the machine values come from the machine profile `artisan.machine_profile` (Documents/MachineControl/
+    profiles). The first time the user's copy is made, the values in the settings are moved into it, so a calibrated
+    laser offset is kept. If the profile cannot be used, the settings' values stay and `profile_error` says why."""
+    from PathManager import USER_DIR, get_base_dir
+    name = get("artisan.machine_profile", "snapmaker_artisan")
+    try:
+        path, created = profile.find_profile(name, USER_DIR / "profiles", get_base_dir() / "profiles")
+        if created:
+            moved = {key: get(old) for old, key in LEGACY_KEYS.items() if get(old) is not None}
+            profile.update_machine_values(path, moved)
+            protocol_log.note("artisan", f"machine profile {path} created, settings moved into it: {sorted(moved)}")
+        loaded = profile.load_profile(path)
+        before = {old: get(old) for old in LEGACY_KEYS}
+        profile.apply(loaded, config)
+        config.profile_path = str(path)
+        differs = [old for old, value in before.items() if value is not None and not _same(value, _machine_value(
+            loaded.machine, LEGACY_KEYS[old]))]
+        if differs:
+            protocol_log.note("artisan", f"settings {differs} differ from the machine profile {path} – the profile is used")
+    except (profile.ProfileError, OSError, ValueError, KeyError) as e:
+        config.profile_error = f"machine profile not used ({e}); values from the settings"
+        protocol_log.note("artisan", config.profile_error)
+
+
+def _machine_value(machine, dotted):
+    node = machine
+    for part in dotted.split("."):
+        node = node.get(part) if isinstance(node, dict) else None
+    return node
+
+
+def _same(a, b):
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b))
+    try:
+        return abs(float(a) - float(b)) < 1e-9
+    except (TypeError, ValueError):
+        return a == b
 
 
 class MachineBridge(QtCore.QObject):
@@ -213,7 +264,12 @@ class ArtisanFacade:
             self.last_log = "Artisan already connected."
             return
         self._tool_head = self._laser_offset = None
-        self._submit(m.Connect(self.port, self.bridge.worker.config.baudrate))
+        if self.s is not None:                 # disconnected: a changed machine profile is read again (P3.3)
+            self.bridge.worker.config = config_from_settings(self.s)
+        config = self.bridge.worker.config
+        if config.profile_error:
+            self.last_log = f"WARNING: {config.profile_error}"
+        self._submit(m.Connect(self.port, config.baudrate))
 
     def disconnect(self):
         self._submit(m.Disconnect())

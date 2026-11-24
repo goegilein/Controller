@@ -22,7 +22,7 @@ This file is the single source of truth for status – update it in the same com
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
-| 3 – J-code and machine profile | in progress | P3.1, P3.2, P3.4 done; next P3.3 machine profile |
+| 3 – J-code and machine profile | done | P3.1–P3.4; C16 run 3 and hardware checks pending |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
 
@@ -306,9 +306,17 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   [docs/JCODE_SPEC.md](docs/JCODE_SPEC.md) section 2 (binding). `jcode.read_job` reads and checks version, units,
   paths and SHA-256; `check_header` (machine id from `ArtisanConfig.machine_id` until P3.3, detected head) runs in
   the preflight. J-codes without a header run as v0. BildHatcher writes the header from v3.0 on.
-- [ ] P3.3 Machine profile: read BildHatcher's `machine_profiles/*.json` format and extend it with capabilities
+- [x] P3.3 Machine profile: read BildHatcher's `machine_profiles/*.json` format and extend it with capabilities
   (work area, power / speed range, toolheads with laser offset, rotary axis, laser-off sequence) instead of the
   `artisan.*` settings. Where the profiles live → C10.
+  [docs/MACHINE_PROFILE.md](docs/MACHINE_PROFILE.md), `machine_core/profile.py`, bundled `profiles/snapmaker_artisan.json`
+  (values = v2.0's built-in ones, tested). File = `{name, gcode, machine}`; BildHatcher's flat 2.x layout + a
+  `machine` key is read too (BildHatcher ignores the unknown key), so one file can serve both until v3.0. The user's
+  copy lives in `Documents\MachineControl\profiles` (setting `artisan.machine_profile`); when it is first made the
+  old settings (baud rate, speeds, laser offsets) are moved into it, so a calibration is kept; afterwards the profile
+  counts (a differing setting is noted in the protocol log). Read again on every connect. Checked completely: a profile
+  with one wrong value (e.g. empty `laser_off`) is not used – warning on connect, values from the settings. Rotary
+  stages stay in the settings (own hardware, C8). BildHatcher unchanged.
 - [x] P3.4 Run log (job + checksum, machine, profile, time, result) – first step of traceability.
   `machine_core/runlog.py`: one JSON file per job in `Documents\MachineControl\runs` (setting `run_log.folder`
   overrides it), named `<start YYYY-MM-DD_HHMMSS>_<first step>.json`. Written at the start (result `running`, so a
@@ -396,4 +404,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-24 | P3.2: J-code v0.1 header (`JH key=value`, refuse on mismatch, relative paths) | `973731f` |
 | 2026-11-24 | C16 run 1 evaluated; PC-side correction of the servo dead band; test script run 2 | `ce543f1` |
 | 2026-11-24 | P3.4: run log, one JSON file per job | `0781d03` |
-| 2026-11-24 | C16 run 2 evaluated; correction aims from the target | see git log |
+| 2026-11-24 | C16 run 2 evaluated; correction aims from the target | `6f7516d` |
+| 2026-11-24 | P3.3: machine profile | see git log |

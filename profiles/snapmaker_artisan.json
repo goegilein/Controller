@@ -1,0 +1,28 @@
+{
+  "name": "Snapmaker Artisan",
+  "machine": {
+    "id": "snapmaker_artisan",
+    "notes": "Values as in Machine Control 2.0 / v1.0. work_area from the datasheet - VERIFY on the machine (HARDWARE_CHECKLIST item 15).",
+    "controller": "marlin",
+    "baudrate": 115200,
+    "work_area": {"x": [0, 400], "y": [0, 400], "z": [0, 400]},
+    "limits": {
+      "max_power_s": 255,
+      "max_power_p": 100,
+      "max_feed": null,
+      "default_speed": 30,
+      "max_z_speed": 30
+    },
+    "toolheads": {
+      "laser1064": {"name": "1064 nm infrared laser", "m1006_lines": 39, "laser_offset": [21.3, -11.3, 0]},
+      "laser455": {"name": "455 nm 40 W laser", "m1006_lines": 34, "laser_offset": [-21.0, 0, 0]}
+    },
+    "laser_off": ["M5 ; laser off", "M9 ; air assist off"],
+    "outputs": {
+      "crosshair": {"on": ["M2000 L13 P1"], "off": ["M2000 L13 P0"]},
+      "light": {"on": ["M2000 W1 P100"], "off": ["M2000 W1 P0"]},
+      "fan": {"on": ["M2000 W2 P100"], "off": ["M2000 W2 P0"]},
+      "air_assist": {"on": ["M8"], "off": ["M9"]}
+    }
+  }
+}

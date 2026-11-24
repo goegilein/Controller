@@ -122,7 +122,7 @@ J1 motif_block-1_cluster-2.nc
 | `jcode` | yes, once there is a header | format version `major.minor` | major other than 0 → refused |
 | `creator`, `created` | no | producer, ISO time | logged only (run log, P3.4) |
 | `units` | no (default `mm`) | units | anything other than `mm` → refused |
-| `machine` | no | machine profile id (C10); the Artisan is `snapmaker_artisan` | another machine → refused |
+| `machine` | no | `machine.id` of the machine profile ([MACHINE_PROFILE.md](MACHINE_PROFILE.md)); the Artisan is `snapmaker_artisan` | another machine → refused |
 | `toolhead` | no | head the job was made for: `laser1064` or `laser455` | not the detected head → refused |
 | `sha256` | no, repeatable | `sha256=<64 hex digits> <file>`, file as written in its `J1` line | see 2.2 |
 

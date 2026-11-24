@@ -35,6 +35,8 @@ class ArtisanConfig:
     machine_id: str = "snapmaker_artisan"  # checked against `JH machine=` (P3.2); from the machine profile in P3.3
     run_log_dir: str = None              # P3.4: one JSON file per job here; None = no run log (tests, core alone)
     app_version: str = ""                # written into the run log
+    profile_path: str = None             # P3.3: the machine profile these values come from (None = built-in / settings)
+    profile_error: str = None            # why the profile could not be used (the values are then the settings')
     baudrate: int = 115200
     default_speed: float = 30.0          # mm/s
     max_z_speed: float = 30.0            # mm/s; also limits combined moves, as in v1.0

@@ -117,6 +117,7 @@ class ExecutableBuilder:
             "--icon=GUI_files/resources/crosshair.png",  # Icon (optional)
             "--add-data", "GUI_files;GUI_files",  # Include GUI files
             "--add-data", "settings;settings",    # Include settings
+            "--add-data", "profiles;profiles",    # Include machine profiles (P3.3)
             "--add-data", "libraries;libraries",  # Include libraries
             "--add-data", "Drivers;Drivers",      # Include drivers
             "--add-data", "version.json;.",       # Include version file
