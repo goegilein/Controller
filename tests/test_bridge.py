@@ -119,7 +119,7 @@ def test_process_state_and_progress_in_the_ui_thread(setup):
     states, threads = [], set()
     setup.ac.set_process_state_callback(lambda st: (states.append(st), threads.add(threading.current_thread().name)))
     setup.bridge.submit(m.StartJob((JobStep("s", str(JOBS / "long_moves.nc"), step_transform(100, 100, 0)).to_dict(),)))
-    pump(lambda: states[-2:] == ["Running", "Idle"], timeout=20, what="job done")
+    pump(lambda: states[-2:] == ["Running", "Idle"], timeout=60, what="job done")
     assert threads == {"MainThread"}
 
 

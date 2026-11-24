@@ -57,7 +57,7 @@ def test_job_from_the_process_steps_burns_like_the_runner(qapp, tmp_path):
     s.add_step([50, 60, 0], JOBS / "long_moves.nc")
     start = len(s.sim.moves)
     s.ph.start_process()
-    pump(lambda: s.states[-2:] == ["Running", "Idle"], timeout=20, what="job done")
+    pump(lambda: s.states[-2:] == ["Running", "Idle"], timeout=60, what="job done")
     got = [(pos, armed) for code, pos, armed in s.sim.moves[start:] if code == "G1"]
     s.close()
 

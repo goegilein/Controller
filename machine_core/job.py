@@ -36,9 +36,34 @@ def rotation_z(deg):
     return r
 
 
-def step_transform(x, y, z, rotation_deg=0.0):
-    """Raw job coordinates -> machine: rotate the part about its origin, then place the origin at (x, y, z)."""
-    return translation(x, y, z) @ rotation_z(rotation_deg)
+def step_transform(x, y, z, rotation_deg=0.0, rotation=None):
+    """Raw job coordinates -> machine: rotate the part about its origin, then place the origin at (x, y, z).
+    `rotation` (3×3) replaces `rotation_deg` if given."""
+    t = translation(x, y, z)
+    if rotation is None:
+        return t @ rotation_z(rotation_deg)
+    r = np.eye(4)
+    r[:3, :3] = np.asarray(rotation, dtype=float)
+    return t @ r
+
+
+# P2.6: a measured part rotation (e.g. the three-point fit of a sample holder) is a full 3×3 rotation. Only its
+# rotation about Z goes into a job (decision 2026-11-24); the tilt is shown so the user sees an uneven holder.
+def rz_deg(rotation):
+    """Rotation about Z (deg) of a 3×3 rotation: the direction of the part's X axis in the machine X/Y plane."""
+    r = np.asarray(rotation, dtype=float)
+    return float(np.degrees(np.arctan2(r[1, 0], r[0, 0])))
+
+
+def tilt_deg(rotation):
+    """Angle (deg) between the part's Z axis and the machine Z axis."""
+    r = np.asarray(rotation, dtype=float)
+    return float(np.degrees(np.arccos(np.clip(r[2, 2], -1.0, 1.0))))
+
+
+def rz_only(rotation):
+    """The 3×3 rotation about Z with the same Rz – the part of a measured rotation that a job uses."""
+    return rotation_z(rz_deg(rotation))[:3, :3]
 
 
 @dataclass

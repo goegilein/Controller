@@ -84,6 +84,11 @@ class ProcessInterface(BaseClass):
         widget.set_current_pos_button.clicked.connect(lambda _, s=step, w=widget, b=True: self.set_step_wp(s,w,b))
         widget.go_to_wp_button.clicked.connect(lambda _, s=step: self.go_to_step_wp(s))
 
+        #part rotation (v2.0, P2.6): only with the machine-core process handler
+        if hasattr(self.process_handler, "set_step_from_stored_point"):
+            from step_rotation_ui import add_rotation_button
+            add_rotation_button(self, step, widget)
+
         #rotation motor
         self.set_available_rot_motors([widget])
         widget.rot_mot_combobox.currentTextChanged.connect(lambda _, s=step, w=widget: self.set_rot_motor_id(s,w))
@@ -94,10 +99,15 @@ class ProcessInterface(BaseClass):
 
         def update_axis_pos(position = None):
             abs_pos = self.process_handler.controller.abs_position
-
-            widget.rel_x_spinbox.setValue(abs_pos[0]-step.work_position[0])
-            widget.rel_y_spinbox.setValue(abs_pos[1]-step.work_position[1])
-            widget.rel_z_spinbox.setValue(abs_pos[2]-step.work_position[2])
+            if abs_pos is None:
+                return
+            if hasattr(self.process_handler, "part_coordinates"):  # part frame of a rotated step (P2.6)
+                rel = self.process_handler.part_coordinates(step, abs_pos)
+            else:
+                rel = [abs_pos[i] - step.work_position[i] for i in range(3)]
+            widget.rel_x_spinbox.setValue(rel[0])
+            widget.rel_y_spinbox.setValue(rel[1])
+            widget.rel_z_spinbox.setValue(rel[2])
         
         def threadsave_update_axies(position):
             position_emitter.list_signal.emit(position)
@@ -178,6 +188,15 @@ class ProcessInterface(BaseClass):
 
     def go_to_step_wp(self, process_step):
         self.process_handler.go_to_step_wp(process_step)
+
+    def refresh_step_widget(self, process_step, widget):
+        """Show the step's work position again (e.g. after it was taken from a stored position)."""
+        boxes = (widget.wp_x_spinbox, widget.wp_y_spinbox, widget.wp_z_spinbox, widget.wp_r_spinbox)
+        for box, value in zip(boxes, process_step.work_position):
+            box.blockSignals(True)
+            box.setValue(value)
+            box.blockSignals(False)
+        self.update_bounding_box_ui(reset_list=False)
 
     def set_step_nc_file(self, process_step, widget, browse_file=True):
         """

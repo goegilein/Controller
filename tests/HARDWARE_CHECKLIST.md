@@ -48,3 +48,4 @@ Start the app, do the step, close the app, copy `protocol.log` to `tests/fixture
 | 16 | v2.0: job positions – the same job as in v1.0 on scrap | identical burn position (C5 machine coordinates) |
 | 17 | v2.0: rotary moves with both cameras running (C16) | settles at the angle, no oscillation |
 | 18 | v2.0: stop the rotary while it turns (disconnect / Stop) and close the app while it turns | stage stops at once |
+| 19 | v2.0: holder fit with three points on a rotated holder → store centre → step "Rot" → apply → bounding box, then a short job on scrap | box and burn follow the holder's rotation; tilt value plausible |

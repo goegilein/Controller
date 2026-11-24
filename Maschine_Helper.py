@@ -615,7 +615,8 @@ class CustomSampleHolders():
                     float(self.measured_center[0]),
                     float(self.measured_center[1]),
                     float(self.measured_center[2]),
-                    name=pos_name
+                    name=pos_name,
+                    rotation=self.rotation_matrix,  # keep the holder's rotation for process steps (P2.6)
                 )
 
     def reset_center_display(self):
@@ -769,7 +770,7 @@ class StoredPoints():
             return None
         return self.add_point(pos[0], pos[1], pos[2], name=name, save=save)
 
-    def add_point(self, x=None, y=None, z=None, name=None, save=True):
+    def add_point(self, x=None, y=None, z=None, name=None, save=True, rotation=None):
         """
         Add a point to the stored list.
         Can be called with coordinates (x, y, z), a Point object, a list/tuple of coords,
@@ -800,6 +801,10 @@ class StoredPoints():
                 point.name = name
         else:
             point = Point(x, y, z, name=name)
+        if rotation is not None:
+            point.rotation = [[float(v) for v in row] for row in rotation]
+        elif isinstance(x, Point) and x.rotation is not None:
+            point.rotation = x.rotation
 
         # Enforce unique name
         if point.name is not None:
@@ -998,7 +1003,7 @@ class StoredPoints():
                     clean_name = str(name).strip() if name is not None else ""
                     if not clean_name or self.name_exists(clean_name):
                         clean_name = self.generate_unique_name(base_prefix=clean_name + "_" if clean_name else "Pos_")
-                    self.add_point(x, y, z, name=clean_name, save=False)
+                    self.add_point(x, y, z, name=clean_name, save=False, rotation=item.get("rotation"))
             elif isinstance(item, (list, tuple)) and len(item) >= 3:
                 self.add_point(item[0], item[1], item[2], save=False)
 
@@ -1034,11 +1039,12 @@ class StoredPoints():
 
 
 class Point():
-    def __init__(self, x=None, y=None, z=None, name=None):
+    def __init__(self, x=None, y=None, z=None, name=None, rotation=None):
         self.X = x
         self.Y = y
         self.Z = z
         self.name = name
+        self.rotation = rotation  # optional 3×3 part rotation in machine coordinates (e.g. from a holder fit, P2.6)
     
     def set_pos(self, x, y, z):
         self.X = x
@@ -1052,6 +1058,8 @@ class Point():
         d["x"] = float(self.X) if self.X is not None else None
         d["y"] = float(self.Y) if self.Y is not None else None
         d["z"] = float(self.Z) if self.Z is not None else None
+        if self.rotation is not None:
+            d["rotation"] = [[float(v) for v in row] for row in self.rotation]
         return d
 
     @classmethod
@@ -1062,7 +1070,7 @@ class Point():
         y = data.get("y", data.get("Y"))
         z = data.get("z", data.get("Z"))
         name = data.get("name", data.get("Name"))
-        return cls(x, y, z, name=name)
+        return cls(x, y, z, name=name, rotation=data.get("rotation"))
 
     def __repr__(self):
         name_str = f", name='{self.name}'" if self.name is not None else ""

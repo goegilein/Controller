@@ -21,7 +21,7 @@ This file is the single source of truth for status – update it in the same com
 | Inventory & plan | **draft – waiting for the user** | open questions in section 6 |
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
-| 2 – Machine core without Qt (Marlin) | in progress | P2.1–P2.5, P2.7, P2.8 done; P2.6 open (stored positions / fit points with the per-step transform) |
+| 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
 | 3 – J-code and machine profile | open | prepare v3.0, no galvo driver yet |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
@@ -243,9 +243,16 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   unknown). Absolute manual moves (`MoveTo`) outside the work area are refused too. Work area = datasheet,
   400 × 400 × 400 mm from the homing point (0, 0, 0) – **VERIFY** on the machine (homing position, real travel,
   whether the work area differs per toolhead). Relative jogs are not checked (the firmware's soft endstops apply).
-- [ ] P2.6 Coordinates (C5): no `G92`; per-step 4×4 transform raw → machine applied to every `G0/G1` (X, Y, Z; F unchanged
+- [x] P2.6 Coordinates (C5): no `G92`; per-step 4×4 transform raw → machine applied to every `G0/G1` (X, Y, Z; F unchanged
   for rigid transforms); camera → laser offset as a translation; stored positions / fit points stay valid (already
   absolute). Fixes B10, B15, B18, B25.
+  Part rotation per step (decisions 2026-11-24): the three-point holder fit (`CustomSampleHolders`) already computed
+  a full rotation but only stored the centre – a stored position now keeps an optional `rotation` (3×3, saved in
+  `stored_positions.json`; old files stay valid). A process step takes position + rotation from a stored position;
+  the job uses **only the rotation about Z** (`rz_only`), the tilt is shown with a warning above 0.5° and not
+  applied (paths stay flat). Step widget: button "Rot x.xx°" → dialog with the matrix, Rz, tilt, "apply stored
+  position", "reset". Rel X/Y/Z of a step are shown in the part frame (= G-code coordinates); bounding box rotates
+  with the part. Without a rotation everything is as before. Rotary gear ratio per motor from the settings (C16).
 - [x] P2.7 `stages.py` from `RotMotor_Cotroller` with safe stop and timeouts; direction per C8.
   `machine_core/stages.py`: `RotaryStages` (no Qt) with the v1.0 PID unchanged, bus interface (`ScservoBus` real,
   `SimStageBus` simulated with acceleration and faults). Speed 0 to every motor on disconnect, interpreter exit
@@ -364,4 +371,6 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-23 | P2.7: rotary stages without Qt – safe stop, timeouts, cancel by the machine stop (B06) | `037824b` |
 | 2026-11-23 | P2.8a: Qt bridge, Artisan and rotary facades with the old API | `468fe90` |
 | 2026-11-23 | P2.8b: process steps run as core jobs; bounding box without G92 (B10) | `45f9124` |
-| 2026-11-23 | P2.8c: app on the machine core, Stop / E-stop bar with confirmation and F9 / F12, simulator port; B26, C16 | see git log |
+| 2026-11-23 | P2.8c: app on the machine core, Stop / E-stop bar with confirmation and F9 / F12, simulator port; B26, C16 | `8a568ef` |
+| 2026-11-24 | Decisions C10, phase 3 scope; rotary gear ratio per motor | `363e595` |
+| 2026-11-24 | P2.6: part rotation per step from stored positions (Rz only, tilt shown) | see git log |

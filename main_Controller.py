@@ -75,6 +75,7 @@ interactive_image_control_overvoiew = Interactive_Image_Control.InteractiveImage
 
 maschine_helper = Maschine_Helper.MaschineHelpers(gui, artisan_controller)
 maschine_helper.setup_helpers()
+process_gui_interface.stored_points = maschine_helper.stored_points  # step rotation from stored positions (P2.6)
 
 gcode_plotter = Gcode_Plotter.GCodePlotter(gui, process_handler)
 
