@@ -161,3 +161,32 @@ def test_rotary_facade_connect_error_is_logged(qapp):
     rot.set_log_callback(logs.append)
     rot.connect()
     assert not rot.connected and "no such port" in logs[-1]
+
+
+def test_rotary_facade_position_mode_and_loop_record(qapp, tmp_path, monkeypatch):
+    """C16: control_mode / record_loop from the settings; an out-of-range click is logged, not raised."""
+    import PathManager
+
+    class Settings:
+        values = {"rotary_motors.port": "simulator", "rotary_motors.control_mode": "position",
+                  "rotary_motors.record_loop": True}
+
+        def get(self, key, default=None):
+            return self.values.get(key, default)
+
+    class Signal:
+        def connect(self, slot):
+            pass
+
+    Settings.settingChanged = Settings.settingsReplaced = Signal()
+    monkeypatch.setattr(PathManager, "USER_DIR", tmp_path)
+    rot = RotaryFacade(settings=Settings())
+    logs = []
+    rot.set_log_callback(logs.append)
+    rot.connect()
+    assert rot.control_mode == "position" and rot.bus.position_mode == {1, 2}
+    assert rot.move_to_angle(1, 5, wait_for_position=True, timeout=30) is True
+    assert rot.move_to_angle(1, 5000) is False and "outside the servo range" in logs[-1]
+    rot.disconnect()
+    record = next((tmp_path / "logs").glob("rotary_loop_*.csv")).read_text(encoding="utf-8").splitlines()
+    assert record[0] == "time,motor,target_ticks,actual_ticks,command" and len(record) > 5

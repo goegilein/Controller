@@ -49,3 +49,5 @@ Start the app, do the step, close the app, copy `protocol.log` to `tests/fixture
 | 17 | v2.0: rotary moves with both cameras running (C16) | settles at the angle, no oscillation |
 | 18 | v2.0: stop the rotary while it turns (disconnect / Stop) and close the app while it turns | stage stops at once |
 | 19 | v2.0: holder fit with three points on a rotated holder → store centre → step "Rot" → apply → bounding box, then a short job on scrap | box and burn follow the holder's rotation; tilt value plausible |
+| 20 | C16: `python tools/st3215_position_test.py COMx --id 1` for each rotary motor (stage free, no part); then once the manual power-cycle step it prints | all lines OK: on the tick (±1), beyond one turn, stop, holds without the PC; send the CSV + output back |
+| 21 | C16, after 20 is OK: settings `rotary_motors.control_mode = "position"`, `record_loop = true`; items 13, 17, 18 again; one job with `R` on scrap | no oscillation, angle on the tick; `Documents\MachineControl\logs\rotary_loop_*.csv` back |

@@ -14,12 +14,23 @@ control ends:
   loop overrode 20 ms later).
 A crash that kills the process without atexit (power loss of the PC, kill) still leaves the last speed active – the
 servos have no watchdog in wheel mode (VERIFY in the STS3215 manual).
+
+Position mode (C16, `control_mode="position"`, opt-in until the hardware test tools/st3215_position_test.py has
+passed): the servo's own position loop in multi-turn absolute mode (mode 0, both angle limits 0, full-angle
+feedback). The PC only writes the goal (±32767 ticks ≈ ±8 motor turns) and watches the position; there is no PC
+PID, so no stick-slip hunting, and a dead PC leaves the servo standing at its last goal. Stop = goal := present
+position. (Step mode 3 is not used: its present position is the distance to the target, not a position.)
 """
 import atexit
 import threading
 import time
+from pathlib import Path
 
 TICKS_PER_REV = 4096
+GOAL_LIMIT = 30000          # position mode: goal register ±32767 (bit 15 = sign), kept clear of the end
+MODE_POSITION, MODE_WHEEL = 0, 1
+REG_MIN_ANGLE, REG_MAX_ANGLE, REG_PHASE, REG_MODE = 9, 11, 18, 33
+PHASE_FULL_ANGLE = 0x10     # phase bit 4: feedback the full (multi-turn) angle instead of 0..4095
 
 
 class StageError(Exception):
@@ -28,6 +39,10 @@ class StageError(Exception):
 
 class StageTimeout(StageError):
     pass
+
+
+class StageFrameError(StageError):
+    """Position mode: the PC's position and the servo's goal frame do not match – torque off, not a goal."""
 
 
 # --------------------------------------------------------------------------- buses
@@ -51,6 +66,34 @@ class ScservoBus:
         self.driver.WheelMode(sid)
         self.driver.LockEprom(sid)
         self.driver.EnableTorque(sid, 1)
+
+    def setup_position_mode(self, sid):
+        """C16: multi-turn absolute position mode (VERIFY on the ST3215: tools/st3215_position_test.py)."""
+        if not hasattr(self.driver, "WritePosEx"):
+            raise StageError("position mode needs STS servos")
+        d = self.driver
+        phase, result, _ = d.read1ByteTxRx(sid, REG_PHASE)
+        if result != self._ok:
+            raise StageError(f"motor {sid}: cannot read the phase register")
+        d.EnableTorque(sid, 0)           # no jump to a goal left in the register while switching
+        d.unLockEprom(sid)
+        d.write1ByteTxRx(sid, REG_MODE, MODE_POSITION)
+        d.write2ByteTxRx(sid, REG_MIN_ANGLE, 0)
+        d.write2ByteTxRx(sid, REG_MAX_ANGLE, 0)
+        d.write1ByteTxRx(sid, REG_PHASE, phase | PHASE_FULL_ANGLE)
+        d.LockEprom(sid)
+        pos = self.read_pos(sid)
+        if pos is None or not self.write_goal(sid, pos, 0, 0):
+            raise StageError(f"motor {sid}: cannot set the goal to the present position")
+        d.EnableTorque(sid, 1)
+
+    def write_goal(self, sid, goal, speed, acc):
+        result, _ = self.driver.WritePosEx(sid, self.driver.scs_toscs(int(goal), 15), int(speed), int(acc))
+        return result == self._ok
+
+    def release(self, sid):
+        """Torque off (the stage turns freely) – only when the PC no longer knows where the servo is."""
+        self.driver.EnableTorque(sid, 0)
 
     def keepalive(self):
         self.driver.ReadPos(0)  # dummy read as in v1.0 ("prevents timeouts" of the board)
@@ -76,9 +119,12 @@ class SimStageBus:
     """
 
     def __init__(self, ids=(1,), positions=None, cycle_dt=None):
-        self.motors = {sid: {"pos": float((positions or {}).get(sid, 0)), "speed": 0.0, "cmd": 0.0, "acc": 50}
-                       for sid in ids}
+        self.motors = {sid: {"pos": float((positions or {}).get(sid, 0)), "speed": 0.0, "cmd": 0.0, "acc": 50,
+                             "goal": None, "limit": 0.0} for sid in ids}
         self.wheel_mode = set()
+        self.position_mode = set()
+        self.single_turn_feedback = False   # fault for tests: position mode without full-angle feedback
+        self.released = set()
         self.writes = []                 # (time, id, speed)
         self.closed = False
         self.jammed = set()
@@ -97,6 +143,19 @@ class SimStageBus:
             dt, self._t = now - self._t, now
         for sid, mo in self.motors.items():
             step = mo["acc"] * 100 * dt
+            if sid in self.position_mode:
+                if mo["goal"] is None or sid in self.released:
+                    mo["speed"] = 0.0
+                    continue
+                # the servo's own loop: trapezoid to the goal, stops on the tick
+                dist = mo["goal"] - mo["pos"]
+                brake = (2 * max(step / dt, 1e-9) * abs(dist)) ** 0.5
+                want = max(-mo["limit"], min(mo["limit"], (1 if dist > 0 else -1) * min(brake, abs(dist) / dt)))
+                mo["speed"] += max(-step, min(step, want - mo["speed"]))
+                if sid not in self.jammed:
+                    move = mo["speed"] * dt
+                    mo["pos"] = mo["goal"] if abs(move) >= abs(dist) else mo["pos"] + move
+                continue
             mo["speed"] += max(-step, min(step, mo["cmd"] - mo["speed"]))
             if sid not in self.jammed:
                 mo["pos"] += mo["speed"] * dt
@@ -106,6 +165,28 @@ class SimStageBus:
 
     def setup_wheel_mode(self, sid):
         self.wheel_mode.add(sid)
+        self.position_mode.discard(sid)
+
+    def setup_position_mode(self, sid):
+        self.position_mode.add(sid)
+        self.wheel_mode.discard(sid)
+
+    def write_goal(self, sid, goal, speed, acc):
+        with self._lock:
+            if self.closed:
+                raise StageError("port closed")
+            self._advance()
+            mo = self.motors[sid]
+            mo["goal"], mo["limit"], mo["acc"] = float(goal), float(speed), acc
+            self.writes.append((time.monotonic(), sid, ("goal", int(goal))))
+            return True
+
+    def release(self, sid):
+        with self._lock:
+            self.released.add(sid)
+
+    def last_goal(self, sid):
+        return next((w[1] for _, i, w in reversed(self.writes) if i == sid and isinstance(w, tuple)), None)
 
     def keepalive(self):
         if self.cycle_dt is not None:
@@ -127,7 +208,11 @@ class SimStageBus:
             self._advance()
             if sid in self.fail_reads:
                 return None
-            return int(self.motors[sid]["pos"]) % TICKS_PER_REV
+            pos = self.motors[sid]["pos"]
+            if sid in self.position_mode:
+                pos = int(round(pos))
+                return pos % TICKS_PER_REV if self.single_turn_feedback else pos  # full-angle feedback, signed
+            return int(pos) % TICKS_PER_REV
 
     def write_speed(self, sid, speed, acc):
         with self._lock:
@@ -139,7 +224,7 @@ class SimStageBus:
             return True
 
     def last_speed(self, sid):
-        return next((s for _, i, s in reversed(self.writes) if i == sid), None)
+        return next((s for _, i, s in reversed(self.writes) if i == sid and not isinstance(s, tuple)), None)
 
     def close(self):
         with self._lock:
@@ -266,11 +351,102 @@ class StageMotor:
         return output_speed
 
 
+class ServoPositionMotor(StageMotor):
+    """C16: the servo positions itself (multi-turn absolute mode); the PC sends the goal once per new target.
+
+    Reached = within `tolerance` ticks and standing still for `position_stable_threshold` cycles. A servo that stands
+    still for `settle_cycles` within 3 ticks (v1.0's accuracy) also counts as reached, so a dead zone of the servo
+    does not turn into a timeout."""
+
+    tolerance = 1
+    settle_cycles = 25                 # 0.5 s at 50 Hz
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.sent_goal = None          # None: (re)send the goal in the next cycle
+        self.still_cycles = 0
+        self._prev_ticks = self.total_ticks
+        self.accuracy_note = None
+
+    def update_from_raw(self, new_raw_pos):
+        if abs(new_raw_pos - self.last_raw_pos) > TICKS_PER_REV // 2:
+            # full-angle feedback never jumps by half a turn in one cycle: the servo reports single-turn positions,
+            # so the PC's ticks and the servo's goal frame differ by whole turns
+            raise StageFrameError(f"motor {self.ID}: position jumped {self.last_raw_pos} -> {new_raw_pos} "
+                                  f"(no full-angle feedback?)")
+        self.last_raw_pos = new_raw_pos
+        self.total_ticks = new_raw_pos
+        for callback in self.position_changed_callback:
+            try:
+                callback(self.angle(self.total_ticks))
+            except Exception:
+                pass
+
+    def set_target_angle(self, angle):
+        new_target = self.ticks(angle)
+        if abs(new_target) > GOAL_LIMIT:
+            raise StageError(f"motor {self.ID}: {angle}° is outside the servo range "
+                             f"(±{self.angle(GOAL_LIMIT)}° at {self.gear_ratio:g}:1)")
+        self.stopped = False
+        if new_target != self.target_ticks:
+            self.target_ticks = new_target
+            self.still_cycles = 0
+        if abs(self.target_ticks - self.total_ticks) > self.tolerance or self.sent_goal != self.target_ticks:
+            self.position_reached = False
+            self.position_stable_counter = 0
+
+    def hold(self):
+        """Stop where the stage is now: goal := present position (sent in the next cycle or by the caller)."""
+        self.stopped = True
+        self.target_ticks = self.total_ticks
+        self.sent_goal = None
+        self.position_reached = True
+
+    def goal_command(self):
+        """One control cycle: the goal to write, or None. Updates `position_reached`."""
+        self.still_cycles = self.still_cycles + 1 if self.total_ticks == self._prev_ticks else 0
+        self._prev_ticks = self.total_ticks
+        if self.sent_goal != self.target_ticks:
+            return self.target_ticks
+        error = abs(self.target_ticks - self.total_ticks)
+        if error <= self.tolerance:
+            self.position_stable_counter += 1
+        else:
+            self.position_stable_counter = 0
+        if not self.position_reached:
+            if self.position_stable_counter >= self.position_stable_threshold:
+                self.position_reached = True
+            elif error < 3 and self.still_cycles >= self.settle_cycles:
+                self.accuracy_note = f"motor {self.ID}: stands {error} ticks from the goal"
+                self.position_reached = True
+        return None
+
+    def goal_sent(self):
+        self.sent_goal = self.target_ticks
+
+
+class LoopRecorder:
+    """C16: CSV of every control cycle (time, motor, target / actual ticks, command) – does not change the control."""
+
+    def __init__(self, path):
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._file = open(self.path, "w", encoding="utf-8", newline="")
+        self._file.write("time,motor,target_ticks,actual_ticks,command\n")
+
+    def __call__(self, t, sid, target, actual, command):
+        if not self._file.closed:
+            self._file.write(f"{t:.4f},{sid},{target},{actual},{'' if command is None else command}\n")
+
+    def close(self):
+        self._file.close()
+
+
 # --------------------------------------------------------------------------- the stages
 
 class RotaryStages:
     def __init__(self, bus_factory, gear_ratio=3, loop_interval=0.02, max_failures=5, move_timeout=100.0,
-                 on_log=None, gear_ratios=None):
+                 on_log=None, gear_ratios=None, control_mode="wheel", recorder=None):
         self.bus_factory = bus_factory     # () -> bus
         self.gear_ratio = gear_ratio       # C8: 3:1 (GT2 20:60); 5:1 upgrade planned -> per motor in gear_ratios
         self.gear_ratios = dict(gear_ratios or {})  # {motor id: ratio}, overrides gear_ratio
@@ -278,6 +454,10 @@ class RotaryStages:
         self.max_failures = max_failures
         self.move_timeout = move_timeout   # s, default for waits (v1.0 had 100 s, unused)
         self.on_log = on_log or (lambda text, level="info": None)
+        if control_mode not in ("wheel", "position"):
+            raise ValueError(f"unknown rotary control mode {control_mode!r}")
+        self.control_mode = control_mode   # C16: "wheel" = v1.0 PID on the PC, "position" = the servo's own loop
+        self.recorder = recorder           # (time, id, target ticks, actual ticks, command) per cycle, or None
         self.bus = None
         self.motors = []
         self.fault = None
@@ -295,14 +475,19 @@ class RotaryStages:
         if self.bus is not None:
             return
         bus = self.bus_factory()
+        position = self.control_mode == "position"
         motors = []
         for sid in range(1, 10):
             if bus.ping(sid):
+                if position:
+                    bus.setup_position_mode(sid)   # before the read: the feedback changes to the full angle
                 pos = bus.read_pos(sid)
                 if pos is None:
                     continue
-                bus.setup_wheel_mode(sid)
-                motor = StageMotor(sid, raw_position=pos, gear_ratio=self.gear_ratios.get(sid, self.gear_ratio))
+                if not position:
+                    bus.setup_wheel_mode(sid)
+                kind = ServoPositionMotor if position else StageMotor
+                motor = kind(sid, raw_position=pos, gear_ratio=self.gear_ratios.get(sid, self.gear_ratio))
                 if hasattr(bus, "clock"):
                     motor.clock = bus.clock
                     motor.last_update_time = motor.clock()
@@ -315,7 +500,7 @@ class RotaryStages:
         if not self._atexit:
             atexit.register(self._stop_at_exit)
             self._atexit = True
-        self.on_log(f"rotary stages: motors {[mo.ID for mo in motors]}")
+        self.on_log(f"rotary stages ({self.control_mode} mode): motors {[mo.ID for mo in motors]}")
 
     def _stop_at_exit(self):
         """Interpreter exit: speed 0 and close; the UI that would show a log line may already be gone."""
@@ -353,37 +538,65 @@ class RotaryStages:
                             self._failure(motor, "read failed")
                             continue
                         motor.update_from_raw(raw)
-                        if self.bus.write_speed(motor.ID, motor.calculate_control_speed(), motor.acc) is False:
-                            self._failure(motor, "write failed")
-                            continue
+                        if isinstance(motor, ServoPositionMotor):
+                            command = motor.goal_command()
+                            if command is not None:
+                                if self.bus.write_goal(motor.ID, command, motor.speed_limit, motor.acc) is False:
+                                    self._failure(motor, "write failed")
+                                    continue
+                                motor.goal_sent()
+                            if motor.accuracy_note:
+                                self.on_log(motor.accuracy_note, "warning")
+                                motor.accuracy_note = None
+                        else:
+                            command = motor.calculate_control_speed()
+                            if self.bus.write_speed(motor.ID, command, motor.acc) is False:
+                                self._failure(motor, "write failed")
+                                continue
                         motor.failures = 0
+                        if self.recorder:
+                            self.recorder(time.time(), motor.ID, motor.target_ticks, motor.total_ticks, command)
                 self._halt.wait(self.loop_interval)
+        except StageFrameError as e:
+            self._set_fault(str(e), release=True)
         except Exception as e:
             self._set_fault(f"control loop: {e!r}")
 
-    def _failure(self, motor, what):
-        motor.failures += 1
+    def _halt_motor(self, motor, release=False):
+        """Stop one motor at once: wheel mode speed 0; position mode goal := present position (or torque off)."""
+        motor.hold()
         try:
-            self.bus.write_speed(motor.ID, 0, motor.acc)
+            if isinstance(motor, ServoPositionMotor):
+                if release:
+                    self.bus.release(motor.ID)
+                elif self.bus.write_goal(motor.ID, motor.total_ticks, motor.speed_limit, motor.acc):
+                    motor.goal_sent()
+            else:
+                self.bus.write_speed(motor.ID, 0, motor.acc)
         except Exception:
             pass
+
+    def _failure(self, motor, what):
+        motor.failures += 1
+        if isinstance(motor, ServoPositionMotor):
+            # a read failed: the servo keeps its own goal; only a write failure leaves it unknown
+            if what != "read failed":
+                self._halt_motor(motor)
+        else:
+            self._halt_motor(motor)
         if motor.failures >= self.max_failures:
             raise StageError(f"motor {motor.ID}: {what} {motor.failures}× in a row")
 
-    def _set_fault(self, reason):
+    def _set_fault(self, reason, release=False):
         with self.lock:
             self.fault = reason
             self._halt.set()
-            self._all_speed_zero()
+            self._all_speed_zero(release)
         self.on_log(f"rotary stages stopped: {reason}", "error")
 
-    def _all_speed_zero(self):
+    def _all_speed_zero(self, release=False):
         for motor in self.motors:
-            motor.hold()
-            try:
-                self.bus.write_speed(motor.ID, 0, motor.acc)
-            except Exception:
-                pass
+            self._halt_motor(motor, release)
 
     # ------------------------------------------------------------------ commands
     def _motors(self, sid):
@@ -416,12 +629,10 @@ class RotaryStages:
     def stop_motor(self, sid):
         with self.lock:
             for motor in self._motors(sid):
-                motor.hold()
                 if self.bus is not None:
-                    try:
-                        self.bus.write_speed(motor.ID, 0, motor.acc)
-                    except Exception:
-                        pass
+                    self._halt_motor(motor)
+                else:
+                    motor.hold()
 
     def stop_all(self):
         self.stop_motor(-1)

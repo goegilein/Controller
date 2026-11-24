@@ -8,11 +8,13 @@ UI modules call, but every method only submits a command or reads cached state â
 Coordinates: `abs_position` / `get_absolute_position()` are machine coordinates (C5); `current_position` /
 `get_position()` are relative to the work position, which only lives in the app (no G92).
 """
+import time
+
 from PyQt6 import QtCore
 
 import protocol_log
 from machine_core import messages as m
-from machine_core.stages import RotaryStages, ScservoBus, SimStageBus, StageError
+from machine_core.stages import LoopRecorder, RotaryStages, ScservoBus, SimStageBus, StageError
 from machine_core.worker import SIMULATOR_PORT, ArtisanConfig, MachineWorker
 
 PROCESS_STATES = {"running": "Running", "paused": "Paused"}  # everything else is "Idle" for the old UI
@@ -304,6 +306,9 @@ class RotaryFacade(RotaryStages):
         self.series = get("rotary_motors.series", "STS")
         self.gear_ratio = float(get("rotary_motors.gear_ratio", 3))     # applied on the next connect
         self.gear_ratios = {int(k): float(v) for k, v in (get("rotary_motors.gear_ratios", {}) or {}).items()}
+        mode = get("rotary_motors.control_mode", "wheel")     # C16: "position" after the hardware test
+        self.control_mode = mode if mode in ("wheel", "position") else "wheel"
+        self.record_loop = bool(get("rotary_motors.record_loop", False))
 
     def _make_bus(self):
         if self.port == SIMULATOR_PORT:
@@ -338,10 +343,17 @@ class RotaryFacade(RotaryStages):
             self.last_log = "Rotary Motor Board already connected."
             return
         try:
+            if self.record_loop and self.recorder is None:
+                from PathManager import USER_DIR
+                self.recorder = LoopRecorder(USER_DIR / "logs" / time.strftime("rotary_loop_%Y%m%d_%H%M%S.csv"))
             super().connect()
-            protocol_log.note("rotary", f"connected on {self.port} ({self.series}), motors {[mo.ID for mo in self.motors]}")
+            protocol_log.note("rotary", f"connected on {self.port} ({self.series}, {self.control_mode} mode), "
+                                        f"motors {[mo.ID for mo in self.motors]}")
         except Exception as e:
             self.bus = None
+            if self.recorder is not None:
+                self.recorder.close()
+                self.recorder = None
             self.last_log = f"Rotary Motor Board connection error: {e}."
             protocol_log.note("rotary", f"connect failed on {self.port}: {e!r}")
         self._notify_connected()
@@ -351,6 +363,9 @@ class RotaryFacade(RotaryStages):
             self.last_log = "No Rotary Motor Board connected."
             return
         super().disconnect()
+        if self.recorder is not None:
+            self.recorder.close()
+            self.recorder = None
         protocol_log.note("rotary", "disconnected")
         self._notify_connected()
 

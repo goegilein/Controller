@@ -64,7 +64,9 @@
     "port": "COM5",
     "series": "STS",
     "gear_ratio": 3,
-    "gear_ratios": {}
+    "gear_ratios": {},
+    "control_mode": "wheel",
+    "record_loop": false
   },
   "overview_camera": {
     "camera_index": -1,
