@@ -7,8 +7,8 @@ Answers what the register map does not say, before `rotary_motors.control_mode =
   4. Does the servo finish and hold its goal when the PC goes away in the middle of a move (port closed)?
   5. Does the position survive a reconnect, and what is reported after a power cycle (manual step at the end)?
 
-  6. (--correction, run 2) Does the PC correction reach ±1 tick: once the servo stands still, aim past the target by
-     the remaining error, at most 3 times and 12 ticks (what machine_core.stages.ServoPositionMotor does)?
+  6. (--correction) Does the PC correction reach ±1 tick: once the servo stands still off the target, set the goal
+     2, 3, 4 ticks past the target in the direction still to go (what machine_core.stages.ServoPositionMotor does)?
 
 Run with the stage free to turn (no part, no cables in the way), one motor at a time:
     python tools/st3215_position_test.py COM5 --id 1 [--turns 5] [--speed 1000] [--keep] [--correction]
@@ -17,7 +17,9 @@ back at the end, unless --keep. Readings go to <out>/st3215_test_<id>_<time>.csv
 <out>/st3215_test_<id>_<time>_summary.txt (default out: tests/hardware/c16). Nothing here talks to the laser.
 
 Run 1 (2026-11-24): multi-turn and full-angle feedback work, holds without the PC; the servo stops 2-4 ticks short
-and does not move for goals 1-3 ticks away (its own loop, default gains P/D/I in registers 21/22/23).
+and does not move for goals 1-3 ticks away (its own loop, gains P 32 / D 32 / I 0 in registers 21/22/23).
+Run 2 (--correction, errors added up): 16 of 18 within ±1; the two returns from 1 and 3 turns swung to -2.
+Run 3 (--correction, aim from the target): checks the rule now in ServoPositionMotor.
 """
 import argparse
 import csv
@@ -217,7 +219,7 @@ def main():
     print(f"\nResults in {out_dir} – commit and push them.")
 
 
-def corrected_moves(servo, start, args, log, report, max_corrections=3, max_aim=12):
+def corrected_moves(servo, start, args, log, report, max_corrections=3, base_aim=2):
     """6.: the PC correction of machine_core.stages.ServoPositionMotor, step by step."""
     for delta in [2, 3, -2, -3, 10, -10, 0, 100, 0, TICKS, 0, 3 * TICKS, 0, -TICKS, 0, 1, -1, 0]:
         target = start + delta
@@ -225,10 +227,8 @@ def corrected_moves(servo, start, args, log, report, max_corrections=3, max_aim=
         servo.goal(goal, args.speed)
         p, took = settle(servo, log, f"corr {delta:+d}")
         while p is not None and abs(target - p) > 1 and corrections < max_corrections:
-            aim = max(-max_aim, min(max_aim, goal + (target - p) - target))
-            if target + aim == goal:
-                break
-            goal, corrections = target + aim, corrections + 1
+            corrections += 1
+            goal = target + (1 if target > p else -1) * (base_aim + corrections - 1)
             servo.goal(goal, args.speed)
             p, _ = settle(servo, log, f"corr {delta:+d} #{corrections}")
         err = None if p is None else p - target

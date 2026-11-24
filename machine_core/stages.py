@@ -364,10 +364,11 @@ class StageMotor:
 class ServoPositionMotor(StageMotor):
     """C16: the servo positions itself (multi-turn absolute mode); the PC writes the goal and corrects the rest.
 
-    Measured on the ST3215 (2026-11-24, tests/hardware/c16): the servo stops 2-4 ticks short of its goal and does not
-    move at all for a goal 1-3 ticks away (its own loop has the same break-away limit as the wheel mode). So the PC
-    aims past the target by the remaining error once the servo stands still (`max_corrections` times, at most
-    `max_aim` ticks past), like a nudge, without any PID on the PC.
+    Measured on the ST3215 (2026-11-24, tests/hardware/c16): the servo stops about 2 ticks short of whatever goal it
+    gets, from any distance, and often does not move for a goal 1-3 ticks away (its own loop has the same break-away
+    limit as the wheel mode). So once the servo stands still off the target, the PC sets the goal `base_aim`,
+    `base_aim + 1`, ... ticks past the target in the direction it still has to go (`max_corrections` times). The aim
+    is always taken from the target, never added up (run 2: adding up the errors swung past the target).
     Reached = within `tolerance` and still for `position_stable_threshold` cycles; after the corrections within
     `accept` ticks also counts (logged), anything further away never counts (the wait times out)."""
 
@@ -375,7 +376,7 @@ class ServoPositionMotor(StageMotor):
     accept = 4                         # ticks, measured accuracy without correction
     settle_cycles = 10                 # 0.2 s still = the servo has stopped
     max_corrections = 3
-    max_aim = 12                       # ticks the goal may lie past the target
+    base_aim = 2                       # ticks past the target for the first correction (the servo stops ~2 short)
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -436,12 +437,10 @@ class ServoPositionMotor(StageMotor):
             self.position_reached = True
         elif self.still_cycles >= self.settle_cycles:
             if self.corrections < self.max_corrections:
-                aim = max(-self.max_aim, min(self.max_aim, self.goal_ticks + error - self.target_ticks))
                 self.corrections += 1
                 self.still_cycles = 0
-                if self.target_ticks + aim != self.goal_ticks:
-                    self.goal_ticks = self.target_ticks + aim
-                    return self.goal_ticks
+                self.goal_ticks = self.target_ticks + (1 if error > 0 else -1) * (self.base_aim + self.corrections - 1)
+                return self.goal_ticks
             elif abs(error) <= self.accept:
                 self.accuracy_note = f"motor {self.ID}: stands {abs(error)} ticks from the target"
                 self.position_reached = True

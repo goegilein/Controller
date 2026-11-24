@@ -263,11 +263,12 @@ def test_position_mode_setup_order_on_the_real_bus():
                      ("LockEprom", 1), ("ReadPos", 1), ("WritePosEx", 1, 5000, 0, 0), ("EnableTorque", 1, 1)]
 
 
+@pytest.mark.parametrize("deadband", [2, 3])
 @pytest.mark.parametrize("angle", [360, -45.1, 0.03, 0.06])
-def test_position_mode_corrects_the_servo_dead_band(angle):
+def test_position_mode_corrects_the_servo_dead_band(angle, deadband):
     """C16 measurement: the ST3215 stops 2-4 ticks short and ignores goals 1-3 ticks away; the PC aims past."""
     bus = SimStageBus((1,), cycle_dt=0.02)
-    bus.servo_deadband = 3
+    bus.servo_deadband = deadband
     s = RotaryStages(lambda: bus, control_mode="position")
     s.connect()
     s.motors[0].speed_limit = 3000
@@ -280,7 +281,7 @@ def test_position_mode_without_correction_success_still_reaches_within_accept():
     bus = SimStageBus((1,), cycle_dt=0.02)
     s = RotaryStages(lambda: bus, control_mode="position")
     s.connect()
-    s.motors[0].max_aim = 0                                                  # corrections cannot help
+    s.motors[0].max_corrections = 0                                          # no corrections
     bus.servo_deadband = 3
     logs = []
     s.on_log = lambda text, level="info": logs.append(text)
