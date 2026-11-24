@@ -4,7 +4,7 @@ J-code is the job format of the machine suite: a short sequence file that places
 G-code files). This document describes:
 
 - **v0**: what BildHatcher writes today and what Machine Control 2.0 reads (binding);
-- **v0.1**: the optional header (draft, REVISION_PLAN.md P3.2).
+- **v0.1**: the optional header (REVISION_PLAN.md P3.2, decided 2026-11-24; read by Machine Control 2.0).
 
 The reader is `machine_core/jcode.py`, and the tests are in `tests/test_jcode.py`.
 
@@ -67,6 +67,7 @@ The job is refused before anything moves if any of these holds:
 - power is outside `S` 0..255 or `P` 0..100;
 - the feed is not allowed;
 - a step needs a rotary stage that is not assigned.
+- the v0.1 header does not fit the machine, the head or the files (section 2).
 
 The checks are in REVISION_PLAN.md, P2.5.
 
@@ -87,37 +88,57 @@ header and footer inside each file.
 
 ---
 
-## 2. v0.1 header (draft – to be decided)
+## 2. v0.1 header (binding)
 
-The header carries metadata (format version, target machine and toolhead, checksums), so the machine can check
-that a job fits it and is still the file that was produced (decision 2026-11-24 (3)). BildHatcher keeps writing
-v0 until v3.0. The controller accepts both: a J-code without a header runs as v0.
+The header carries metadata, so the machine can check two things before anything moves: that the job fits this
+machine, and that the files are still the ones that were produced (decision 2026-11-24 (3)). BildHatcher keeps
+writing v0 until v3.0. The controller accepts both: a J-code without a header runs as v0 (section 1).
 
-### 2.1 Proposed syntax
+### 2.1 Syntax
 
-A structured header instead of comments (revision notes, proposal 7). One `JH` line holds a JSON object and must
-be the first command in the file:
+Header lines have the form `JH <key>=<value>`, one key per line, so they stay readable and editable by hand. They
+come **before the first `J0` / `J1`**. Comments and blank lines may be between them. The value is the rest of the
+line without the `;` comment, with spaces trimmed. Keys are case-insensitive.
 
 ```
 ; This file was created by BildHatcher
-JH {"jcode": "0.1", "creator": "BildHatcher 3.0.0", "created": "2026-11-24T10:00:00", "units": "mm", "machine": "snapmaker_artisan", "toolhead": "laser455", "files": {"motif_block-1_cluster-1.nc": "sha256:9f2c…", "motif_block-1_cluster-2.nc": "sha256:41ab…"}}
+JH jcode=0.1
+JH creator=BildHatcher 3.0.0
+JH created=2026-11-24T10:00:00
+JH units=mm
+JH machine=snapmaker_artisan
+JH toolhead=laser455
+JH sha256=9f2c0e…(64 hex digits) motif_block-1_cluster-1.nc
+JH sha256=41ab77…(64 hex digits) motif_block-1_cluster-2.nc
+
 J0 X12.5 Y-3 Z0 R0
 J1 motif_block-1_cluster-1.nc
+J0 X40 Y-3 Z0 R90
+J1 motif_block-1_cluster-2.nc
 ```
 
 | Key | Required | Meaning | Check by the machine control |
 |---|---|---|---|
-| `jcode` | yes | format version | unknown major version → refuse |
-| `creator`, `created` | no | producer and time | logged only |
-| `units` | no (default `mm`) | units | anything else than `mm` → refuse |
-| `machine` | no | machine profile id (C10) | another machine → refuse |
-| `toolhead` | no | toolhead the job was made for | not the detected head → refuse |
-| `files` | no | SHA-256 per `J1` file, keyed by the path as written in `J1` | mismatch or missing file → refuse |
+| `jcode` | yes, once there is a header | format version `major.minor` | major other than 0 → refused |
+| `creator`, `created` | no | producer, ISO time | logged only (run log, P3.4) |
+| `units` | no (default `mm`) | units | anything other than `mm` → refused |
+| `machine` | no | machine profile id (C10); the Artisan is `snapmaker_artisan` | another machine → refused |
+| `toolhead` | no | head the job was made for: `laser1064` or `laser455` | not the detected head → refused |
+| `sha256` | no, repeatable | `sha256=<64 hex digits> <file>`, file as written in its `J1` line | see 2.2 |
 
-Open points for the decision:
+A key other than `sha256` given twice is refused. An unknown key is logged as a warning and ignored, so a newer
+minor version can add keys.
 
-- Refuse or only warn on a mismatch? The proposal refuses. A changed file or the wrong head is exactly what the
-  check is for.
-- One `JH` JSON line, or several `JH key=value` lines (easier to read and edit by hand)?
-- Relative `J1` paths become the rule once a header is present, so a job folder can be moved (revision notes,
-  proposal 2: a package).
+### 2.2 Rules once a header is present
+
+- **Every mismatch is refused, not just warned about.** A wrong head, another machine or a changed file is
+  exactly what the check is for.
+- **`J1` paths are relative** to the folder of the J-code file and stay inside it: absolute paths and paths that
+  leave the folder (`..`) are refused. The job folder is then a package that can be moved or archived as a whole.
+- **Checksums:** once there is any `sha256` line, every `J1` file needs one, every listed file must be used by a `J1`,
+  and the file's SHA-256 must match. File names are matched with `/` and `\` treated alike, a leading `./` ignored
+  and the case ignored (Windows).
+- `JH` after the first `J0` / `J1` is refused.
+
+The reader is `machine_core.jcode.read_job`, the machine-side check `check_header`. Both run in the preflight
+(`JobRunner.prepare`) before anything moves.

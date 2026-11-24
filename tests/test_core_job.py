@@ -276,3 +276,22 @@ def test_manual_move_outside_the_work_area_is_refused():
     assert not any(line.startswith("G0 X401") for line in rig.sent())
     assert any("outside the work area" in e.text for e in rig.of(m.LogLine))
     rig.close()
+
+
+def test_job_for_another_toolhead_is_refused(tmp_path):
+    """P3.2: the header names the head the job was made for; the machine checks it before anything moves."""
+    seg = tmp_path / "seg.nc"
+    seg.write_bytes((JOBS / "long_moves.nc").read_bytes())
+    import hashlib
+    digest = hashlib.sha256(seg.read_bytes()).hexdigest()
+    jcode = tmp_path / "job.jcode"
+    for head, refused in (("laser455", True), ("laser1064", False)):
+        jcode.write_text(f"JH jcode=0.1\nJH machine=snapmaker_artisan\nJH toolhead={head}\nJH sha256={digest} seg.nc\n"
+                         "J0 X0 Y0 Z0 R0\nJ1 seg.nc\n", encoding="utf-8")
+        rig = Rig(realtime=False)                                         # detects laser1064
+        rig.connect()
+        start_job(rig, [JobStep("s", str(jcode), step_transform(100, 100, 0))])
+        texts = [e.text for e in rig.of(m.LogLine)]
+        assert any("made for toolhead 'laser455', detected 'laser1064'" in t for t in texts) == refused, texts
+        assert any(line.startswith("G1") for line in rig.sent()) != refused
+        rig.close()

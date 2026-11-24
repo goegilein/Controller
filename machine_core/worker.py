@@ -31,6 +31,7 @@ SIMULATOR_PORT = "simulator"
 @dataclass
 class ArtisanConfig:
     """Machine settings the worker needs; filled from the settings today, from the machine profile later (P3.3)."""
+    machine_id: str = "snapmaker_artisan"  # checked against `JH machine=` (P3.2); from the machine profile in P3.3
     baudrate: int = 115200
     default_speed: float = 30.0          # mm/s
     max_z_speed: float = 30.0            # mm/s; also limits combined moves, as in v1.0

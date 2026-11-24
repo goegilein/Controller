@@ -22,7 +22,7 @@ This file is the single source of truth for status – update it in the same com
 | 0 – Safety net | in progress | P0.1, P0.2, P0.4, P0.5 done; P0.3 waits for recordings (checklist A) |
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
-| 3 – J-code and machine profile | in progress | P3.1 done; P3.2 header draft to decide |
+| 3 – J-code and machine profile | in progress | P3.1, P3.2 done; next P3.4 run log, P3.3 profile |
 | 4 – UI, user data, conventions | open | |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
 
@@ -300,8 +300,12 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   writing it: parentheses in J-code lines are no comments again (as v1.0 – the P2.4 reader stripped them, so
   `J1 job (1).nc` would not be found); a bad `J0` number or word is a clear refusal instead of an internal error;
   `G20` (inch) is refused. Section 2 = header draft for P3.2.
-- [ ] P3.2 Optional header / manifest (format version, creator, target machine / profile, SHA-256 of linked files)
-  read and checked if present – coordinated with BildHatcher.
+- [x] P3.2 Optional header / manifest (format version, creator, target machine / profile, SHA-256 of linked files)
+  read and checked if present – coordinated with BildHatcher. Decided 2026-11-24: several `JH key=value` lines before
+  the first `J0` / `J1`; every mismatch is refused; with a header `J1` paths are relative and stay in the job folder.
+  [docs/JCODE_SPEC.md](docs/JCODE_SPEC.md) section 2 (binding). `jcode.read_job` reads and checks version, units,
+  paths and SHA-256; `check_header` (machine id from `ArtisanConfig.machine_id` until P3.3, detected head) runs in
+  the preflight. J-codes without a header run as v0. BildHatcher writes the header from v3.0 on.
 - [ ] P3.3 Machine profile: read BildHatcher's `machine_profiles/*.json` format and extend it with capabilities
   (work area, power / speed range, toolheads with laser offset, rotary axis, laser-off sequence) instead of the
   `artisan.*` settings. Where the profiles live → C10.
@@ -380,4 +384,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-24 | Decisions C10, phase 3 scope; rotary gear ratio per motor | `363e595` |
 | 2026-11-24 | P2.6: part rotation per step from stored positions (Rz only, tilt shown) | `eb7e6e8` |
 | 2026-11-24 | P3.1: J-code spec v0, reader fixes (parentheses in file names, bad J0, G20); C16 analysis | `57e0997` |
-| 2026-11-24 | C16: servo position mode (opt-in), loop recorder, hardware test script | see git log |
+| 2026-11-24 | C16: servo position mode (opt-in), loop recorder, hardware test script | `f35070c` |
+| 2026-11-24 | P3.2: J-code v0.1 header (`JH key=value`, refuse on mismatch, relative paths) | see git log |

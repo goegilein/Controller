@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 from machine_core import messages as m
-from machine_core.jcode import Move, Other, read_job_file
+from machine_core.jcode import Move, Other, check_header, read_job
 from machine_core.state import MachineState as S
 
 
@@ -99,6 +99,7 @@ class JobRunner:
         self.steps = steps
         self.rotary = rotary
         self.loaded = []               # (step, [segments])
+        self.headers = {}              # step name -> J-code v0.1 header (P3.2; empty for v0), for the run log
         self.mode_line = None          # last M3 / M4 line, restored on resume
         self.power_words = []          # last S / P words of a G1, restored on resume
         self.restore_power = False
@@ -119,10 +120,18 @@ class JobRunner:
             problems.append("no process steps")
         for step in self.steps:
             try:
-                segments = read_job_file(step.path)
+                job_file = read_job(step.path)
             except JobError as e:
                 problems.append(f"{step.name}: {e}")
                 continue
+            segments = job_file.segments
+            for warning in job_file.warnings:
+                w._log(f"{step.name}: {warning}", "warning")
+            if job_file.header:
+                h = job_file.header
+                w._log(f"{step.name}: J-code {h.get('jcode')} by {h.get('creator', '?')} ({h.get('created', '?')})")
+                problems += [f"{step.name}: {p}" for p in check_header(h, w.config.machine_id, w.toolhead)]
+            self.headers[step.name] = job_file.header
             for seg in segments:
                 for warning in seg.warnings:
                     w._log(f"{step.name}: {warning}", "warning")
