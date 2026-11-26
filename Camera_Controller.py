@@ -130,4 +130,7 @@ class USBCameraController:
 
 
     def __del__(self):
-        self.disconnect()
+        try:
+            self.disconnect()
+        except RuntimeError:
+            pass  # at exit Qt may have deleted the timer already; the camera is released with the process

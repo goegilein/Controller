@@ -23,7 +23,7 @@ This file is the single source of truth for status – update it in the same com
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
 | 3 – J-code and machine profile | done | P3.1–P3.4; C16 run 3 and hardware checks pending |
-| 4 – UI, user data, conventions | in progress | P4.1, P4.2 done |
+| 4 – UI, user data, conventions | done | P4.1–P4.3 |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
 
 ---
@@ -353,7 +353,11 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   so the unselected ones read as choices; settings with fixed values (`rotary_motors.control_mode`, `.series`,
   `ui.theme`) are drop-downs in the settings dialog (`Settings_Binder.CHOICES`); `ui.theme` chosen there switches the
   look at once.
-- [ ] P4.3 README with module table; `main()` instead of module-level wiring.
+- [x] P4.3 README with module table; `main()` instead of module-level wiring.
+  [README.md](README.md): start, where the files are, safety in short, module tables (core, bridge / UI, v1.0 reference,
+  tools). `main_Controller.build(argv)` wires the app and returns its parts without running the event loop (used by
+  a smoke test that builds the real app and by the screenshot tool), `main()` runs it. On the way: the camera
+  controller's destructor no longer raises at exit when Qt deleted its timer first (v1.0).
 
 ### Phase 5 – Release 2.0.0
 
@@ -428,4 +432,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-26 | C16 run 3 (18/18); work area from the measured home position | `532171d` |
 | 2026-11-26 | P4.1: user data into Documents/MachineControl with a one-time migration | `6c8d4d4` |
 | 2026-11-26 | P4.2: Atelier style (dark / bright) from BildHatcher; B19 | `7b4c337` |
-| 2026-11-26 | P4.2 review: titles centred, tabs as tiles, drop-downs for fixed settings | see git log |
+| 2026-11-26 | P4.2 review: titles centred, tabs as tiles, drop-downs for fixed settings | `ef6a8e0` |
+| 2026-11-26 | P4.3: README, main() | see git log |

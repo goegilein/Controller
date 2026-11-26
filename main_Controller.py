@@ -1,111 +1,113 @@
-import sys
-import os
+"""Machine Control – start of the application (REVISION_PLAN.md P4.3: `main()` instead of module-level wiring).
+
+    python main_Controller.py [--migrate-from <folder>]
+
+`build(argv)` creates the window, the settings, the machine core with its facades and every UI module, and returns
+them (an `App` namespace) without running the event loop – the tests and tools use it. `main()` runs the app.
+See README.md for the modules.
+"""
 import json
-from pathlib import Path
-from PyQt6 import QtWidgets, uic, QtCore
-import Main_GUI_Interface
+import sys
+from types import SimpleNamespace
+
+from PyQt6 import QtWidgets
+
+import Artisan_GUI_Interface
 import Camera_Controller
 import Camera_GUI_Interface
-import Artisan_GUI_Interface
-import ArduinoController
-import Process_GUI_Interface
-import Settings_Manager
-import RotMotor_GUI_Interface
-import Interactive_Image_Control
-import Maschine_Helper
 import Gcode_Plotter
-from PathManager import get_gui_file_path, get_settings_path, get_base_dir, migrate_user_data
+import Interactive_Image_Control
+import Main_GUI_Interface
+import Maschine_Helper
+import Process_GUI_Interface
+import RotMotor_GUI_Interface
+import Settings_Manager
 import protocol_log
 import theme
-from machine_bridge import ArtisanFacade, MachineBridge, RotaryFacade, config_from_settings
+from PathManager import get_base_dir, get_gui_file_path, get_settings_path, migrate_user_data
 from job_bridge import CoreProcessHandler
+from machine_bridge import ArtisanFacade, MachineBridge, RotaryFacade, config_from_settings
 from machine_safety_ui import MachineBar
 
-protocol_log.setup()
 
-# P4.1: user data into Documents/MachineControl/settings, once; `--migrate-from <folder>` imports from another folder
-# (e.g. the v1.0 installation) – the files already in the user folder are moved to a backup first
-_migrate_from = sys.argv[sys.argv.index("--migrate-from") + 1] if "--migrate-from" in sys.argv[:-1] else None
-try:
-    MIGRATION_REPORT = migrate_user_data(sources=[_migrate_from] if _migrate_from else None, force=bool(_migrate_from))
-except OSError as e:
-    MIGRATION_REPORT = f"User data could not be moved to the user folder: {e}"
-if MIGRATION_REPORT:
-    protocol_log.note("app", MIGRATION_REPORT)
-
-#Define paths using PathManager
-MAIN_GUI_PATH = get_gui_file_path("Controller.ui")
-DEFAULT_SETTINGS_PATH = get_settings_path("Default_Settings.json")
-SCHEMA_PATH = get_settings_path("schema.json")   
-
-#Load version
-with open(get_base_dir() / "version.json") as f:
-    version_data = json.load(f)
-    version = f"{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
-
-#setup QApplication and load GUI
-app = QtWidgets.QApplication(sys.argv)
-gui = theme.load_ui(str(MAIN_GUI_PATH))
-gui.setWindowTitle(f"Artisan Controller {version}")
-gui.show()
-if MIGRATION_REPORT:
-    QtWidgets.QMessageBox.information(gui, "User data", MIGRATION_REPORT)
+def app_version():
+    data = json.loads((get_base_dir() / "version.json").read_text(encoding="utf-8"))
+    return f"{data['major']}.{data['minor']}.{data['patch']}"
 
 
-
-#setup Settings Manager
-
-settings = Settings_Manager.SettingsManager(default_settings_path=DEFAULT_SETTINGS_PATH, schema_path=SCHEMA_PATH, use_validation=False)
-theme.apply(app, settings.get("ui.theme", "dark"))  # Atelier look from BildHatcher, dark / bright (P4.2)
-
-
-#setup controllers: the machine core runs in its own thread, the UI talks to it through the facades (v2.0, P2.8)
-rot_motor_controller = RotaryFacade(settings=settings)
-machine_bridge = MachineBridge(config=config_from_settings(settings), rotary=rot_motor_controller)
-artisan_controller = ArtisanFacade(machine_bridge, settings=settings)
-overview_camera_controller = Camera_Controller.USBCameraController(settings=settings, camera_type="overview_camera")
-laser_camera_controller = Camera_Controller.USBCameraController(settings=settings, camera_type="laser_camera")
-controllers={"artisan_controller":artisan_controller,
-             "overview_camera_controller":overview_camera_controller, 
-             "laser_camera_controller":laser_camera_controller,
-             "rot_motor_controller":rot_motor_controller
-             }
-
-# arduino_controller = ArduinoController.ArduinoController(gui, artisan_controller=artisan_controller)
-# arduino_controller.connect(port="COM5", baudrate=9600)
-process_handler = CoreProcessHandler(gui, artisan_controller, rot_motor_controller)
-
-#setup interfaces
-main_interface=Main_GUI_Interface.MainInterface(gui, controllers, settings)
-artisan_interface=Artisan_GUI_Interface.ArtisanInterface(gui, artisan_controller)
-overview_camera_gui_interface = Camera_GUI_Interface.CameraInterface(gui, settings, overview_camera_controller)
-laser_camera_gui_interface = Camera_GUI_Interface.CameraInterface(gui, settings, laser_camera_controller)
-rot_mot_interface = RotMotor_GUI_Interface.RotMotorInterface(gui, rot_motor_controller)
-process_gui_interface = Process_GUI_Interface.ProcessInterface(gui, process_handler)
-
-#Maschine Helpers
-interactive_image_control_lasercam = Interactive_Image_Control.InteractiveImageControl(gui, settings, laser_camera_gui_interface, artisan_controller)
-interactive_image_control_overvoiew = Interactive_Image_Control.InteractiveImageControl(gui, settings, overview_camera_gui_interface, artisan_controller)
-
-maschine_helper = Maschine_Helper.MaschineHelpers(gui, artisan_controller)
-maschine_helper.setup_helpers()
-process_gui_interface.stored_points = maschine_helper.stored_points  # step rotation from stored positions (P2.6)
-
-gcode_plotter = Gcode_Plotter.GCodePlotter(gui, process_handler)
-
-#machine state, Stop / E-stop (F9 / F12, with confirmation)
-machine_bar = MachineBar(gui, artisan_controller, settings=settings)
+def migrate(argv):
+    """P4.1: user data into Documents/MachineControl/settings, once; `--migrate-from <folder>` imports from another
+    folder (e.g. the v1.0 installation) – the files already in the user folder are moved to a backup first."""
+    source = argv[argv.index("--migrate-from") + 1] if "--migrate-from" in argv[:-1] else None
+    try:
+        report = migrate_user_data(sources=[source] if source else None, force=bool(source))
+    except OSError as e:
+        report = f"User data could not be moved to the user folder: {e}"
+    if report:
+        protocol_log.note("app", report)
+    return report
 
 
-def shutdown():
-    """Laser off and stages stopped before the process ends."""
-    machine_bridge.shutdown()
-    rot_motor_controller.disconnect()
+def build(argv=None, show_messages=True):
+    """Everything the app consists of, wired together; the event loop is not started."""
+    argv = list(sys.argv if argv is None else argv)
+    protocol_log.setup()
+    migration_report = migrate(argv)
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(argv)
+    gui = theme.load_ui(str(get_gui_file_path("Controller.ui")))
+    gui.setWindowTitle(f"Artisan Controller {app_version()}")
+    gui.show()
+    if migration_report and show_messages:
+        QtWidgets.QMessageBox.information(gui, "User data", migration_report)
+
+    settings = Settings_Manager.SettingsManager(default_settings_path=get_settings_path("Default_Settings.json"),
+                                                schema_path=get_settings_path("schema.json"), use_validation=False)
+    theme.apply(app, settings.get("ui.theme", "dark"))  # Atelier look from BildHatcher, dark / bright (P4.2)
+
+    # controllers: the machine core runs in its own thread, the UI talks to it through the facades (P2.8)
+    rot = RotaryFacade(settings=settings)
+    bridge = MachineBridge(config=config_from_settings(settings), rotary=rot)
+    artisan = ArtisanFacade(bridge, settings=settings)
+    overview_camera = Camera_Controller.USBCameraController(settings=settings, camera_type="overview_camera")
+    laser_camera = Camera_Controller.USBCameraController(settings=settings, camera_type="laser_camera")
+    controllers = {"artisan_controller": artisan, "overview_camera_controller": overview_camera,
+                   "laser_camera_controller": laser_camera, "rot_motor_controller": rot}
+    # (the Arduino joystick stays switched off, C11: ArduinoController.ArduinoController(gui, artisan_controller=...))
+    process_handler = CoreProcessHandler(gui, artisan, rot)
+
+    # UI modules
+    a = SimpleNamespace(app=app, gui=gui, settings=settings, rot=rot, bridge=bridge, artisan=artisan,
+                        overview_camera=overview_camera, laser_camera=laser_camera, process_handler=process_handler)
+    a.main_ui = Main_GUI_Interface.MainInterface(gui, controllers, settings)
+    a.artisan_ui = Artisan_GUI_Interface.ArtisanInterface(gui, artisan)
+    a.overview_camera_ui = Camera_GUI_Interface.CameraInterface(gui, settings, overview_camera)
+    a.laser_camera_ui = Camera_GUI_Interface.CameraInterface(gui, settings, laser_camera)
+    a.rot_ui = RotMotor_GUI_Interface.RotMotorInterface(gui, rot)
+    a.process_ui = Process_GUI_Interface.ProcessInterface(gui, process_handler)
+    a.image_control_laser = Interactive_Image_Control.InteractiveImageControl(gui, settings, a.laser_camera_ui, artisan)
+    a.image_control_overview = Interactive_Image_Control.InteractiveImageControl(gui, settings, a.overview_camera_ui,
+                                                                                 artisan)
+    a.helper = Maschine_Helper.MaschineHelpers(gui, artisan)
+    a.helper.setup_helpers()
+    a.process_ui.stored_points = a.helper.stored_points  # step rotation from stored positions (P2.6)
+    a.plotter = Gcode_Plotter.GCodePlotter(gui, process_handler)
+    a.machine_bar = MachineBar(gui, artisan, settings=settings)  # machine state, Stop / E-stop (F9 / F12)
+
+    def shutdown():
+        """Laser off and stages stopped before the process ends."""
+        bridge.shutdown()
+        rot.disconnect()
+
+    a.shutdown = shutdown
+    app.aboutToQuit.connect(shutdown)
+    return a
 
 
-app.aboutToQuit.connect(shutdown)
+def main(argv=None):
+    a = build(argv)
+    return a.app.exec()
 
 
-sys.exit(app.exec())
-
-
+if __name__ == "__main__":
+    sys.exit(main())

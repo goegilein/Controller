@@ -67,7 +67,8 @@ def app(qapp):
 
 def test_buttons_drive_the_virtual_machine(app):
     g = app.gui
-    assert "Idle" in app.bar.state_label.text() and app.bar.stop_button.isEnabled()
+    pump(lambda: "Idle" in app.bar.state_label.text(), timeout=15, what="idle shown")   # via the Qt event queue
+    assert app.bar.stop_button.isEnabled()
     assert g.rot_mot_tabWidget.count() == 2                                 # stages found on the simulated bus
     g.axis_step_mode_button.click()
     g.axis_step_size_box.setValue(5)
@@ -78,7 +79,7 @@ def test_buttons_drive_the_virtual_machine(app):
     g.move_by_z_box.setValue(10)
     g.move_abs_button.click()
     app.idle()
-    pump(lambda: g.abs_x_box.value() == 100 and g.abs_y_box.value() == 80, what="position in the UI")
+    pump(lambda: g.abs_x_box.value() == 100 and g.abs_y_box.value() == 80, timeout=15, what="position in the UI")
     g.set_wp_button.click()
     g.home_axis_button.click()                                              # clicked(False) -> "G28"
     app.idle()
@@ -123,7 +124,7 @@ def test_stops_need_confirmation(qapp):
 
 def test_emergency_stop_from_the_bar(app):
     app.bar.request_estop()
-    pump(lambda: "E-STOP" in app.bar.state_label.text(), what="estop shown")
+    pump(lambda: "E-STOP" in app.bar.state_label.text(), timeout=15, what="estop shown")
     assert app.sim.halted and not app.bar.stop_button.isEnabled()
 
 
@@ -134,3 +135,20 @@ def test_each_rotary_tab_shows_its_own_motor(app):
     assert app.rot.move_to_angle(2, 30, wait_for_position=True, timeout=30)
     pump(lambda: abs(spin[1].value() - 30) < 0.5, what="tab 2 shows motor 2")
     assert abs(spin[0].value()) < 0.5
+
+
+def test_main_builds_the_whole_app_without_running_it(qapp, monkeypatch):
+    """P4.3: main_Controller.build() wires everything (no module-level code); shutdown stops the core.
+    The G-code plotter (OpenGL, unchanged v1.0) needs a GL context the test process cannot give it – stubbed."""
+    import Gcode_Plotter
+    import main_Controller
+    monkeypatch.setattr(Gcode_Plotter, "GCodePlotter", lambda gui, handler: None)
+    a = main_Controller.build(["main_Controller.py"], show_messages=False)
+    try:
+        assert a.gui.windowTitle().startswith("Artisan Controller ")
+        assert a.process_ui.stored_points is a.helper.stored_points
+        assert a.machine_bar.ac is a.artisan and a.artisan.bridge is a.bridge
+    finally:
+        a.shutdown()
+        a.gui.close()
+    assert not a.bridge.worker._thread.is_alive()
