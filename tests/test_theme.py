@@ -64,6 +64,9 @@ def test_bright_mode_button_switches_and_is_remembered(qapp):
     class Settings:
         values = {}
 
+        def get(self, key, default=None):
+            return self.values.get(key, default)
+
         def set(self, key, value):
             self.values[key] = value
 

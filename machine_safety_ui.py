@@ -70,6 +70,8 @@ class MachineBar(QtWidgets.QToolBar):
         self.theme_button.setCheckable(True)
         self.theme_button.setChecked(theme.MODE == "light")
         self.theme_button.toggled.connect(self.set_bright)
+        if settings is not None and hasattr(settings, "settingChanged"):
+            settings.settingChanged.connect(self._on_setting)      # e.g. ui.theme chosen in the settings dialog
         self.addWidget(self.theme_button)
         self.addSeparator()
 
@@ -109,9 +111,14 @@ class MachineBar(QtWidgets.QToolBar):
 
     def set_bright(self, bright):
         mode = "light" if bright else "dark"
-        theme.set_mode(mode, self.window())
-        if self.settings is not None:
+        if mode != theme.MODE:
+            theme.set_mode(mode, self.window())
+        if self.settings is not None and self.settings.get("ui.theme") != mode:
             self.settings.set("ui.theme", mode)
+
+    def _on_setting(self, path, value):
+        if path == "ui.theme" and value in theme.MODES and value != theme.MODE:
+            self.theme_button.setChecked(value == "light")     # switches through set_bright
 
     def on_error(self, message):
         self.status_bar.showMessage(f"ERROR: {message}")

@@ -349,6 +349,10 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   white and vanished on the bright background); a mode switch re-tints them. "Bright mode" button in the machine bar,
   remembered as `ui.theme`. Minimum window size 1162 × 790 (v1.0: 1011 × 803). Still clipped: the "Crosshair is OFF"
   button (fixed width in the .ui).
+  User review 2026-11-26: group titles now centred on the outline (margin from the font metrics), tabs drawn as tiles
+  so the unselected ones read as choices; settings with fixed values (`rotary_motors.control_mode`, `.series`,
+  `ui.theme`) are drop-downs in the settings dialog (`Settings_Binder.CHOICES`); `ui.theme` chosen there switches the
+  look at once.
 - [ ] P4.3 README with module table; `main()` instead of module-level wiring.
 
 ### Phase 5 – Release 2.0.0
@@ -423,4 +427,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-24 | P3.3: machine profile | `2376ada` |
 | 2026-11-26 | C16 run 3 (18/18); work area from the measured home position | `532171d` |
 | 2026-11-26 | P4.1: user data into Documents/MachineControl with a one-time migration | `6c8d4d4` |
-| 2026-11-26 | P4.2: Atelier style (dark / bright) from BildHatcher; B19 | see git log |
+| 2026-11-26 | P4.2: Atelier style (dark / bright) from BildHatcher; B19 | `7b4c337` |
+| 2026-11-26 | P4.2 review: titles centred, tabs as tiles, drop-downs for fixed settings | see git log |

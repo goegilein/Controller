@@ -11,8 +11,8 @@ QGroupBox {
 	background-color: @surface;
 	border: 1px solid @hairline;
 	border-radius: 12px;
-	margin-top: 10px;
-	padding: 4px 2px 2px 2px;
+	margin-top: 8px;               /* the title (15 px, capitals 3-12 px) sits centred on the outline */
+	padding: 6px 2px 2px 2px;
 }
 QGroupBox::title {
 	subcontrol-origin: margin;
@@ -47,12 +47,36 @@ QGroupBox QGroupBox {
 	border: none;
 	border-top: 1px solid @hairline;
 	border-radius: 0px;
-	margin-top: 10px;
-	padding: 4px 0px 0px 0px;
+	margin-top: 8px;
+	padding: 6px 0px 0px 0px;
 }
 QGroupBox QGroupBox::title {
 	left: 0px;
 	color: @muted;
 	font-family: "Plus Jakarta Sans";
 	font-weight: 600;
+}
+
+/* tabs: every tab is a visible tile (BildHatcher's tabs are a text strip; the controller's tabs carry whole panels,
+   so the unselected ones must read as choices too) */
+QTabBar::tab {
+	background: @button;
+	color: @muted;
+	border: 1px solid @buttonLine;
+	border-bottom: 2px solid @hairline;
+	border-top-left-radius: 8px;
+	border-top-right-radius: 8px;
+	padding: 5px 14px;
+	margin-right: 3px;
+}
+QTabBar::tab:hover {
+	background: @accentSoft;
+	color: @text;
+	border-color: @accentLine;
+}
+QTabBar::tab:selected {
+	background: @surface;
+	color: @accentText;
+	border-color: @accentLine;
+	border-bottom: 2px solid @accent;
 }

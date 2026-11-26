@@ -8,12 +8,19 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QLineEdit,
     QDoubleSpinBox, QSpinBox, QCheckBox, QPushButton, QFileDialog, QMessageBox,
-    QSizePolicy, QLayout
+    QSizePolicy, QLayout, QComboBox
 )
 
 # Adjust import to your module name
 import Settings_Manager as settings_module
 SettingsManager = settings_module.SettingsManager
+
+# settings with a fixed set of allowed values: shown as a drop-down instead of free text
+CHOICES: Dict[str, List[str]] = {
+    "rotary_motors.control_mode": ["wheel", "position"],   # C16: v1.0 PID on the PC / the servo's own position loop
+    "rotary_motors.series": ["STS", "SC"],
+    "ui.theme": ["dark", "light"],                          # P4.2
+}
 
 JsonObj = Dict[str, Any]
 JsonVal = Union[dict, list, str, int, float, bool, None]
@@ -194,7 +201,10 @@ class SettingsEditorWidget(QWidget):
         label.setMinimumWidth(180)
         row.addWidget(label)
 
-        editor, getter, connect_change = self._make_scalar_editor(value)
+        if path in CHOICES:
+            editor, getter, connect_change = self._make_choice_editor(CHOICES[path])
+        else:
+            editor, getter, connect_change = self._make_scalar_editor(value)
 
         # Settings -> UI
         def apply(val):
@@ -305,8 +315,20 @@ class SettingsEditorWidget(QWidget):
         def connect(cb): w.editingFinished.connect(cb)
         return w, getter, connect
 
+    def _make_choice_editor(self, choices: List[str]) -> tuple[QWidget, Callable[[], Any], Callable[[Callable], None]]:
+        w = QComboBox()
+        w.addItems(choices)
+        def getter(): return w.currentText()
+        def connect(cb): w.currentTextChanged.connect(cb)
+        return w, getter, connect
+
     def _apply_scalar_value(self, editor: QWidget, val: Any):
-        if isinstance(editor, QCheckBox):
+        if isinstance(editor, QComboBox):
+            text = "" if val is None else str(val)
+            if editor.findText(text) < 0:
+                editor.addItem(text)        # an unknown value in the file stays visible (and is not changed)
+            editor.setCurrentText(text)
+        elif isinstance(editor, QCheckBox):
             editor.setChecked(bool(val))
         elif isinstance(editor, QSpinBox):
             try: editor.setValue(int(val))
