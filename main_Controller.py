@@ -14,13 +14,23 @@ import RotMotor_GUI_Interface
 import Interactive_Image_Control
 import Maschine_Helper
 import Gcode_Plotter
-from PathManager import get_gui_file_path, get_settings_path, get_base_dir
+from PathManager import get_gui_file_path, get_settings_path, get_base_dir, migrate_user_data
 import protocol_log
 from machine_bridge import ArtisanFacade, MachineBridge, RotaryFacade, config_from_settings
 from job_bridge import CoreProcessHandler
 from machine_safety_ui import MachineBar
 
 protocol_log.setup()
+
+# P4.1: user data into Documents/MachineControl/settings, once; `--migrate-from <folder>` imports from another folder
+# (e.g. the v1.0 installation) – the files already in the user folder are moved to a backup first
+_migrate_from = sys.argv[sys.argv.index("--migrate-from") + 1] if "--migrate-from" in sys.argv[:-1] else None
+try:
+    MIGRATION_REPORT = migrate_user_data(sources=[_migrate_from] if _migrate_from else None, force=bool(_migrate_from))
+except OSError as e:
+    MIGRATION_REPORT = f"User data could not be moved to the user folder: {e}"
+if MIGRATION_REPORT:
+    protocol_log.note("app", MIGRATION_REPORT)
 
 #Define paths using PathManager
 MAIN_GUI_PATH = get_gui_file_path("Controller.ui")
@@ -37,6 +47,8 @@ app = QtWidgets.QApplication(sys.argv)
 gui = uic.loadUi(str(MAIN_GUI_PATH))
 gui.setWindowTitle(f"Artisan Controller {version}")
 gui.show()
+if MIGRATION_REPORT:
+    QtWidgets.QMessageBox.information(gui, "User data", MIGRATION_REPORT)
 
 
 

@@ -23,7 +23,7 @@ This file is the single source of truth for status – update it in the same com
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
 | 3 – J-code and machine profile | done | P3.1–P3.4; C16 run 3 and hardware checks pending |
-| 4 – UI, user data, conventions | open | |
+| 4 – UI, user data, conventions | in progress | P4.1 done |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
 
 ---
@@ -130,7 +130,7 @@ Severity: **S** = safety (person, machine, workpiece), **F** = wrong function, *
 | B18 | F | After the job the work position is set to the *start* position, not restored to the user's previous one (intended? → C6). | [Process_Handler.py:237-238](Process_Handler.py#L237-L238) | P2 | fixed in v2.0 (P2.4), simulator-tested – hardware check pending |
 | B19 | M | Icons loaded by relative path (`QIcon("GUI_files/resources/pause.png")`) – break in the built exe or another working directory. | [Process_GUI_Interface.py:294-304](Process_GUI_Interface.py#L294-L304) | P4 | open |
 | B20 | M | 26 `__pycache__/*.pyc` files are tracked despite `.gitignore`. | repo | P0 | done |
-| B21 | M | User data (settings, stored positions, homographies) is written next to the program, not into the user folder. | [PathManager.py](PathManager.py) | P4 | open |
+| B21 | M | User data (settings, stored positions, homographies) is written next to the program, not into the user folder. | [PathManager.py](PathManager.py) | P4 | fixed in v2.0 (P4.1) – hardware check pending |
 | B22 | M | Rotary `connect()` reports "connected" even if `openPort()` fails; gear ratio 3 hard-coded (LaserMachine spec says 4:1 today). | [RotMotor_Cotroller.py:61-112](RotMotor_Cotroller.py#L61-L112), [:279](RotMotor_Cotroller.py#L279) | P2 | fixed in v2.0 (P2.7, P2.8a (3:1 per C8)), simulator-tested – hardware check pending |
 | B24 | F | Comment stripping only cuts at `;`: BildHatcher's line `===;start of new Processblock===` is sent to the machine as `===` (Marlin answers "Unknown command" + `ok`). Parentheses comments are not handled. | [Process_Handler.py:555-563](Process_Handler.py#L555-L563) | P2 | fixed in v2.0 (P2.4), simulator-tested – hardware check pending |
 | B25 | M | Coordinates are sent with float noise (`G0 X21.3 Y1.1999999999999993`, `X-21.299999999999997`) – harmless for Marlin, but noisy logs and longer lines. Seen in the golden files. | [Artisan_Controller.py](Artisan_Controller.py) moves | P2 | fixed in v2.0 (P2.3), simulator-tested – hardware check pending |
@@ -331,7 +331,14 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 
 ### Phase 4 – UI, user data, conventions
 
-- [ ] P4.1 User data into the user folder with a one-time migration of the existing `settings/*.json` (B21, C9).
+- [x] P4.1 User data into the user folder with a one-time migration of the existing `settings/*.json` (B21, C9).
+  `PathManager.get_settings_path`: the user files (`Default_Settings.json` incl. homographies, `stored_positions.json` /
+  `stored_points.json`, `custom_sample_holders.json`) live in `Documents/MachineControl/settings`; `schema.json` is read
+  from the program. First start: `migrate_user_data` copies them from the old place (`settings/` next to the program,
+  from source also the working folder), notes it in `MIGRATED.txt` and shows it once; the old files are not changed,
+  so v1.0 keeps working. `--migrate-from <folder>` imports from another folder (e.g. a v1.0 installation elsewhere);
+  the files already in the user folder go to a `backup_<time>` folder first. The settings dialog works as before
+  ("save default" writes the user's file). Tests no longer write into the repository's `settings/`.
 - [ ] P4.2 Atelier style from BildHatcher (dark / bright); inline styles and sizes into the .ui files; icons via
   `PathManager` (B19).
 - [ ] P4.3 README with module table; `main()` instead of module-level wiring.
@@ -406,4 +413,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-24 | P3.4: run log, one JSON file per job | `0781d03` |
 | 2026-11-24 | C16 run 2 evaluated; correction aims from the target | `6f7516d` |
 | 2026-11-24 | P3.3: machine profile | `2376ada` |
-| 2026-11-26 | C16 run 3 (18/18); work area from the measured home position | see git log |
+| 2026-11-26 | C16 run 3 (18/18); work area from the measured home position | `532171d` |
+| 2026-11-26 | P4.1: user data into Documents/MachineControl with a one-time migration | see git log |
