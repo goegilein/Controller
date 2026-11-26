@@ -33,6 +33,11 @@ Motor 1 on the production rotary stage, `tools/st3215_position_test.py`, 2026-11
 → New rule: the k-th correction sets the goal `2 + k − 1` ticks past the **target** in the direction still to go,
 never added up. Run 3 (`--correction` again) checks it.
 
+## Result of run 3 (`--correction`, aim from the target, 2026-11-26)
+
+**18 of 18 moves end within ±1 tick**, from +1 tick to +3 turns and back, after at most 2 corrections.
+→ The position mode is ready for the test in real use (HARDWARE_CHECKLIST item 21).
+
 ## Consequence (after run 1)
 
 `ServoPositionMotor` corrects on the PC. Once the servo stands still, it aims past the target by the remaining error,

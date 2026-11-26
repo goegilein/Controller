@@ -2,10 +2,10 @@
   "name": "Snapmaker Artisan",
   "machine": {
     "id": "snapmaker_artisan",
-    "notes": "Values as in Machine Control 2.0 / v1.0. work_area from the datasheet - VERIFY on the machine (HARDWARE_CHECKLIST item 15).",
+    "notes": "Values as in Machine Control 2.0 / v1.0. work_area: home measured 2026-11-26 at about X -30 / Y 403 / Z 405 (top left, Y fully forward), limits 1 mm inside; X max, Y min, Z min from the datasheet.",
     "controller": "marlin",
     "baudrate": 115200,
-    "work_area": {"x": [0, 400], "y": [0, 400], "z": [0, 400]},
+    "work_area": {"x": [-29, 400], "y": [0, 402], "z": [0, 404]},
     "limits": {
       "max_power_s": 255,
       "max_power_p": 100,

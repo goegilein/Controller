@@ -241,7 +241,7 @@ def test_cable_pulled_during_a_job(tmp_path):
 # --------------------------------------------------------------------------- preflight (P2.5)
 
 @pytest.mark.parametrize("transform, lines, message", [
-    (step_transform(390, 100, 0), ["G1 X10 F600"], "X 411.3..421.3 outside the work area 0..400"),   # laser offset +21.3
+    (step_transform(390, 100, 0), ["G1 X10 F600"], "X 411.3..421.3 outside the work area -29..400"),   # laser offset +21.3
     (step_transform(100, 5, 0), ["G0 Y-10 F6000"], "Y -16.3..-6.3 outside"),
     (step_transform(100, 100, 0, rotation_deg=90), ["G1 X320 F600"], "Y 88.7..408.7 outside"),        # rotated part
     (step_transform(100, 100, 0), ["M3 S300", "G1 X10 F600"], "power S300 outside 0..255"),

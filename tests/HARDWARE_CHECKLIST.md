@@ -44,7 +44,7 @@ Start the app, do the step, close the app, copy `protocol.log` to `tests/fixture
 | 12 | Close the app during a job (only at 0 % power until Phase 1) | laser off, rotary motors stop |
 | 13 | Rotary stage: move to angle, job with `R` | reaches the angle, job waits for it |
 | 14 | v2.0: Stop (button / F9, confirm with Enter) while jogging, moving and in a job | quick stop (`M410`), laser off, state back to Idle |
-| 15 | v2.0: work area – after homing, move to 400 / 400 / 400 (slowly) and note the real limits; homing point = 0 / 0 / 0? | values for `ArtisanConfig.work_area` (P2.5, VERIFY) |
+| 15 | v2.0: work area – **home measured 2026-11-26: X ≈ −30, Y ≈ 403, Z ≈ 405** (top left, Y fully forward; limits 1 mm inside). Still open: X max, Y min, Z min (slowly towards 400 / 0 / 0) | values for the profile's `work_area` |
 | 16 | v2.0: job positions – the same job as in v1.0 on scrap | identical burn position (C5 machine coordinates) |
 | 17 | v2.0: rotary moves with both cameras running (C16) | settles at the angle, no oscillation |
 | 18 | v2.0: stop the rotary while it turns (disconnect / Stop) and close the app while it turns | stage stops at once |

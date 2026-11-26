@@ -50,7 +50,9 @@ class ArtisanConfig:
         "air_assist": ("M8", "M9"),
     })
     # preflight limits (P2.5); machine coordinates after homing. Datasheet values, VERIFY on the machine.
-    work_area: tuple = ((0.0, 400.0), (0.0, 400.0), (0.0, 400.0))  # (min, max) per X, Y, Z in mm
+    # measured 2026-11-26: home = top left, Y fully forward at about X -30 / Y 403 / Z 405; 1 mm inside the measured
+    # ends; X max, Y min and Z min are the datasheet values (not measured)
+    work_area: tuple = ((-29.0, 400.0), (0.0, 402.0), (0.0, 404.0))  # (min, max) per X, Y, Z in mm
     max_power_s: float = 255.0           # S word
     max_power_p: float = 100.0           # P word, percent
     max_feed: float = None               # mm/min; None = not checked (Artisan limit unknown)
