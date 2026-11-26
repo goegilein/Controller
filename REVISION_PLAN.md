@@ -362,6 +362,7 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 ### Phase 5 – Release 2.0.0
 
 - [ ] P5.1 Hardware checklist (P0.5) passed on the Artisan, results in the work log.
+  Run sheet for the machine PC: [tests/RELEASE_2.0_TEST.md](tests/RELEASE_2.0_TEST.md) (filled in and pushed by the user).
 - [ ] P5.2 Version 2.0.0, build script checked, PR to `main` when the user decides.
   Prepared 2026-11-26: `version.json` 2.0.0, [CHANGELOG.md](CHANGELOG.md), probe build of the exe. Build script: no
   `settings` folder next to the exe any more (it would be taken as the 1.x data by the first-start migration, P4.1).
@@ -440,4 +441,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-26 | P4.2: Atelier style (dark / bright) from BildHatcher; B19 | `7b4c337` |
 | 2026-11-26 | P4.2 review: titles centred, tabs as tiles, drop-downs for fixed settings | `ef6a8e0` |
 | 2026-11-26 | P4.3: README, main() | `09b83c5` |
-| 2026-11-26 | P5.2 prepared: version 2.0.0, changelog, build script | see git log |
+| 2026-11-26 | P5.2 prepared: version 2.0.0, changelog, build script | `693afdf` |
+| 2026-11-26 | P5.1: run sheet for the hardware test | see git log |
