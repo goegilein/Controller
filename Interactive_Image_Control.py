@@ -3,6 +3,7 @@ from typing import Tuple, Optional, Dict
 from PyQt6 import QtWidgets, QtCore, QtGui, uic
 from pathlib import Path
 from PathManager import get_gui_file_path
+import theme
 
 class InteractiveImageControl(QtCore.QObject):
     def __init__(self, gui, settings, camera_GUI, artisan_controller):
@@ -384,7 +385,7 @@ class TransformerCalibrator(QtWidgets.QWidget):
         super().__init__()
         widget_path = get_gui_file_path("image_control_calibrator.ui")
         self.point_ui_path = get_gui_file_path("image_control_calibrator_item.ui")
-        self.widget_ui=uic.loadUi(str(widget_path), self)
+        self.widget_ui=theme.load_ui(str(widget_path), self)
         
         self.coord_transformer = coord_transformer
         self.interactive_image_controller = interactive_image_controller
@@ -405,7 +406,7 @@ class TransformerCalibrator(QtWidgets.QWidget):
             cross_pos = self.interactive_image_controller._cross_pos
 
         # put widget it into the list
-        point_ui = uic.loadUi(self.point_ui_path)
+        point_ui = theme.load_ui(self.point_ui_path)
         item = QtWidgets.QListWidgetItem()
         item.setSizeHint(point_ui.sizeHint())
         self.points_listWidget.addItem(item)

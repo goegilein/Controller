@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Callable, Optional, Union
 
 from PyQt6 import uic
+import theme
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QLineEdit,
@@ -35,7 +36,7 @@ class SettingsEditorWidget(QWidget):
         if not self._ui_path.exists():
             raise FileNotFoundError(f"Settings UI file not found: {self._ui_path}")
         # load the .ui into this instance so widgets are available as attributes
-        uic.loadUi(str(self._ui_path), self)
+        theme.load_ui(str(self._ui_path), self)
 
         # Reference to the target layout
         obj = getattr(self, "settings_verticalLayout", None)

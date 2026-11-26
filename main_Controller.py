@@ -16,6 +16,7 @@ import Maschine_Helper
 import Gcode_Plotter
 from PathManager import get_gui_file_path, get_settings_path, get_base_dir, migrate_user_data
 import protocol_log
+import theme
 from machine_bridge import ArtisanFacade, MachineBridge, RotaryFacade, config_from_settings
 from job_bridge import CoreProcessHandler
 from machine_safety_ui import MachineBar
@@ -44,7 +45,7 @@ with open(get_base_dir() / "version.json") as f:
 
 #setup QApplication and load GUI
 app = QtWidgets.QApplication(sys.argv)
-gui = uic.loadUi(str(MAIN_GUI_PATH))
+gui = theme.load_ui(str(MAIN_GUI_PATH))
 gui.setWindowTitle(f"Artisan Controller {version}")
 gui.show()
 if MIGRATION_REPORT:
@@ -55,6 +56,7 @@ if MIGRATION_REPORT:
 #setup Settings Manager
 
 settings = Settings_Manager.SettingsManager(default_settings_path=DEFAULT_SETTINGS_PATH, schema_path=SCHEMA_PATH, use_validation=False)
+theme.apply(app, settings.get("ui.theme", "dark"))  # Atelier look from BildHatcher, dark / bright (P4.2)
 
 
 #setup controllers: the machine core runs in its own thread, the UI talks to it through the facades (v2.0, P2.8)
@@ -92,7 +94,7 @@ process_gui_interface.stored_points = maschine_helper.stored_points  # step rota
 gcode_plotter = Gcode_Plotter.GCodePlotter(gui, process_handler)
 
 #machine state, Stop / E-stop (F9 / F12, with confirmation)
-machine_bar = MachineBar(gui, artisan_controller)
+machine_bar = MachineBar(gui, artisan_controller, settings=settings)
 
 
 def shutdown():

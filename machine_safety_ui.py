@@ -7,19 +7,28 @@ Enter confirms – the confirm button is the default. Hotkeys work in the whole 
 """
 from PyQt6 import QtCore, QtGui, QtWidgets
 
+import theme
+
 STOP_KEY = "F9"
 ESTOP_KEY = "F12"
 
-STATE_STYLE = {
-    "disconnected": ("Disconnected", "#888888"),
-    "connecting": ("Connecting…", "#888888"),
-    "idle": ("Idle", "#2e7d32"),
-    "busy": ("Busy", "#1565c0"),
-    "running": ("Running", "#1565c0"),
-    "paused": ("Paused", "#ef6c00"),
-    "error": ("ERROR – acknowledge", "#c62828"),
-    "estop": ("E-STOP – restart machine, reconnect", "#c62828"),
+STATE_STYLE = {  # text, colour: a theme signal, or "accent" (the palette's gold) for activity
+    "disconnected": ("Disconnected", "idle"),
+    "connecting": ("Connecting…", "idle"),
+    "idle": ("Idle", "ok"),
+    "busy": ("Busy", "accent"),
+    "running": ("Running", "accent"),
+    "paused": ("Paused", "warning"),
+    "error": ("ERROR – acknowledge", "error"),
+    "estop": ("E-STOP – restart machine, reconnect", "error"),
 }
+
+
+def _signal_button(button, signal):
+    """Stop / E-stop keep their signal colour in both modes (the theme's buttons are neutral)."""
+    button.setStyleSheet(f"QPushButton {{ background:{theme.signal(signal)}; color:{theme.signal('onSignal')}; "
+                         "font-weight:bold; padding:6px 18px; border:none; border-radius:6px; }"
+                         "QPushButton:disabled { background:rgba(127,127,127,0.25); color:rgba(127,127,127,0.8); }")
 
 
 def confirm(parent, title, text, confirm_text):
@@ -35,9 +44,10 @@ def confirm(parent, title, text, confirm_text):
 
 
 class MachineBar(QtWidgets.QToolBar):
-    def __init__(self, window: QtWidgets.QMainWindow, artisan, confirm_fn=confirm):
+    def __init__(self, window: QtWidgets.QMainWindow, artisan, confirm_fn=confirm, settings=None):
         super().__init__("Machine", window)
         self.ac = artisan
+        self.settings = settings
         self.confirm = confirm_fn
         self.setObjectName("machine_bar")
         self.setMovable(False)
@@ -55,13 +65,21 @@ class MachineBar(QtWidgets.QToolBar):
         spacer.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Preferred)
         self.addWidget(spacer)
 
+        # P4.2: bright / dark look (remembered in the settings as ui.theme)
+        self.theme_button = QtWidgets.QPushButton("Bright mode")
+        self.theme_button.setCheckable(True)
+        self.theme_button.setChecked(theme.MODE == "light")
+        self.theme_button.toggled.connect(self.set_bright)
+        self.addWidget(self.theme_button)
+        self.addSeparator()
+
         self.stop_button = QtWidgets.QPushButton(f"STOP  ({STOP_KEY})")
-        self.stop_button.setStyleSheet("background:#ef6c00; color:white; font-weight:bold; padding:6px 18px;")
+        _signal_button(self.stop_button, "stop")
         self.stop_button.clicked.connect(self.request_stop)
         self.addWidget(self.stop_button)
 
         self.estop_button = QtWidgets.QPushButton(f"EMERGENCY STOP  ({ESTOP_KEY})")
-        self.estop_button.setStyleSheet("background:#c62828; color:white; font-weight:bold; padding:6px 18px;")
+        _signal_button(self.estop_button, "estop")
         self.estop_button.clicked.connect(self.request_estop)
         self.addWidget(self.estop_button)
 
@@ -75,9 +93,11 @@ class MachineBar(QtWidgets.QToolBar):
         self.ac.error_callbacks.append(self.on_error)
         window.addToolBar(QtCore.Qt.ToolBarArea.TopToolBarArea, self)
         self.on_state(self.ac.state, "")
+        theme.on_change(lambda: self.on_state(self.ac.state, ""))
 
     def on_state(self, state, reason):
-        text, color = STATE_STYLE.get(state, (state, "#888888"))
+        text, signal = STATE_STYLE.get(state, (state, "idle"))
+        color = theme.color("accentText") if signal == "accent" else theme.signal(signal)
         self.state_label.setText(f"Machine: {text}")
         self.state_label.setStyleSheet(f"color:{color}; font-weight:bold;")
         connected = state not in ("disconnected", "connecting", "estop")
@@ -86,6 +106,12 @@ class MachineBar(QtWidgets.QToolBar):
         self.ack_button.setEnabled(state == "error")
         if reason:
             self.status_bar.showMessage(f"{text}: {reason}", 10000)
+
+    def set_bright(self, bright):
+        mode = "light" if bright else "dark"
+        theme.set_mode(mode, self.window())
+        if self.settings is not None:
+            self.settings.set("ui.theme", mode)
 
     def on_error(self, message):
         self.status_bar.showMessage(f"ERROR: {message}")

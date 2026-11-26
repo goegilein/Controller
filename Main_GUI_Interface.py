@@ -8,6 +8,7 @@ import os
 import wmi
 import sys, serial, serial.tools.list_ports as list_ports
 from PathManager import get_gui_file_path
+import theme
 
 
 class MainInterface(BaseClass):
@@ -80,7 +81,7 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
     def __init__(self, controllers):       
         super().__init__()
         ui_path = str(get_gui_file_path("connection_status_window.ui"))
-        gui=uic.loadUi(ui_path, self)
+        gui=theme.load_ui(ui_path, self)
 
         #controllers
         self.artisan_controller = controllers["artisan_controller"]
@@ -151,43 +152,43 @@ class ConnectionStatusWindow(QtWidgets.QWidget):
         if self.artisan_controller.is_connection_active():
             self.artisan_connect_button.setText('disconnect')
             self.artisan_connect_label.setText(f'Connected on {self.artisan_controller.port}')
-            self.artisan_connect_label.setStyleSheet("color: green;")
+            self.artisan_connect_label.setStyleSheet(f"color: {theme.signal('ok')};")
         else:
             self.artisan_connect_button.setText('connect')
             self.artisan_connect_label.setText('Disconnected')
-            self.artisan_connect_label.setStyleSheet("color: red;")
+            self.artisan_connect_label.setStyleSheet(f"color: {theme.signal('error')};")
 
         #Rotary Motor Controller
         if self.rot_mot_controller.is_connection_active():
             self.rot_mot_connect_button.setText('disconnect')
             self.rot_mot_connect_label.setText(f'Connected on {self.rot_mot_controller.port}')
-            self.rot_mot_connect_label.setStyleSheet("color: green;")
+            self.rot_mot_connect_label.setStyleSheet(f"color: {theme.signal('ok')};")
         else:
             self.rot_mot_connect_button.setText('connect')
             self.rot_mot_connect_label.setText('Disconnected')
-            self.rot_mot_connect_label.setStyleSheet("color: red;")
+            self.rot_mot_connect_label.setStyleSheet(f"color: {theme.signal('error')};")
 
     def update_camera_status(self):
         self.overview_camera_select_comboBox.setCurrentIndex(self.overview_camera_controller.camera_index+1)  # +1 to account for the placeholder
         if self.overview_camera_controller.connected:
             self.overview_camera_connect_button.setText('disconnect')
             self.overview_camera_connect_label.setText(f'Connected on Camera {self.overview_camera_controller.camera_index}')
-            self.overview_camera_connect_label.setStyleSheet("color: green;")
+            self.overview_camera_connect_label.setStyleSheet(f"color: {theme.signal('ok')};")
         else:
             self.overview_camera_connect_button.setText('connect')
             self.overview_camera_connect_label.setText('Disconnected')
-            self.overview_camera_connect_label.setStyleSheet("color: red;")
+            self.overview_camera_connect_label.setStyleSheet(f"color: {theme.signal('error')};")
 
         #Laser Camera (Laser Camera)
         self.laser_camera_select_comboBox.setCurrentIndex(self.laser_camera_controller.camera_index+1)  # +1 to account for the placeholder
         if self.laser_camera_controller.connected:
             self.laser_camera_connect_button.setText('disconnect')
             self.laser_camera_connect_label.setText(f'Connected on Camera {self.laser_camera_controller.camera_index}')
-            self.laser_camera_connect_label.setStyleSheet("color: green;")
+            self.laser_camera_connect_label.setStyleSheet(f"color: {theme.signal('ok')};")
         else:
             self.laser_camera_connect_button.setText('connect')
             self.laser_camera_connect_label.setText('Disconnected')
-            self.laser_camera_connect_label.setStyleSheet("color: red;")
+            self.laser_camera_connect_label.setStyleSheet(f"color: {theme.signal('error')};")
     
     def connect_disconnect(self,controller):
         sender=self.sender()

@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import QListWidgetItem, QFileDialog
 from BaseClasses import BaseClass, TextLogger, SignalEmitter
 from PyQt6.QtGui import QIcon#
 from PathManager import get_gui_file_path
+import theme
 import re
 
 class ProcessInterface(BaseClass):
@@ -60,7 +61,7 @@ class ProcessInterface(BaseClass):
         step = self.process_handler.add_process_step(name=name)
 
         # put widget it into the list
-        widget = uic.loadUi(self.widget_path)
+        widget = theme.load_ui(self.widget_path)
         item = QListWidgetItem()
         item.setSizeHint(widget.sizeHint())
         self.process_steps_listWidget.addItem(item)
@@ -309,19 +310,15 @@ class ProcessInterface(BaseClass):
     
 
     def update_process_state(self, state):
+        # pictograms via PathManager, tinted for the theme (B19: the relative path broke in the exe)
         if state == "Running":
-            icon = QIcon("GUI_files/resources/pause.png")
-            self.toggle_process_button.setIcon(icon)
+            theme.set_icon(self.toggle_process_button, "pause.png")
             self.cancel_process_button.setEnabled(True)
         elif state == "Paused":
-            pass
-            icon = QIcon("GUI_files/resources/start.png")
-            self.toggle_process_button.setIcon(icon)
+            theme.set_icon(self.toggle_process_button, "start.png")
             self.cancel_process_button.setEnabled(True)
         elif state == "Idle":
-            pass
-            icon = QIcon("GUI_files/resources/start.png")
-            self.toggle_process_button.setIcon(icon)
+            theme.set_icon(self.toggle_process_button, "start.png")
             self.cancel_process_button.setEnabled(False)
 
     def run_bounding_box(self):

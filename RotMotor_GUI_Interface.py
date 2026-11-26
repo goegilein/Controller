@@ -3,6 +3,7 @@ from BaseClasses import BaseClass, SignalEmitter, TextLogger
 import RotMotor_Cotroller
 from PyQt6 import uic
 from PathManager import get_gui_file_path
+import theme
 
 class RotMotorInterface(BaseClass):
     def __init__(self, gui, rot_motor_controller: RotMotor_Cotroller.RotMotorCotroller):
@@ -47,7 +48,7 @@ class RotMotorInterface(BaseClass):
             layout.setContentsMargins(8, 8, 8, 8)
             layout.setSpacing(8)
 
-            widget = uic.loadUi(self.widget_path)
+            widget = theme.load_ui(self.widget_path)
             self.connect_widget_callbacks(widget, motor)
 
             layout.addWidget(widget)

@@ -23,7 +23,7 @@ This file is the single source of truth for status – update it in the same com
 | 1 – Safety fixes in the existing code | merged into phase 2 | production stays on v1.0 until hardware tests; no fixes twice |
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
 | 3 – J-code and machine profile | done | P3.1–P3.4; C16 run 3 and hardware checks pending |
-| 4 – UI, user data, conventions | in progress | P4.1 done |
+| 4 – UI, user data, conventions | in progress | P4.1, P4.2 done |
 | 5 – Release 2.0.0 | open | hardware checklist, PR to main |
 
 ---
@@ -128,7 +128,7 @@ Severity: **S** = safety (person, machine, workpiece), **F** = wrong function, *
 | B16 | F | A settings change calls `get_toolhead_info` (`M1006` twice) – also during a running job. Typo `artisan.motoin.max_z_speed` (always the fallback 30). `move_axis_to` / `move_axis_absolute` clamp X/Y speed to the Z limit too. | [Artisan_Controller.py:96-108](Artisan_Controller.py#L96-L108), [:344](Artisan_Controller.py#L344) | P2 | fixed in v2.0 (P2.8a), simulator-tested – hardware check pending |
 | B17 | F | Default work position `[1, 400, 400, 0]` when the position is unknown. `J0` without `Z` / `R` reuses stale values or raises `NameError`. | [Process_Handler.py:83](Process_Handler.py#L83), [:307-318](Process_Handler.py#L307-L318) | P2 | fixed in v2.0 (P2.4), simulator-tested – hardware check pending |
 | B18 | F | After the job the work position is set to the *start* position, not restored to the user's previous one (intended? → C6). | [Process_Handler.py:237-238](Process_Handler.py#L237-L238) | P2 | fixed in v2.0 (P2.4), simulator-tested – hardware check pending |
-| B19 | M | Icons loaded by relative path (`QIcon("GUI_files/resources/pause.png")`) – break in the built exe or another working directory. | [Process_GUI_Interface.py:294-304](Process_GUI_Interface.py#L294-L304) | P4 | open |
+| B19 | M | Icons loaded by relative path (`QIcon("GUI_files/resources/pause.png")`) – break in the built exe or another working directory. | [Process_GUI_Interface.py:294-304](Process_GUI_Interface.py#L294-L304) | P4 | fixed in v2.0 (P4.2, `theme.set_icon` via PathManager) |
 | B20 | M | 26 `__pycache__/*.pyc` files are tracked despite `.gitignore`. | repo | P0 | done |
 | B21 | M | User data (settings, stored positions, homographies) is written next to the program, not into the user folder. | [PathManager.py](PathManager.py) | P4 | fixed in v2.0 (P4.1) – hardware check pending |
 | B22 | M | Rotary `connect()` reports "connected" even if `openPort()` fails; gear ratio 3 hard-coded (LaserMachine spec says 4:1 today). | [RotMotor_Cotroller.py:61-112](RotMotor_Cotroller.py#L61-L112), [:279](RotMotor_Cotroller.py#L279) | P2 | fixed in v2.0 (P2.7, P2.8a (3:1 per C8)), simulator-tested – hardware check pending |
@@ -339,8 +339,16 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
   so v1.0 keeps working. `--migrate-from <folder>` imports from another folder (e.g. a v1.0 installation elsewhere);
   the files already in the user folder go to a `backup_<time>` folder first. The settings dialog works as before
   ("save default" writes the user's file). Tests no longer write into the repository's `settings/`.
-- [ ] P4.2 Atelier style from BildHatcher (dark / bright); inline styles and sizes into the .ui files; icons via
-  `PathManager` (B19).
+- [x] P4.2 Atelier style from BildHatcher (dark / bright); inline styles and sizes into the .ui files; icons via
+  `PathManager` (B19). Taken over from BildHatcher: `theme.py` (adapted), `GUI_files/styles/atelier.qss`, the fonts
+  (Plus Jakarta Sans, Space Mono, SIL OFL) and the four stylesheet images. `styles/controller.qss` (same palette
+  tokens) gives every QGroupBox BildHatcher's card look, since the controller's .ui files have no `styleClass`. All 17
+  `styleSheet` properties of the .ui files removed (v1.0's look kept in `styles/legacy_burgundy.qss`); colours set
+  in code use `theme.signal` (ok / warning / error / stop / E-stop – the same in both modes) or the palette. Every
+  .ui is loaded by `theme.load_ui`, which tints the one-coloured PNG pictograms in the mode's text colour (they were
+  white and vanished on the bright background); a mode switch re-tints them. "Bright mode" button in the machine bar,
+  remembered as `ui.theme`. Minimum window size 1162 × 790 (v1.0: 1011 × 803). Still clipped: the "Crosshair is OFF"
+  button (fixed width in the .ui).
 - [ ] P4.3 README with module table; `main()` instead of module-level wiring.
 
 ### Phase 5 – Release 2.0.0
@@ -414,4 +422,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-24 | C16 run 2 evaluated; correction aims from the target | `6f7516d` |
 | 2026-11-24 | P3.3: machine profile | `2376ada` |
 | 2026-11-26 | C16 run 3 (18/18); work area from the measured home position | `532171d` |
-| 2026-11-26 | P4.1: user data into Documents/MachineControl with a one-time migration | see git log |
+| 2026-11-26 | P4.1: user data into Documents/MachineControl with a one-time migration | `6c8d4d4` |
+| 2026-11-26 | P4.2: Atelier style (dark / bright) from BildHatcher; B19 | see git log |

@@ -61,6 +61,9 @@
       ]
     }
   },
+  "ui": {
+    "theme": "dark"
+  },
   "rotary_motors": {
     "port": "COM5",
     "series": "STS",

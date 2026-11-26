@@ -1,0 +1,661 @@
+/* =====================================================================================================
+   ATELIER – Qt style after piupulaser.de, dark and bright mode (portable: copy this file, GUI_Files/fonts,
+   the four stylesheet images in GUI_Files/icons and theme.py)
+
+   This file is a template: the rules below use @tokens, the two palettes define them. theme.render("dark")
+   / theme.render("light") replaces every @token with the palette value (Qt stylesheets have no variables).
+   Dark is the web shop's look (Tailwind palette "atelier"); bright is the same design on warm paper.
+
+@palette dark
+   bg               #0B0E14                      window, canvas
+   surface          #131822                      cards (panel sections), menus, tool tips
+   raised           #1E2738                      buttons on the cards
+   button           #161D29                      buttons on the window background
+   buttonLine       rgba(255, 255, 255, 0.13)    button hairline
+   field            #0B0E14                      input fields, lists
+   fieldLine        rgba(255, 255, 255, 0.12)
+   fieldLineHover   rgba(255, 255, 255, 0.20)
+   hairline         rgba(255, 255, 255, 0.08)    card borders, separators
+   hover            rgba(255, 255, 255, 0.04)
+   disabledBg       rgba(255, 255, 255, 0.03)
+   disabledLine     rgba(255, 255, 255, 0.05)
+   text             #F1F5F9
+   muted            #94A3B8                      labels
+   slate            #64748B                      disabled text
+   accent           #D0A76F                      gold: borders, checked, slider, check box
+   accentText       #D0A76F                      gold text (titles, hover)
+   accentSoft       rgba(208, 167, 111, 0.14)    tinted backgrounds (hover, checked, selection)
+   accentPress      rgba(208, 167, 111, 0.26)
+   accentLine       rgba(208, 167, 111, 0.40)    tinted borders
+   accentFocus      rgba(208, 167, 111, 0.60)
+   selection        rgba(208, 167, 111, 0.30)
+   selectionText    #FFFFFF
+   primary          #D0A76F                      primary buttons ("In den Warenkorb")
+   primaryHover     #DDB984
+   primaryLine      #E6C995
+   primaryPressed   #B98F58
+   primaryDisabled  rgba(208, 167, 111, 0.25)
+   onPrimary        #020617
+   onPrimaryOff     rgba(2, 6, 23, 0.60)
+   scroll           rgba(255, 255, 255, 0.15)
+   scrollHover      rgba(208, 167, 111, 0.45)
+   checkLine        rgba(255, 255, 255, 0.25)
+   groove           rgba(255, 255, 255, 0.10)
+   handle           #F1F5F9
+   spinStrip        rgba(255, 255, 255, 0.03)
+   spinLine         rgba(255, 255, 255, 0.06)
+@end
+
+@palette light
+   bg               #F3F0EA
+   surface          #FFFFFF
+   raised           #F3EFE8
+   button           #FFFFFF
+   buttonLine       rgba(15, 23, 42, 0.18)
+   field            #FBFAF8
+   fieldLine        rgba(15, 23, 42, 0.16)
+   fieldLineHover   rgba(15, 23, 42, 0.30)
+   hairline         rgba(15, 23, 42, 0.10)
+   hover            rgba(15, 23, 42, 0.04)
+   disabledBg       rgba(15, 23, 42, 0.04)
+   disabledLine     rgba(15, 23, 42, 0.06)
+   text             #1E2533
+   muted            #5B6577
+   slate            #9AA3B2
+   accent           #C49A5E
+   accentText       #8F6A35
+   accentSoft       rgba(196, 154, 94, 0.16)
+   accentPress      rgba(196, 154, 94, 0.30)
+   accentLine       rgba(196, 154, 94, 0.60)
+   accentFocus      rgba(170, 128, 70, 0.85)
+   selection        rgba(196, 154, 94, 0.30)
+   selectionText    #1E2533
+   primary          #D0A76F
+   primaryHover     #C99B5C
+   primaryLine      #B98F58
+   primaryPressed   #B3884F
+   primaryDisabled  rgba(208, 167, 111, 0.35)
+   onPrimary        #1A1205
+   onPrimaryOff     rgba(26, 18, 5, 0.55)
+   scroll           rgba(15, 23, 42, 0.20)
+   scrollHover      rgba(196, 154, 94, 0.70)
+   checkLine        rgba(15, 23, 42, 0.30)
+   groove           rgba(15, 23, 42, 0.12)
+   handle           #FFFFFF
+   spinStrip        rgba(15, 23, 42, 0.03)
+   spinLine         rgba(15, 23, 42, 0.08)
+@end
+
+   Fonts: "Plus Jakarta Sans" (text), "Space Mono" (titles, primary buttons, tabs) – loaded by
+   theme.load_fonts() from GUI_Files/fonts (SIL Open Font License).
+   Images: url(icons:...) – theme.py registers the "icons" search path (GUI_Files/icons).
+
+   Style classes (dynamic property "styleClass" on the widget):
+     outsideFrame     QGroupBox   a panel section: surface card with rounded corners
+     insideFrame      QGroupBox   the section's content; its title is the section title (gold, mono)
+     verticalSubFrame QGroupBox   a sub group inside a section: hairline on top, small muted title
+     IconButton       QPushButton square button with a pictogram
+     ImprintButton    QPushButton pictogram button, highlighted while enabled (edits waiting to be imprinted)
+     ImprintAction    QToolButton the same for a tool bar button
+     ToolbarInfo      QLabel      a value in the tool bar (gold, mono)
+     PrimaryButton    QPushButton the main action of a section (gold)
+     PanelGroup       QToolButton the group strip at the right edge
+     SectionTab       QPushButton the (vertical) section tabs next to the panel
+   ===================================================================================================== */
+
+/* ---------- base ---------- */
+QWidget {
+	background-color: @bg;
+	color: @text;
+	font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+	font-size: 9pt;
+	selection-background-color: @selection;
+	selection-color: @selectionText;
+}
+QMainWindow, QDialog {
+	background-color: @bg;
+}
+QLabel {
+	background: transparent;
+	color: @muted;
+}
+QLabel:disabled {
+	color: @slate;
+}
+QToolTip {
+	background-color: @surface;
+	color: @text;
+	border: 1px solid @accentLine;
+	border-radius: 6px;
+	padding: 4px 6px;
+}
+
+/* ---------- group boxes ---------- */
+QGroupBox {
+	background: transparent;
+	color: @text;
+	font-weight: 600;
+	border: none;
+}
+QGroupBox::title {
+	color: @accentText;
+}
+
+/* ---------- buttons (secondary look: raised tile, hairline, gold on hover) ---------- */
+QPushButton {
+	background-color: @button;
+	color: @text;
+	border: 1px solid @buttonLine;
+	border-radius: 8px;
+	padding: 3px 8px;
+}
+QPushButton:hover {
+	background-color: @accentSoft;
+	border-color: @accentLine;
+	color: @accentText;
+}
+QPushButton:pressed {
+	background-color: @accentPress;
+}
+QPushButton:checked {
+	background-color: @accentSoft;
+	border: 1px solid @accent;
+	color: @accentText;
+	font-weight: 600;
+}
+QPushButton:disabled {
+	background-color: @disabledBg;
+	border-color: @disabledLine;
+	color: @slate;
+}
+
+/* ---------- input fields ---------- */
+QLineEdit, QPlainTextEdit, QTextEdit, QAbstractSpinBox, QComboBox {
+	background-color: @field;
+	color: @text;
+	border: 1px solid @fieldLine;
+	border-radius: 8px;
+	padding: 1px 2px;
+}
+QLineEdit:hover, QPlainTextEdit:hover, QTextEdit:hover, QAbstractSpinBox:hover, QComboBox:hover {
+	border-color: @fieldLineHover;
+}
+QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QAbstractSpinBox:focus, QComboBox:focus {
+	border-color: @accentFocus;
+}
+QLineEdit:disabled, QPlainTextEdit:disabled, QTextEdit:disabled, QAbstractSpinBox:disabled, QComboBox:disabled {
+	background-color: @disabledBg;
+	border-color: @disabledLine;
+	color: @muted;
+}
+QLineEdit:read-only {
+	background-color: @disabledBg;
+}
+
+/* spin arrows: slim gold chevrons in a quiet strip inside the field; none on disabled (read-only) fields */
+QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
+	subcontrol-origin: padding;
+	width: 11px;
+	border: none;
+	border-left: 1px solid @spinLine;
+	background-color: @spinStrip;
+}
+QAbstractSpinBox::up-button {
+	subcontrol-position: top right;
+	border-top-right-radius: 6px;
+}
+QAbstractSpinBox::down-button {
+	subcontrol-position: bottom right;
+	border-bottom-right-radius: 6px;
+}
+QAbstractSpinBox::up-button:hover, QAbstractSpinBox::down-button:hover {
+	background-color: @accentSoft;
+}
+QAbstractSpinBox::up-button:pressed, QAbstractSpinBox::down-button:pressed {
+	background-color: @accentPress;
+}
+QAbstractSpinBox::up-arrow {
+	image: url(icons:spin-up.svg);
+	width: 8px;
+	height: 5px;
+}
+QAbstractSpinBox::down-arrow {
+	image: url(icons:spin-down.svg);
+	width: 8px;
+	height: 5px;
+}
+QAbstractSpinBox::up-button:disabled, QAbstractSpinBox::down-button:disabled {
+	width: 0px;
+	border: none;
+}
+QAbstractSpinBox::up-arrow:disabled, QAbstractSpinBox::down-arrow:disabled {
+	image: none;
+	width: 0px;
+}
+
+/* combo box */
+QComboBox {
+	padding-left: 4px;
+	padding-right: 14px;
+}
+QComboBox::drop-down {
+	subcontrol-origin: padding;
+	subcontrol-position: center right;
+	width: 14px;
+	border: none;
+	background: transparent;
+}
+QComboBox::down-arrow {
+	image: url(icons:combo-down.svg);
+	width: 10px;
+	height: 6px;
+}
+QComboBox::down-arrow:on, QComboBox::down-arrow:hover {
+	image: url(icons:spin-down.svg);
+}
+QComboBox QAbstractItemView {
+	background-color: @surface;
+	color: @text;
+	border: 1px solid @accentLine;
+	border-radius: 6px;
+	padding: 2px;
+	outline: 0;
+	selection-background-color: @accentSoft;
+	selection-color: @accentText;
+}
+
+/* ---------- lists ---------- */
+QListWidget, QListView, QTreeView, QTableView {
+	background-color: @field;
+	color: @text;
+	border: 1px solid @hairline;
+	border-radius: 10px;
+	padding: 2px;
+	outline: 0;
+}
+QListWidget::item, QListView::item {
+	border-radius: 6px;
+	padding: 2px 4px;
+}
+QListWidget::item:hover, QListView::item:hover {
+	background-color: @hover;
+}
+QListWidget::item:selected, QListView::item:selected {
+	background-color: @accentSoft;
+	color: @accentText;
+}
+QHeaderView::section {
+	background-color: @surface;
+	color: @muted;
+	border: none;
+	border-bottom: 1px solid @hairline;
+	padding: 3px 6px;
+}
+
+/* ---------- check boxes ---------- */
+QCheckBox {
+	background: transparent;
+	color: @text;
+	spacing: 6px;
+}
+QCheckBox::indicator {
+	width: 14px;
+	height: 14px;
+	border: 1px solid @checkLine;
+	border-radius: 4px;
+	background-color: @field;
+}
+QCheckBox::indicator:hover {
+	border-color: @accentFocus;
+}
+QCheckBox::indicator:checked {
+	background-color: @accent;
+	border-color: @accent;
+	image: url(icons:check.svg);
+}
+QCheckBox:disabled {
+	color: @slate;
+}
+QCheckBox::indicator:disabled {
+	background-color: @disabledBg;
+	border-color: @hairline;
+}
+
+/* ---------- sliders ---------- */
+QSlider {
+	background: transparent;
+}
+QSlider::groove:horizontal {
+	height: 4px;
+	border-radius: 2px;
+	background-color: @groove;
+}
+QSlider::sub-page:horizontal {
+	border-radius: 2px;
+	background-color: @accent;
+}
+QSlider::handle:horizontal {
+	width: 12px;
+	height: 12px;
+	margin: -5px 0;
+	border-radius: 6px;
+	background-color: @handle;
+	border: 2px solid @accent;
+}
+QSlider::handle:horizontal:hover {
+	background-color: @accent;
+}
+QSlider::sub-page:horizontal:disabled {
+	background-color: @slate;
+}
+
+/* ---------- scroll bars (thin, like the shop) ---------- */
+QScrollBar:vertical {
+	background: transparent;
+	width: 8px;
+	margin: 2px;
+}
+QScrollBar:horizontal {
+	background: transparent;
+	height: 8px;
+	margin: 2px;
+}
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+	background-color: @scroll;
+	border-radius: 2px;
+	min-height: 24px;
+	min-width: 24px;
+}
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+	background-color: @scrollHover;
+}
+QScrollBar::add-line, QScrollBar::sub-line {
+	width: 0px;
+	height: 0px;
+}
+QScrollBar::add-page, QScrollBar::sub-page {
+	background: transparent;
+}
+QAbstractScrollArea {
+	background: transparent;
+	border: none;
+}
+
+/* ---------- menu bar, menus, tool bar ---------- */
+QMenuBar {
+	background-color: @bg;
+	color: @muted;
+	border-bottom: 1px solid @hairline;
+}
+QMenuBar::item {
+	background: transparent;
+	padding: 4px 10px;
+	border-radius: 6px;
+}
+QMenuBar::item:selected {
+	background-color: @accentSoft;
+	color: @accentText;
+}
+QMenuBar::item:disabled {
+	color: @slate;
+}
+QMenu {
+	background-color: @surface;
+	color: @text;
+	border: 1px solid @hairline;
+	border-radius: 8px;
+	padding: 4px;
+}
+QMenu::item {
+	padding: 5px 18px 5px 22px;
+	border-radius: 6px;
+	background: transparent;
+}
+QMenu::item:selected {
+	background-color: @accentSoft;
+	color: @accentText;
+}
+QMenu::item:disabled {
+	color: @slate;
+}
+QMenu::separator {
+	height: 1px;
+	background: @hairline;
+	margin: 4px 6px;
+}
+QToolBar {
+	background-color: @bg;
+	border: none;
+	border-bottom: 1px solid @hairline;
+	padding: 3px;
+	spacing: 3px;
+}
+QToolBar::separator {
+	width: 1px;
+	background: @hairline;
+	margin: 4px 6px;
+}
+QToolButton {
+	background: transparent;
+	color: @text;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	padding: 3px;
+}
+QToolButton:hover {
+	background-color: @accentSoft;
+	border-color: @accentLine;
+	color: @accentText;
+}
+QToolButton:checked {
+	background-color: @accentSoft;
+	border-color: @accent;
+}
+QToolButton:disabled {
+	color: @slate;
+}
+
+/* ---------- tabs ---------- */
+QTabWidget::pane {
+	border: 1px solid @hairline;
+	border-radius: 10px;
+}
+QTabBar::tab {
+	background: transparent;
+	color: @muted;
+	font-family: "Space Mono";
+	padding: 5px 12px;
+	border: none;
+	border-bottom: 2px solid transparent;
+}
+QTabBar::tab:selected {
+	color: @accentText;
+	border-bottom-color: @accent;
+}
+QTabBar::tab:hover {
+	color: @text;
+}
+
+/* ---------- canvas ---------- */
+QGraphicsView {
+	background-color: @bg;
+	border: none;
+}
+
+/* ===================================== style classes ===================================== */
+
+/* outsideFrame: a panel section = surface card */
+QGroupBox[styleClass="outsideFrame"] {
+	background-color: @surface;
+	border: 1px solid @hairline;
+	border-radius: 14px;
+	margin: 0px;
+}
+QGroupBox[styleClass="outsideFrame"] QWidget {
+	background-color: transparent;
+}
+QGroupBox[styleClass="outsideFrame"] QLineEdit, QGroupBox[styleClass="outsideFrame"] QAbstractSpinBox,
+QGroupBox[styleClass="outsideFrame"] QComboBox, QGroupBox[styleClass="outsideFrame"] QPlainTextEdit,
+QGroupBox[styleClass="outsideFrame"] QListWidget {
+	background-color: @field;
+}
+QGroupBox[styleClass="outsideFrame"] QLineEdit:disabled, QGroupBox[styleClass="outsideFrame"] QAbstractSpinBox:disabled,
+QGroupBox[styleClass="outsideFrame"] QComboBox:disabled {
+	background-color: @disabledBg;
+}
+QGroupBox[styleClass="outsideFrame"] QPushButton {
+	background-color: @raised;
+}
+QGroupBox[styleClass="outsideFrame"] QPushButton:hover, QGroupBox[styleClass="outsideFrame"] QPushButton:checked {
+	background-color: @accentSoft;
+}
+QGroupBox[styleClass="outsideFrame"] QPushButton:disabled {
+	background-color: @disabledBg;
+}
+
+/* insideFrame: the section content, its title is the section title */
+QGroupBox[styleClass="insideFrame"] {
+	border: none;
+	padding: 10px;
+	margin: 0px;
+	margin-top: 18px;
+}
+QGroupBox[styleClass="insideFrame"]::title {
+	subcontrol-origin: margin;
+	subcontrol-position: top left;
+	padding: 2px 6px;
+	color: @accentText;
+	font-family: "Space Mono";
+	font-weight: bold;
+}
+
+/* verticalSubFrame: a sub group = hairline on top with a small muted title */
+QGroupBox[styleClass="verticalSubFrame"] {
+	color: @muted;
+	font-weight: normal;
+	border: none;
+	border-top: 1px solid @hairline;
+	margin-top: 8px;
+	padding-top: 6px;
+}
+QGroupBox[styleClass="verticalSubFrame"]::title {
+	subcontrol-origin: margin;
+	subcontrol-position: top center;
+	padding: 0px 6px;
+	color: @muted;
+	font-family: "Space Mono";
+	font-size: 8pt;
+}
+
+/* IconButton: square pictogram tile */
+QPushButton[styleClass="IconButton"] {
+	background-color: @raised;
+	border: 1px solid @buttonLine;
+	border-radius: 8px;
+	padding: 2px;
+}
+QPushButton[styleClass="IconButton"]:hover {
+	background-color: @accentSoft;
+	border-color: @accentLine;
+}
+QPushButton[styleClass="IconButton"]:checked {
+	background-color: @accentSoft;
+	border: 2px solid @accent;
+}
+QPushButton[styleClass="IconButton"]:disabled {
+	background-color: @disabledBg;
+	border-color: @disabledLine;
+}
+
+/* ImprintButton: a pictogram tile that is only enabled while edits wait to be imprinted – then highlighted */
+QPushButton[styleClass="ImprintButton"] {
+	background-color: @raised;
+	border: 1px solid @buttonLine;
+	border-radius: 8px;
+	padding: 2px;
+}
+QPushButton[styleClass="ImprintButton"]:enabled {
+	background-color: @accentPress;
+	border: 2px solid @accent;
+}
+QPushButton[styleClass="ImprintButton"]:hover {
+	background-color: @accentSoft;
+	border-color: @accentLine;
+}
+QPushButton[styleClass="ImprintButton"]:disabled {
+	background-color: @disabledBg;
+	border: 1px solid @disabledLine;
+}
+QToolButton[styleClass="ImprintAction"]:enabled {
+	background-color: @accentPress;
+	border: 1px solid @accent;
+}
+
+/* ToolbarInfo: a value shown in the tool bar (e.g. the number of colours) */
+QLabel[styleClass="ToolbarInfo"] {
+	color: @accentText;
+	font-family: "Space Mono";
+	font-weight: bold;
+	padding: 0px 8px;
+}
+
+/* PrimaryButton: gold, dark mono label */
+QPushButton[styleClass="PrimaryButton"], QGroupBox[styleClass="outsideFrame"] QPushButton[styleClass="PrimaryButton"] {
+	background-color: @primary;
+	color: @onPrimary;
+	border: 1px solid @primary;
+	border-radius: 10px;
+	font-family: "Space Mono";
+	font-weight: bold;
+	padding: 3px 10px;
+}
+QPushButton[styleClass="PrimaryButton"]:hover, QGroupBox[styleClass="outsideFrame"] QPushButton[styleClass="PrimaryButton"]:hover {
+	background-color: @primaryHover;
+	border-color: @primaryLine;
+	color: @onPrimary;
+}
+QPushButton[styleClass="PrimaryButton"]:pressed, QGroupBox[styleClass="outsideFrame"] QPushButton[styleClass="PrimaryButton"]:pressed {
+	background-color: @primaryPressed;
+}
+QPushButton[styleClass="PrimaryButton"]:disabled, QGroupBox[styleClass="outsideFrame"] QPushButton[styleClass="PrimaryButton"]:disabled {
+	background-color: @primaryDisabled;
+	border-color: transparent;
+	color: @onPrimaryOff;
+}
+
+/* PanelGroup: the group strip */
+QToolButton[styleClass="PanelGroup"] {
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	padding: 5px;
+}
+QToolButton[styleClass="PanelGroup"]:hover {
+	background-color: @accentSoft;
+	border-color: @accentLine;
+}
+QToolButton[styleClass="PanelGroup"]:checked {
+	background-color: @accentSoft;
+	border: 1px solid @accentLine;
+	border-right: 3px solid @accent;
+}
+
+/* SectionTab: the vertical section tabs */
+QPushButton[styleClass="SectionTab"] {
+	background-color: transparent;
+	color: @muted;
+	font-family: "Space Mono";
+	border: 1px solid transparent;
+	border-radius: 8px;
+	padding: 2px;
+}
+QPushButton[styleClass="SectionTab"]:hover {
+	background-color: @hover;
+	color: @text;
+}
+QPushButton[styleClass="SectionTab"]:checked {
+	background-color: @accentSoft;
+	border: 1px solid @accentLine;
+	color: @accentText;
+	font-weight: bold;
+}

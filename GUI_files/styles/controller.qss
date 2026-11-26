@@ -1,0 +1,58 @@
+/* =====================================================================================================
+   Machine Control additions to the Atelier style (REVISION_PLAN.md P4.2). Rendered with atelier.qss's palettes
+   (same @tokens) and appended to it by theme.render.
+
+   BildHatcher marks every group box with a styleClass; the controller's .ui files do not, so here every
+   QGroupBox gets the card look of "outsideFrame" + the gold section title of "insideFrame", and a group inside
+   a group becomes a sub group (hairline on top, no card).
+   ===================================================================================================== */
+
+QGroupBox {
+	background-color: @surface;
+	border: 1px solid @hairline;
+	border-radius: 12px;
+	margin-top: 10px;
+	padding: 4px 2px 2px 2px;
+}
+QGroupBox::title {
+	subcontrol-origin: margin;
+	subcontrol-position: top left;
+	left: 12px;
+	padding: 0px 4px;
+	color: @accentText;
+	font-family: "Space Mono";
+	font-weight: bold;
+}
+QGroupBox QWidget {
+	background-color: transparent;
+}
+QGroupBox QLineEdit, QGroupBox QAbstractSpinBox, QGroupBox QComboBox, QGroupBox QPlainTextEdit,
+QGroupBox QTextEdit, QGroupBox QListWidget {
+	background-color: @field;
+}
+QGroupBox QPushButton {
+	background-color: @raised;
+	padding: 3px 4px;
+}
+QGroupBox QPushButton:hover, QGroupBox QPushButton:checked {
+	background-color: @accentSoft;
+}
+QGroupBox QPushButton:disabled {
+	background-color: @disabledBg;
+}
+
+/* a group inside a group: no second card */
+QGroupBox QGroupBox {
+	background-color: transparent;
+	border: none;
+	border-top: 1px solid @hairline;
+	border-radius: 0px;
+	margin-top: 10px;
+	padding: 4px 0px 0px 0px;
+}
+QGroupBox QGroupBox::title {
+	left: 0px;
+	color: @muted;
+	font-family: "Plus Jakarta Sans";
+	font-weight: 600;
+}

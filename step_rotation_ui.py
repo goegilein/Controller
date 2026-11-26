@@ -8,6 +8,7 @@ import numpy as np
 from PyQt6 import QtWidgets
 
 from job_bridge import TILT_WARNING_DEG
+import theme
 from machine_core.job import rz_deg, tilt_deg
 
 
@@ -85,7 +86,7 @@ class StepRotationDialog(QtWidgets.QDialog):
                 f"The job uses the rotation about Z: Rz = {rz:.3f}°.\nTilt (not applied): {tilt:.3f}°")
         if tilt > TILT_WARNING_DEG:
             text += f"\n⚠ Tilt above {TILT_WARNING_DEG}°: the holder is not level, the job stays flat."
-            self.info.setStyleSheet("color:#ef6c00; font-weight:bold;")
+            self.info.setStyleSheet(f"color:{theme.signal('warning')}; font-weight:bold;")
         else:
             self.info.setStyleSheet("")
         self.info.setText(text)

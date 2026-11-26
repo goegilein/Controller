@@ -4,6 +4,7 @@ import numpy as np
 from PyQt6 import uic
 from PyQt6.QtWidgets import QListWidgetItem, QApplication, QInputDialog, QLineEdit
 from PathManager import get_gui_file_path, get_settings_path
+import theme
 
 class MaschineHelpers():
     def __init__(self, gui, controller):
@@ -50,7 +51,7 @@ class CircleFitter():
         self.point_list.append(point)
 
         # put widget it into the list
-        widget = uic.loadUi(self.widget_path)
+        widget = theme.load_ui(self.widget_path)
         item = QListWidgetItem()
         item.setSizeHint(widget.sizeHint())
         self.circle_fit_listWidget.addItem(item)
@@ -230,7 +231,7 @@ class RectangleFitter():
     def setup_gui(self):
         for text in ["LEFT:", "RIGHT:", "TOP:", "BOTTOM:"]:
             # put widget it into the list
-            widget = uic.loadUi(self.widget_path)
+            widget = theme.load_ui(self.widget_path)
             item = QListWidgetItem()
             item.setSizeHint(widget.sizeHint())
             self.rectangle_fit_listWidget.addItem(item)
@@ -457,7 +458,7 @@ class CustomSampleHolders():
             pt_data = holder_cfg.get(pt_key, {})
             pt_name = pt_data.get("Name", pt_key)
 
-            widget = uic.loadUi(self.widget_path)
+            widget = theme.load_ui(self.widget_path)
             item = QListWidgetItem()
             item.setSizeHint(widget.sizeHint())
             self.custom_holders_listWidget.addItem(item)
@@ -834,7 +835,7 @@ class StoredPoints():
 
     def _create_point_widget(self, point):
         """Create and configure the UI widget item for a point in the list widget."""
-        widget = uic.loadUi(self.widget_path)
+        widget = theme.load_ui(self.widget_path)
         widget.point = point
         item = QListWidgetItem()
         item.setSizeHint(widget.sizeHint())
@@ -856,7 +857,7 @@ class StoredPoints():
             def on_name_text_changed(text):
                 stripped = text.strip()
                 if not stripped or self.name_exists(stripped, exclude_point=point):
-                    widget.position_name_lineEdit.setStyleSheet("border: 1px solid red; background-color: #ffe6e6;")
+                    widget.position_name_lineEdit.setStyleSheet(f"border: 1px solid {theme.signal('error')};")
                     widget.position_name_lineEdit.setToolTip("Name must be unique and non-empty")
                 else:
                     widget.position_name_lineEdit.setStyleSheet("")
