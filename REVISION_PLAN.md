@@ -24,7 +24,7 @@ This file is the single source of truth for status – update it in the same com
 | 2 – Machine core without Qt (Marlin) | in progress | done (P2.1–P2.8); hardware checks pending |
 | 3 – J-code and machine profile | done | P3.1–P3.4; C16 run 3 and hardware checks pending |
 | 4 – UI, user data, conventions | done | P4.1–P4.3 |
-| 5 – Release 2.0.0 | open | hardware checklist, PR to main |
+| 5 – Release 2.0.0 | in progress | release candidate prepared; waiting for the hardware checklist, then PR to main |
 
 ---
 
@@ -363,6 +363,12 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 
 - [ ] P5.1 Hardware checklist (P0.5) passed on the Artisan, results in the work log.
 - [ ] P5.2 Version 2.0.0, build script checked, PR to `main` when the user decides.
+  Prepared 2026-11-26: `version.json` 2.0.0, [CHANGELOG.md](CHANGELOG.md), probe build of the exe. Build script: no
+  `settings` folder next to the exe any more (it would be taken as the 1.x data by the first-start migration, P4.1).
+  Probe build OK (190 MB, starts, creates the user folder, migration message). Fixed on the way: the theme is
+  applied before the first window (the first-start message came up unstyled); the "nothing found" message says how
+  to import from a 1.x folder (`--migrate-from`); the build script no longer crashes on its ✓ marks in a cp1252
+  console. Open: P5.1, then the PR.
 
 ---
 
@@ -433,4 +439,5 @@ are made once, in the new core, and tested on the simulated machine. Each P1 ite
 | 2026-11-26 | P4.1: user data into Documents/MachineControl with a one-time migration | `6c8d4d4` |
 | 2026-11-26 | P4.2: Atelier style (dark / bright) from BildHatcher; B19 | `7b4c337` |
 | 2026-11-26 | P4.2 review: titles centred, tabs as tiles, drop-downs for fixed settings | `ef6a8e0` |
-| 2026-11-26 | P4.3: README, main() | see git log |
+| 2026-11-26 | P4.3: README, main() | `09b83c5` |
+| 2026-11-26 | P5.2 prepared: version 2.0.0, changelog, build script | see git log |

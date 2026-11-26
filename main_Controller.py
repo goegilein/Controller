@@ -55,15 +55,14 @@ def build(argv=None, show_messages=True):
     migration_report = migrate(argv)
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(argv)
+    settings = Settings_Manager.SettingsManager(default_settings_path=get_settings_path("Default_Settings.json"),
+                                                schema_path=get_settings_path("schema.json"), use_validation=False)
+    theme.apply(app, settings.get("ui.theme", "dark"))  # Atelier look (P4.2) – before any window is shown
     gui = theme.load_ui(str(get_gui_file_path("Controller.ui")))
     gui.setWindowTitle(f"Artisan Controller {app_version()}")
     gui.show()
     if migration_report and show_messages:
         QtWidgets.QMessageBox.information(gui, "User data", migration_report)
-
-    settings = Settings_Manager.SettingsManager(default_settings_path=get_settings_path("Default_Settings.json"),
-                                                schema_path=get_settings_path("schema.json"), use_validation=False)
-    theme.apply(app, settings.get("ui.theme", "dark"))  # Atelier look from BildHatcher, dark / bright (P4.2)
 
     # controllers: the machine core runs in its own thread, the UI talks to it through the facades (P2.8)
     rot = RotaryFacade(settings=settings)

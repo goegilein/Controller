@@ -101,8 +101,10 @@ def migrate_user_data(sources=None, force=False):
             os.replace(tmp, target / name)
             copied.append(f"{name} from {source.parent}")
     lines = [f"{stamp}: user data moved to {target} (REVISION_PLAN.md P4.1)."]
-    lines += [f"  copied {c}" for c in copied] or [f"  nothing found in {', '.join(str(d) for d in sources)} – "
-                                                   "started with the default settings"]
+    lines += [f"  copied {c}" for c in copied] or [
+        f"  nothing found in {', '.join(str(d) for d in sources)} – started with the default settings.",
+        "  If Machine Control 1.x is installed in another folder, close this app and start it once with",
+        '  --migrate-from "<1.x folder>\\settings" to take over its settings, stored positions and sample holders.']
     lines.append("  The old files were not changed; Machine Control 1.0 still uses them.")
     with open(note, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")

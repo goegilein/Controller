@@ -132,14 +132,9 @@ class ExecutableBuilder:
             if result.returncode == 0:
                 exe_path = self.dist_dir / f"{exe_name}.exe"
                 if exe_path.exists():
-                    # Copy settings directory next to the executable
-                    settings_src = Path("settings")
-                    settings_dst = self.dist_dir / "settings"
-                    if settings_src.exists():
-                        if settings_dst.exists():
-                            shutil.rmtree(settings_dst)
-                        shutil.copytree(settings_src, settings_dst)
-                        print(f"✓ Copied settings to: {settings_dst}")
+                    # v2.0 (P4.1): no settings folder next to the exe any more – the templates are inside the exe,
+                    # the user's files live in Documents\MachineControl\settings. A settings folder next to the exe
+                    # would be taken as the v1.0 data by the first-start migration.
                     
                     print(f"\n✓ Build successful!")
                     print(f"✓ Executable: {exe_path}")
@@ -169,6 +164,11 @@ class ExecutableBuilder:
 
 def main():
     """Main entry point."""
+    for stream in (sys.stdout, sys.stderr):   # the ✓ / ✗ marks must not crash a cp1252 console or a redirect
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     builder = ExecutableBuilder()
     
     # Check for version bump arguments
